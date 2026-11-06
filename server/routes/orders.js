@@ -8,6 +8,7 @@ const { protect, adminOnly } = require('../middleware/auth');
 const {
   sendOrderPlacedNotification,
   sendOrderStatusNotification,
+  notifyOwnerNewOrder,
 } = require('../services/whatsappService');
 
 // Helper to generate next sequential campus token
@@ -158,12 +159,21 @@ router.post('/', protect, async (req, res) => {
       io.emit('tokens:refresh');
     }
 
-    // 1. Automated Meta WhatsApp Notification: Order Placed
+    // 1. Automated Meta WhatsApp Notification: Order Placed to student
     let whatsappNotification = null;
     try {
       whatsappNotification = await sendOrderPlacedNotification(populatedOrder, req.user, io);
     } catch (waErr) {
       console.warn('[Orders Route] WhatsApp order placed notification error:', waErr.message);
+    }
+
+    // 2. Automated Meta WhatsApp Notification: Dispatch to Canteen Owner in the background
+    try {
+      notifyOwnerNewOrder(populatedOrder).catch((err) => {
+        console.warn('[Orders Route] Background notify owner error:', err.message);
+      });
+    } catch (ownerErr) {
+      console.warn('[Orders Route] Background notify owner setup error:', ownerErr.message);
     }
 
     res.status(201).json({

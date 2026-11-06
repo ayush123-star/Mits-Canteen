@@ -4,6 +4,10 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
 import {
+  getOwnerWhatsAppNumber,
+  setOwnerWhatsAppNumber
+} from '../../utils/whatsappHelper';
+import {
   Settings,
   Power,
   Flame,
@@ -21,7 +25,8 @@ import {
   Sparkles,
   CreditCard,
   Check,
-  SlidersHorizontal
+  SlidersHorizontal,
+  MessageSquare
 } from 'lucide-react';
 
 export const CanteenSettingsPage = () => {
@@ -45,6 +50,7 @@ export const CanteenSettingsPage = () => {
   const [closingTime, setClosingTime] = useState(currentCanteen.closingTime || '07:30 PM');
   const [activeCounters, setActiveCounters] = useState(currentCanteen.activeCounters || 3);
   const [managerPhone, setManagerPhone] = useState(currentCanteen.managerPhone || '+91 98112 23344');
+  const [ownerWhatsApp, setOwnerWhatsApp] = useState(getOwnerWhatsAppNumber());
   const [rushHourMode, setRushHourMode] = useState(false);
 
   // QR Code & Payment States
@@ -115,6 +121,9 @@ export const CanteenSettingsPage = () => {
   // Save General Operating Settings
   const handleSaveGeneral = (e) => {
     e.preventDefault();
+    if (ownerWhatsApp) {
+      setOwnerWhatsAppNumber(ownerWhatsApp);
+    }
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
@@ -476,7 +485,7 @@ export const CanteenSettingsPage = () => {
 
             <div>
               <label className="font-bold text-[#AAB3C5] uppercase tracking-wider block mb-1">
-                Manager Helpline / WhatsApp
+                Manager Helpline Phone
               </label>
               <input
                 type="text"
@@ -485,6 +494,27 @@ export const CanteenSettingsPage = () => {
                 className="w-full px-4 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/20 font-semibold text-white focus:outline-none focus:border-[#7955E8]"
               />
             </div>
+          </div>
+
+          {/* Dedicated WhatsApp Destination Phone for Live Orders */}
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-emerald-400" />
+              <label className="font-extrabold text-xs text-emerald-300 uppercase tracking-wider">
+                Canteen Owner Live WhatsApp Order Alert Number
+              </label>
+            </div>
+            <p className="text-[11px] text-[#AAB3C5]">
+              Every new student order receipt will be sent directly to this WhatsApp number upon checkout.
+            </p>
+            <input
+              type="tel"
+              required
+              value={ownerWhatsApp}
+              onChange={(e) => setOwnerWhatsApp(e.target.value)}
+              placeholder="e.g. 9876543210 (10-digit mobile number)"
+              className="w-full px-4 py-2.5 rounded-2xl bg-[#151C30] border border-emerald-500/40 font-mono font-bold text-white text-xs focus:outline-none focus:border-emerald-400"
+            />
           </div>
 
           <div className="pt-3 border-t border-purple-500/20 flex justify-end">

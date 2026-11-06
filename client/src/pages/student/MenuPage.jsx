@@ -30,7 +30,7 @@ const CATEGORIES = [
 
 export const MenuPage = () => {
   const { menuItems, canteens } = useData();
-  const { setIsCartOpen } = useCart();
+  const { setIsCartOpen, totalItemCount, total } = useCart();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -206,7 +206,7 @@ export const MenuPage = () => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filteredFoods.map((food) => (
             <FoodCard
               key={food._id || food.id}
@@ -223,6 +223,27 @@ export const MenuPage = () => {
           food={selectedFood}
           onClose={() => setSelectedFood(null)}
         />
+      )}
+
+      {/* 6. Sticky Floating Mobile Cart CTA Bar (Appears when items are in cart) */}
+      {totalItemCount > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden animate-slideUp">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-extrabold text-sm flex items-center justify-between shadow-2xl shadow-purple-950/80 border border-white/20 active:scale-95 transition-transform cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-full bg-white text-[#7955E8] flex items-center justify-center text-xs font-black shadow-xs">
+                {totalItemCount}
+              </span>
+              <span className="tracking-wide">View Campus Tray</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-black text-white">
+              <span>₹{total}</span>
+              <span className="text-base">&rarr;</span>
+            </div>
+          </button>
+        </div>
       )}
     </div>
   );

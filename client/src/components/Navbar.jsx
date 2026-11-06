@@ -78,8 +78,8 @@ export const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             
             {/* 1. Left: MITS Crest Logo & Brand Name */}
-            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="relative w-9 h-9 rounded-full bg-slate-900 border border-purple-500/30 p-1 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform duration-300 overflow-hidden shrink-0">
+            <Link to="/" className="flex items-center gap-2 group shrink-0">
+              <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 border border-purple-500/30 p-1 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform duration-300 overflow-hidden shrink-0">
                 <img
                   src="/assets/campus/mits-logo.png"
                   alt="MITS Gwalior Logo"
@@ -90,11 +90,11 @@ export const Navbar = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="font-black text-lg tracking-tight text-white group-hover:text-purple-300 transition-colors">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-black text-base sm:text-lg tracking-tight text-white group-hover:text-purple-300 transition-colors">
                   MITS
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/25">
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/25">
                   CANTEEN
                 </span>
 
@@ -221,17 +221,17 @@ export const Navbar = () => {
             </nav>
 
             {/* 3. Right Action Area: Developer Button + Light/Dark Mode Toggle + Cart + User */}
-            <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
               
-              {/* Signature MITS AMS Developer Pill Button */}
+              {/* Signature MITS AMS Developer Pill Button (Desktop & Tablet only to keep mobile navbar clean) */}
               <button
                 type="button"
                 onClick={() => setIsDeveloperModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                 title="View Lead Developer: Ayush Pandey"
               >
                 <Code className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden sm:inline">Developer</span>
+                <span>Developer</span>
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
               </button>
 
@@ -270,7 +270,7 @@ export const Navbar = () => {
                 <div className="relative">
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/20 transition-all text-left shadow-sm cursor-pointer"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/30 transition-all text-left shadow-sm cursor-pointer"
                   >
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                       {user?.name?.charAt(0) || 'U'}
@@ -285,93 +285,122 @@ export const Navbar = () => {
                   </button>
 
                   {userDropdownOpen && (
-                    <div
-                      className="absolute right-0 mt-2 w-56 rounded-2xl bg-[#151C30]/98 backdrop-blur-2xl border border-purple-500/30 shadow-2xl py-2 z-50 divide-y divide-purple-500/10 animate-fadeIn"
-                      onMouseLeave={() => setUserDropdownOpen(false)}
-                    >
-                      <div className="px-4 py-2.5">
-                        <p className="text-[10px] text-[#AAB3C5] uppercase font-bold tracking-wider">Signed in as</p>
-                        <p className="text-xs font-bold text-white truncate mt-0.5">{user?.email}</p>
-                        {user?.studentId && (
-                          <p className="text-[11px] text-purple-300 font-mono mt-0.5">ID: {user?.studentId}</p>
-                        )}
-                      </div>
+                    <>
+                      {/* Transparent click-outside overlay to close dropdown */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setUserDropdownOpen(false)}
+                      />
 
-                      <div className="py-1">
-                        {!isAdmin && (
-                          <Link
-                            to="/dashboard"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
-                          >
-                            <User className="w-4 h-4 text-purple-400" />
-                            Student Dashboard
-                          </Link>
-                        )}
-                        <Link
-                          to="/my-orders"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
-                        >
-                          <ClipboardList className="w-4 h-4 text-purple-400" />
-                          My Order History
-                        </Link>
-                        {!isAdmin && (
-                          <>
-                            <Link
-                              to="/profile"
-                              onClick={() => setUserDropdownOpen(false)}
-                              className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
-                            >
-                              <User className="w-4 h-4 text-purple-400" />
-                              My Profile
-                            </Link>
-                            <Link
-                              to="/feedback"
-                              onClick={() => setUserDropdownOpen(false)}
-                              className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
-                            >
-                              <Star className="w-4 h-4 text-amber-400" />
-                              Rate Dishes & Feedback
-                            </Link>
-                          </>
-                        )}
-                        {isAdmin && !isSuperAdmin && (
-                          <Link
-                            to="/admin"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-purple-300 hover:bg-[#1C263A] hover:text-white"
-                          >
-                            <ShieldAlert className="w-4 h-4 text-purple-400" />
-                            Canteen Admin Panel
-                          </Link>
-                        )}
-                        {isSuperAdmin && (
-                          <Link
-                            to="/super-admin"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-amber-300 hover:bg-[#1C263A] hover:text-white"
-                          >
-                            <Crown className="w-4 h-4 text-amber-400" />
-                            Super Admin Console
-                          </Link>
-                        )}
-                      </div>
+                      {/* 100% SOLID OPAQUE DARK DROPDOWN PANEL (Zero transparency, Zero background bleed-through) */}
+                      <div
+                        className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#070B16] border-2 border-purple-500/40 shadow-2xl shadow-black ring-2 ring-black/80 z-50 overflow-hidden divide-y divide-purple-500/15 animate-fadeIn"
+                      >
+                        {/* 1. DARK SOLID "SIGNED IN AS" HEADER */}
+                        <div className="p-3.5 bg-[#0C1222] border-b border-purple-500/25 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-purple-400 uppercase font-black tracking-widest flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-purple-400" />
+                              SIGNED IN AS
+                            </span>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                              {user?.role?.replace('_', ' ') || 'Student'}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs font-black text-white truncate pt-0.5">
+                            {user?.name || 'MITS Student'}
+                          </p>
+                          <p className="text-[11px] text-slate-400 font-mono truncate">
+                            {user?.email}
+                          </p>
+                          {user?.studentId && (
+                            <div className="pt-1">
+                              <span className="inline-block px-2 py-0.5 rounded bg-[#151C30] text-purple-300 font-mono text-[10px] font-bold border border-purple-500/30">
+                                ID: {user?.studentId}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            logout();
-                            setUserDropdownOpen(false);
-                            navigate('/');
-                          }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Sign Out
-                        </button>
+                        {/* 2. MENU LINKS */}
+                        <div className="p-1.5 space-y-0.5 bg-[#070B16]">
+                          {!isAdmin && (
+                            <Link
+                              to="/dashboard"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                            >
+                              <User className="w-4 h-4 text-purple-400 shrink-0" />
+                              <span>Student Dashboard</span>
+                            </Link>
+                          )}
+                          <Link
+                            to="/my-orders"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                          >
+                            <ClipboardList className="w-4 h-4 text-purple-400 shrink-0" />
+                            <span>My Order History</span>
+                          </Link>
+                          {!isAdmin && (
+                            <>
+                              <Link
+                                to="/profile"
+                                onClick={() => setUserDropdownOpen(false)}
+                                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                              >
+                                <User className="w-4 h-4 text-purple-400 shrink-0" />
+                                <span>My Profile</span>
+                              </Link>
+                              <Link
+                                to="/feedback"
+                                onClick={() => setUserDropdownOpen(false)}
+                                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                              >
+                                <Star className="w-4 h-4 text-amber-400 shrink-0" />
+                                <span>Rate Dishes & Feedback</span>
+                              </Link>
+                            </>
+                          )}
+                          {isAdmin && !isSuperAdmin && (
+                            <Link
+                              to="/admin"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] transition-colors"
+                            >
+                              <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0" />
+                              <span>Canteen Admin Panel</span>
+                            </Link>
+                          )}
+                          {isSuperAdmin && (
+                            <Link
+                              to="/super-admin"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30] transition-colors"
+                            >
+                              <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span>Super Admin Console</span>
+                            </Link>
+                          )}
+                        </div>
+
+                        {/* 3. SIGN OUT */}
+                        <div className="p-1.5 bg-[#070B16]">
+                          <button
+                            onClick={() => {
+                              logout();
+                              setUserDropdownOpen(false);
+                              navigate('/');
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors text-left cursor-pointer"
+                          >
+                            <LogOut className="w-4 h-4 shrink-0" />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               ) : (

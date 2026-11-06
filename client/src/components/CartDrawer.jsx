@@ -58,7 +58,7 @@ export const CartDrawer = ({ onCheckoutClick }) => {
         className="absolute inset-0 bg-black/75 backdrop-blur-sm transition-opacity animate-fadeIn"
       ></div>
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
         <div className="w-screen max-w-md bg-[#151C30] border-l border-purple-500/30 text-white shadow-2xl flex flex-col justify-between animate-slideLeft">
           
           {/* Header */}

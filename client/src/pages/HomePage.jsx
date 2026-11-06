@@ -67,20 +67,20 @@ export const HomePage = () => {
               {/* Left Column: Headlines & CTA */}
               <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
                 {/* Official College Badge */}
-                <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#151C30]/90 border border-purple-500/30 text-white text-xs font-black tracking-wide shadow-2xl backdrop-blur-md">
+                <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#151C30]/90 border border-purple-500/30 text-white text-[11px] sm:text-xs font-black tracking-wide shadow-2xl backdrop-blur-md max-w-full">
                   <img
                     src="/assets/campus/mits-logo.png"
                     alt="MITS Gwalior"
-                    className="w-5 h-5 object-contain"
+                    className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0"
                     onError={(e) => { e.target.src = '/images/mits/mits-logo.png'; }}
                   />
-                  <span className="text-purple-300">MITS GWALIOR</span>
-                  <span className="text-slate-500">&bull;</span>
-                  <span className="text-[#AAB3C5]">Estd. 1957 &bull; Main Canteen Express Counter 1</span>
+                  <span className="text-purple-300 shrink-0">MITS GWALIOR</span>
+                  <span className="text-slate-500 shrink-0">&bull;</span>
+                  <span className="text-[#AAB3C5] truncate">Main Canteen Counter 1</span>
                 </div>
 
                 {/* HEADING */}
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-[1.08] text-white">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-[1.1] text-white">
                   Your Campus, <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-300 to-blue-400">
                     Your Canteen,
@@ -151,20 +151,20 @@ export const HomePage = () => {
               <div className="lg:col-span-5 relative perspective-1000">
                 <div className="relative mx-auto max-w-md bg-gradient-to-tr from-[#1C263A]/90 via-[#151C30]/90 to-[#1C263A]/90 p-4 rounded-3xl border border-purple-500/30 shadow-2xl card-3d transform-style-3d backdrop-blur-xl">
                   {/* 3D Floating Live Token Preview Badge */}
-                  <div className="absolute -top-5 -left-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2.5 rounded-2xl shadow-xl shadow-emerald-900/40 flex items-center gap-2 border border-emerald-300/40 animate-float-slow z-20">
+                  <div className="absolute -top-4 left-2 sm:-left-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-xl shadow-emerald-900/40 flex items-center gap-2 border border-emerald-300/40 animate-float-slow z-20">
                     <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
                     <div className="text-left">
-                      <p className="text-[10px] uppercase font-black tracking-wider text-emerald-200">
+                      <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-emerald-200">
                         Now Serving &bull; Counter 1
                       </p>
-                      <p className="text-sm font-black font-mono">TOKEN #TK-101</p>
+                      <p className="text-xs sm:text-sm font-black font-mono">TOKEN #TK-101</p>
                     </div>
                   </div>
 
                   {/* 3D Floating MITS Verified Badge Bottom Right */}
-                  <div className="absolute -bottom-4 -right-3 bg-[#0B1020]/95 text-white px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2 border border-purple-500/40 backdrop-blur-md z-20">
+                  <div className="absolute -bottom-3 right-2 sm:-right-3 bg-[#0B1020]/95 text-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl shadow-xl flex items-center gap-2 border border-purple-500/40 backdrop-blur-md z-20">
                     <Flame className="w-4 h-4 text-purple-400" />
-                    <span className="text-xs font-bold text-slate-200">MITS Main Canteen</span>
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-200">MITS Main Canteen</span>
                   </div>
 
                   {/* Real MITS Main Canteen Dining Hall & Counter Photo */}
@@ -322,7 +322,7 @@ export const HomePage = () => {
         </div>
 
         {/* Popular Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {popularItems.map((food) => (
             <FoodCard
               key={food._id || food.id}

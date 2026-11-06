@@ -41,7 +41,6 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [upiPaymentInitiated, setUpiPaymentInitiated] = useState(false);
-  const [whatsappOptIn, setWhatsappOptIn] = useState(true);
 
   if (!isOpen) return null;
 
@@ -83,7 +82,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
         scheduledPickupTime: scheduledTime,
         pickupOption: pickupOption,
         orderNotes: orderNotes,
-        whatsappOptIn: whatsappOptIn,
+        whatsappOptIn: true,
       });
 
       // Confetti burst for joyful zero-queue experience
@@ -256,29 +255,6 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               </div>
             </div>
           )}
-
-          {/* WhatsApp Notification Consent */}
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between text-xs text-slate-200">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">📲</span>
-              <div>
-                <p className="font-extrabold text-[12px] text-emerald-300">
-                  Receive WhatsApp Live Order Updates
-                </p>
-                <p className="text-[10px] text-[#AAB3C5]">
-                  Automated token alert, prep time & pickup updates
-                </p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={whatsappOptIn}
-                onChange={(e) => setWhatsappOptIn(e.target.checked)}
-                className="w-4 h-4 text-emerald-500 rounded-md border-gray-600 focus:ring-emerald-500 cursor-pointer accent-[#7955E8]"
-              />
-            </label>
-          </div>
 
           {/* Price Breakdown */}
           <div className="border-t border-purple-500/20 pt-3 space-y-1.5 text-xs text-[#AAB3C5]">

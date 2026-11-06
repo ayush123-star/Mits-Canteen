@@ -512,11 +512,71 @@ const sendOtpViaWhatsApp = async (rawPhone, otpCode) => {
   }
 };
 
+/**
+ * Background Automatic Dispatch: Sends new order alert straight to Canteen Owner WhatsApp
+ */
+const notifyOwnerNewOrder = async (order) => {
+  try {
+    const rawOwnerPhone = process.env.OWNER_WHATSAPP_PHONE || process.env.ADMIN_WHATSAPP_PHONE;
+    if (!rawOwnerPhone) {
+      console.log('[WhatsApp Service] No OWNER_WHATSAPP_PHONE configured in server/.env');
+      return { success: false, reason: 'NO_OWNER_PHONE' };
+    }
+
+    const targetPhone = formatPhoneNumber(rawOwnerPhone);
+    const itemsList = (order.items || [])
+      .map((i, idx) => `  ${idx + 1}. *${i.quantity}x ${i.name}* (₹${(i.price || 0) * (i.quantity || 1)})`)
+      .join('\n');
+
+    const customerName = order.studentName || 'Student';
+    const customerPhone = order.studentPhone || 'Not provided';
+    const customerRoll = order.studentRoll || order.studentEnrollment || 'BTET25O1039';
+    const customerDept = order.studentDepartment || 'Electronics and Telecommunication';
+    const token = order.tokenNumber || 'TK-101';
+    const amount = order.finalAmount || order.totalAmount || 0;
+    const payment = order.paymentMethod || 'UPI';
+    const paymentStatus = order.paymentStatus || 'PAID';
+    const slot = order.scheduledPickupTime || 'ASAP (Immediate)';
+
+    const messageText = 
+      `🛎️ *MITS CANTEEN — NEW ORDER RECEIVED!* 🛎️\n\n` +
+      `🎫 *Token Number:* *#${token}*\n` +
+      `👤 *Customer:* ${customerName}\n` +
+      `📞 *Customer Phone:* ${customerPhone}\n` +
+      `🏫 *Dept / ID:* ${customerDept} (${customerRoll})\n\n` +
+      `🍽️ *Items Ordered:*\n${itemsList || '  • Campus meal'}\n\n` +
+      `💰 *Total Amount:* *₹${amount}*\n` +
+      `💳 *Payment:* ${payment} (${paymentStatus})\n` +
+      `⏰ *Pickup Slot:* ${slot}\n` +
+      `📍 *Pickup Counter:* MITS Main Canteen (Counter 1)\n\n` +
+      `_Automatic Background Dispatch — MITS Smart Canteen_ 🚀`;
+
+    console.log(`[WhatsApp Service] Background dispatching new order #${token} to Owner WhatsApp (+${targetPhone})...`);
+
+    const result = await sendMetaWhatsAppMessage({
+      toPhone: targetPhone,
+      messageText,
+    });
+
+    if (result.success) {
+      console.log(`[WhatsApp Service] Successfully sent new order notification to Owner WhatsApp (+${targetPhone})! (wamid: ${result.waMessageId})`);
+    } else {
+      console.warn(`[WhatsApp Service] Failed sending to Owner WhatsApp: ${result.error}`);
+    }
+
+    return result;
+  } catch (err) {
+    console.error('[WhatsApp Service] notifyOwnerNewOrder unexpected error:', err.message);
+    return { success: false, error: err.message };
+  }
+};
+
 module.exports = {
   formatPhoneNumber,
   hasCustomerConsent,
   sendMetaWhatsAppMessage,
   sendOtpViaWhatsApp,
+  notifyOwnerNewOrder,
   sendOrderPlacedNotification,
   sendOrderAcceptedNotification,
   sendOrderPreparingNotification,
