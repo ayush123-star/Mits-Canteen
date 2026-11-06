@@ -6,7 +6,6 @@ import { useCart } from '../context/CartContext';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { MitsCampusHeroVideo } from '../components/common/MitsCampusHeroVideo';
-import { MitsCampusGallery } from '../components/common/MitsCampusGallery';
 import { HomepageCravingsModal } from '../components/admin/HomepageCravingsModal';
 import { LiveCanteenTicker } from '../components/common/LiveCanteenTicker';
 import { TextRotator } from '../components/common/TextRotator';
@@ -123,18 +122,6 @@ export const HomePage = () => {
                     <span>Open Food Tray</span>
                     <ArrowRight className="w-4 h-4 text-purple-400" />
                   </button>
-
-                  <a
-                    href="#campus-spaces"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const el = document.getElementById('campus-spaces');
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-[#151C30]/90 hover:bg-[#1C263A] border border-purple-500/40 text-purple-300 hover:text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-md"
-                  >
-                    <span>Explore Campus Spaces &darr;</span>
-                  </a>
                 </div>
 
                 {/* Campus Trust Badges - 1 Express Counter */}
@@ -257,9 +244,6 @@ export const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* 2.5 REAL MITS GWALIOR CAMPUS LANDMARKS & DINING SPACES GALLERY */}
-      <MitsCampusGallery />
 
       {/* 3. POPULAR FOOD ITEMS SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">

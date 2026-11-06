@@ -157,21 +157,6 @@ export const Navbar = () => {
                 Live Tokens
               </Link>
 
-              <Link
-                to="/#campus-spaces"
-                onClick={() => {
-                  const el = document.getElementById('campus-spaces');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  location.hash === '#campus-spaces'
-                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
-                    : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
-                }`}
-              >
-                Campus Spaces
-              </Link>
-
               {isAuthenticated && (
                 <Link
                   to="/my-orders"
@@ -602,18 +587,6 @@ export const Navbar = () => {
               >
                 <Tv className="w-3.5 h-3.5 text-purple-400" />
                 <span>Live TV Tokens</span>
-              </Link>
-
-              <Link
-                to="/#campus-spaces"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  const el = document.getElementById('campus-spaces');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="block px-3.5 py-2.5 rounded-xl text-xs font-semibold text-purple-300 hover:bg-[#151C30]"
-              >
-                🏛️ Explore Campus Spaces
               </Link>
 
               {isAdmin && !isSuperAdmin && (
