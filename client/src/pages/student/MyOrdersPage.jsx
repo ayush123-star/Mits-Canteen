@@ -156,13 +156,13 @@ export const MyOrdersPage = () => {
           <div className="space-y-1">
             <h3 className="text-lg sm:text-xl font-black text-white">
               {activeTab === 'ACTIVE'
-                ? 'Pehle Order Karo, Uske Baad Token Generate Hoga! 🍔'
+                ? 'Place an Order to Generate Your Live Token! 🍔'
                 : 'No Orders Found in History'}
             </h3>
             <p className="text-xs text-[#AAB3C5] max-w-md mx-auto leading-relaxed">
               {activeTab === 'ACTIVE'
-                ? 'Aapne abhi koi food order nahi lagaya hai. Live token pane ke liye canteen menu se apna favorite food order karein!'
-                : 'Aapne abhi tak canteen se koi order place nahi kiya hai.'}
+                ? 'You do not have any active orders right now. Browse the canteen menu and place an order to get your instant live token!'
+                : 'You have not placed any canteen orders yet.'}
             </p>
           </div>
           <Link

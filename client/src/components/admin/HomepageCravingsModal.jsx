@@ -339,7 +339,7 @@ export const HomepageCravingsModal = ({ isOpen, onClose }) => {
                     className="w-full px-3 py-2 rounded-xl bg-[#0B1020] border border-purple-500/30 text-xs font-mono font-bold text-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
                   />
                   <p className="text-[10px] text-[#AAB3C5] mt-1">
-                    Student checkout par yeh code daalkar discount paayenge.
+                    Students can enter this promo code at checkout to claim the discount.
                   </p>
                 </div>
                 <div>
@@ -357,7 +357,7 @@ export const HomepageCravingsModal = ({ isOpen, onClose }) => {
                     className="w-full px-3 py-2 rounded-xl bg-[#0B1020] border border-purple-500/30 text-xs font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                   <p className="text-[10px] text-[#AAB3C5] mt-1">
-                    Itne amount se upar ke orders par he offer apply hoga.
+                    The offer will apply only to orders equal to or above this minimum amount.
                   </p>
                 </div>
               </div>

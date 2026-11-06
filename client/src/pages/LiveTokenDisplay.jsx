@@ -150,10 +150,10 @@ export const LiveTokenDisplay = () => {
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-lg sm:text-xl font-black text-white">
-                    Pehle Order Karo, Uske Baad Token Generate Hoga! 🍔
+                    Place an Order to Generate Your Live Token! 🍔
                   </h3>
                   <p className="text-xs text-[#AAB3C5] max-w-md mx-auto leading-relaxed">
-                    Abhi koi active ready token nahi hai. Food menu se apna order place karein, turant live token generate hoga.
+                    There are no ready orders right now. Place an order from the campus menu to generate your live token.
                   </p>
                 </div>
                 <a
@@ -234,10 +234,10 @@ export const LiveTokenDisplay = () => {
             {preparingTokens.length === 0 ? (
               <div className="py-20 text-center space-y-2 bg-[#151C30]/80 rounded-3xl border border-purple-500/20 p-6 mt-4">
                 <p className="text-base font-black text-purple-300">
-                  Pehle Order Karo, Uske Baad Token Generate Hoga! ⏳
+                  Place an Order to Generate Your Live Token! ⏳
                 </p>
                 <p className="text-xs text-[#AAB3C5]">
-                  Kitchen queue abhi free hai. Order karte hi live token yahan appear ho jayega.
+                  The kitchen preparation queue is currently clear. Place an order to see your live token appear here.
                 </p>
               </div>
             ) : (

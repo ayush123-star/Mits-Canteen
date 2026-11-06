@@ -46,13 +46,13 @@ export const RegisterPage = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
-      setError('Kripya valid email address enter karein (jaise: yourname@mitsgwl.ac.in).');
+      setError('Please enter a valid email address (e.g., yourname@mitsgwl.ac.in).');
       return;
     }
 
     const isInstituteEmail = cleanEmail.endsWith('@mitsgwl.ac.in') || cleanEmail.endsWith('@mitsgwalior.in');
     if (!isInstituteEmail) {
-      setError('Access Denied: Keval authorized MITS College email ID (@mitsgwl.ac.in students ke liye aur @mitsgwalior.in teachers ke liye) hi allowed hai.');
+      setError('Access Denied: Only authorized MITS College email addresses (@mitsgwl.ac.in for students and @mitsgwalior.in for faculty) are permitted.');
       return;
     }
 

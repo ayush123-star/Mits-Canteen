@@ -156,10 +156,10 @@ export const StudentDashboard = () => {
             </div>
             <div className="space-y-1">
               <h3 className="font-black text-lg text-white">
-                Pehle Order Karo, Uske Baad Token Generate Hoga! 🍔
+                Place an Order to Generate Your Live Token! 🍔
               </h3>
               <p className="text-xs text-[#AAB3C5] max-w-md mx-auto leading-relaxed">
-                Aapka abhi koi active live token nahi hai. Food menu se apna pasandida khana order karein, turant aapka live kitchen token number generate ho jayega!
+                You do not have any active orders right now. Order your favorite food from the campus menu to instantly generate your kitchen pickup token!
               </p>
             </div>
             <Link
