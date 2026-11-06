@@ -185,8 +185,21 @@ export const AdminLayout = () => {
 
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                {user?.name?.charAt(0) || 'M'}
+              <div className="w-8 h-8 rounded-lg overflow-hidden border border-purple-500/30 shrink-0 bg-slate-800">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user?.name || 'Admin'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/assets/campus/ayush_pandey.jpg';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    {user?.name?.charAt(0) || 'M'}
+                  </div>
+                )}
               </div>
               <div className="truncate max-w-[130px]">
                 <p className="text-xs font-bold text-white truncate">{user?.name || 'Canteen Manager'}</p>

@@ -43,10 +43,10 @@ export const StudentProfilePage = () => {
       <div className="bg-gradient-to-r from-[#1C263A] via-[#151C30] to-[#1C263A] rounded-3xl p-6 sm:p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl border border-purple-500/25">
         <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
           <img
-            src={user?.avatar || '/assets/developer/ayush-pandey.jpg'}
+            src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
             alt={user?.name || 'Ayush Pandey'}
-            className="w-20 h-20 rounded-3xl object-cover border-2 border-purple-500/60 shadow-lg shadow-purple-500/30"
-            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'; }}
+            className="w-20 h-20 rounded-3xl object-cover border-2 border-purple-400 shadow-lg shadow-purple-500/30 ring-2 ring-purple-500/20"
+            onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
           />
           <div>
             <div className="flex items-center gap-2 justify-center sm:justify-start">

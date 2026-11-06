@@ -107,6 +107,7 @@ export const LoginPage = () => {
       email: 'pandeyayush1603@gmail.com',
       avatarInitial: 'A',
       avatarBg: 'bg-red-600',
+      photo: '/assets/developer/ayush_pandey.jpg',
       isPersonal: true,
       domain: 'gmail.com',
       type: 'Personal Gmail',

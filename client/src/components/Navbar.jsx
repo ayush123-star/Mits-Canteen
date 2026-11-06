@@ -223,16 +223,23 @@ export const Navbar = () => {
             {/* 3. Right Action Area: Developer Button + Light/Dark Mode Toggle + Cart + User */}
             <div className="flex items-center gap-1.5 sm:gap-2.5">
               
-              {/* Signature MITS AMS Developer Pill Button (Desktop & Tablet only to keep mobile navbar clean) */}
+              {/* Signature MITS AMS Developer Pill Button (Always visible with Ayush's photo) */}
               <button
                 type="button"
                 onClick={() => setIsDeveloperModalOpen(true)}
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                 title="View Lead Developer: Ayush Pandey"
               >
-                <Code className="w-3.5 h-3.5 text-blue-400" />
-                <span>Developer</span>
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                <div className="w-5 h-5 rounded-full overflow-hidden border border-purple-400 shrink-0 shadow-xs">
+                  <img
+                    src="/assets/developer/ayush_pandey.jpg"
+                    alt="Ayush Pandey"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
+                  />
+                </div>
+                <span className="hidden sm:inline text-xs">Developer</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               </button>
 
               {/* Functional Light / Dark Mode Toggle Button */}
@@ -265,19 +272,28 @@ export const Navbar = () => {
                 )}
               </button>
 
-              {/* User Dropdown or Single Sleek Sign In Button */}
+              {/* User Dropdown with Ayush's Real Profile Photo */}
               {isAuthenticated ? (
                 <div className="relative">
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/30 transition-all text-left shadow-sm cursor-pointer"
+                    className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/30 transition-all text-left shadow-sm cursor-pointer"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
-                      {user?.name?.charAt(0) || 'U'}
+                    {/* User Profile Photo */}
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-400/90 shadow-md ring-2 ring-purple-500/20 shrink-0 bg-slate-800">
+                      <img
+                        src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
+                        alt={user?.name || 'Ayush Pandey'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/assets/campus/ayush_pandey.jpg';
+                        }}
+                      />
                     </div>
+
                     <div className="hidden md:block">
                       <p className="text-xs font-bold text-white leading-tight truncate max-w-[90px]">
-                        {user?.name}
+                        {user?.name || 'Ayush Pandey'}
                       </p>
                       <p className="text-[9px] text-purple-300 capitalize leading-none mt-0.5">{user?.role?.replace('_', ' ')}</p>
                     </div>
@@ -292,35 +308,46 @@ export const Navbar = () => {
                         onClick={() => setUserDropdownOpen(false)}
                       />
 
-                      {/* 100% SOLID OPAQUE DARK DROPDOWN PANEL (Zero transparency, Zero background bleed-through) */}
+                      {/* 100% SOLID OPAQUE DARK DROPDOWN PANEL */}
                       <div
-                        className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#070B16] border-2 border-purple-500/40 shadow-2xl shadow-black ring-2 ring-black/80 z-50 overflow-hidden divide-y divide-purple-500/15 animate-fadeIn"
+                        className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#070B16] border-2 border-purple-500/40 shadow-2xl shadow-black ring-2 ring-black/80 z-50 overflow-hidden divide-y divide-purple-500/15 animate-fadeIn"
                       >
-                        {/* 1. DARK SOLID "SIGNED IN AS" HEADER */}
-                        <div className="p-3.5 bg-[#0C1222] border-b border-purple-500/25 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-purple-400 uppercase font-black tracking-widest flex items-center gap-1">
-                              <Sparkles className="w-3 h-3 text-purple-400" />
-                              SIGNED IN AS
-                            </span>
-                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                              {user?.role?.replace('_', ' ') || 'Student'}
-                            </span>
+                        {/* 1. DARK SOLID "SIGNED IN AS" HEADER WITH AYUSH'S PHOTO */}
+                        <div className="p-3.5 bg-[#0C1222] border-b border-purple-500/25 flex items-center gap-3">
+                          {/* Circular Photo with Glowing Border */}
+                          <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-purple-400 shadow-md ring-2 ring-purple-500/40 shrink-0 bg-slate-800">
+                            <img
+                              src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
+                              alt={user?.name || 'Ayush Pandey'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.src = '/assets/campus/ayush_pandey.jpg';
+                              }}
+                            />
+                            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0C1222]" title="Active" />
                           </div>
-                          
-                          <p className="text-xs font-black text-white truncate pt-0.5">
-                            {user?.name || 'MITS Student'}
-                          </p>
-                          <p className="text-[11px] text-slate-400 font-mono truncate">
-                            {user?.email}
-                          </p>
-                          {user?.studentId && (
-                            <div className="pt-1">
-                              <span className="inline-block px-2 py-0.5 rounded bg-[#151C30] text-purple-300 font-mono text-[10px] font-bold border border-purple-500/30">
-                                ID: {user?.studentId}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-purple-400 uppercase font-black tracking-widest flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-purple-400" />
+                                SIGNED IN AS
+                              </span>
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                {user?.role?.replace('_', ' ') || 'Student'}
                               </span>
                             </div>
-                          )}
+                            
+                            <p className="text-xs font-black text-white truncate mt-0.5">
+                              {user?.name || 'Ayush Pandey'}
+                            </p>
+                            <p className="text-[11px] text-slate-400 font-mono truncate">
+                              {user?.email || '25et1ay39@mitsgwl.ac.in'}
+                            </p>
+                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-[#151C30] text-purple-300 font-mono text-[9px] font-bold border border-purple-500/30">
+                              ID: {user?.studentId || 'BTET25O1039'}
+                            </span>
+                          </div>
                         </div>
 
                         {/* 2. MENU LINKS */}

@@ -46,8 +46,15 @@ export const StudentDashboard = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-              {user?.name?.charAt(0) || 'A'}
+            <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-purple-400 shadow-lg shadow-purple-500/30 ring-2 ring-purple-500/20 shrink-0 bg-slate-800">
+              <img
+                src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
+                alt={user?.name || 'Ayush Pandey'}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = '/assets/campus/ayush_pandey.jpg';
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">

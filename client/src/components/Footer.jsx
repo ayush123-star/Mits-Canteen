@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UtensilsCrossed, Clock, MapPin, Phone, ShieldCheck, Heart, Sparkles } from 'lucide-react';
+import { UtensilsCrossed, Clock, MapPin, Phone, ShieldCheck, Heart, Sparkles, Mail, Github, Linkedin } from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -103,6 +103,76 @@ export const Footer = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* Lead Developer Spotlight Card with Ayush's Real Photograph */}
+        <div className="mb-10 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#151C30] via-[#1C263A] to-[#151C30] border-2 border-purple-500/30 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-5 relative z-10">
+            <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-purple-400 shadow-xl ring-4 ring-purple-500/20 shrink-0 bg-slate-800">
+                <img
+                  src="/assets/developer/ayush_pandey.jpg"
+                  alt="Ayush Pandey"
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
+                />
+                <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#151C30]" title="Verified Creator" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 bg-purple-500/15 border border-purple-500/30 px-2.5 py-0.5 rounded-full">
+                    Lead Developer & Creator
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-white mt-1">
+                  Ayush Pandey
+                </h3>
+                <p className="text-xs text-[#AAB3C5] mt-0.5">
+                  Electronics and Telecommunication &bull; Madhav Institute of Technology & Science, Gwalior
+                </p>
+                <p className="text-[11px] text-purple-300 font-mono mt-0.5">
+                  Enrollment: BTET25O1039 &bull; College Email: 25et1ay39@mitsgwl.ac.in
+                </p>
+              </div>
+            </div>
+
+            {/* Direct Contact & Social Links */}
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=pandeyayush1603@gmail.com&su=Message%20from%20MITS%20Canteen%20Platform"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold transition-all shadow-md shadow-purple-500/20 active:scale-95"
+                title="Send direct Gmail message to Ayush Pandey"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Message Developer</span>
+              </a>
+
+              <a
+                href="https://www.linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-purple-500/30 text-purple-200 text-xs font-bold transition-all"
+                title="LinkedIn Profile"
+              >
+                <Linkedin className="w-3.5 h-3.5 text-blue-400" />
+                <span>LinkedIn</span>
+              </a>
+
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-purple-500/30 text-purple-200 text-xs font-bold transition-all"
+                title="GitHub Profile"
+              >
+                <Github className="w-3.5 h-3.5 text-purple-400" />
+                <span>GitHub</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Bottom Bar */}
