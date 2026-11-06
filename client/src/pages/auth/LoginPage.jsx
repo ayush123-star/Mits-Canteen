@@ -16,6 +16,9 @@ import {
   ChevronDown,
   Linkedin,
   Github,
+  Globe,
+  Award,
+  Briefcase,
   GraduationCap,
   Building,
   UserCheck,
@@ -548,32 +551,45 @@ export const LoginPage = () => {
                     Ayush Pandey
                   </h4>
                   <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                    Developer
+                    Lead Developer
                   </span>
                 </div>
 
                 <p className="text-xs text-purple-300 font-medium truncate mt-0.5">
-                  Electronics and Telecommunication
+                  Electronics and Telecommunication &bull; MITS Gwalior
+                </p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  IEEE MTT-S Technical Team &bull; Web Dev Intern @ Thiranex
                 </p>
 
-                {/* Social Icons Row: LinkedIn, GitHub, Email */}
+                {/* Social & Portfolio Icons Row: Portfolio, LinkedIn, GitHub, Email */}
                 <div className="flex items-center gap-2 mt-2">
                   <a
-                    href="https://linkedin.com"
+                    href="https://portfolio-jade-two-92.vercel.app/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-7 h-7 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white flex items-center justify-center transition-all shadow-xs"
+                    title="Live Portfolio Website"
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                  </a>
+
+                  <a
+                    href="https://www.linkedin.com/in/ayush-pandey-a9161b275"
                     target="_blank"
                     rel="noreferrer"
                     className="w-7 h-7 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 flex items-center justify-center transition-all"
-                    title="LinkedIn"
+                    title="LinkedIn Profile"
                   >
                     <Linkedin className="w-3.5 h-3.5" />
                   </a>
 
                   <a
-                    href="https://github.com"
+                    href="https://github.com/ayush123-star"
                     target="_blank"
                     rel="noreferrer"
                     className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all"
-                    title="GitHub"
+                    title="GitHub Profile"
                   >
                     <Github className="w-3.5 h-3.5" />
                   </a>

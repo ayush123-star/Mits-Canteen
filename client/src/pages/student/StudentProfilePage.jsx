@@ -16,14 +16,19 @@ import {
   CheckCircle2,
   LogOut,
   Save,
-  QrCode
+  QrCode,
+  Globe,
+  Briefcase,
+  ExternalLink,
+  Linkedin,
+  Github
 } from 'lucide-react';
 
 export const StudentProfilePage = () => {
   const { user, logout } = useAuth();
   const { orders } = useData();
 
-  const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
+  const [phone, setPhone] = useState(user?.phone || '+91 90395 67623');
   const [dietPref, setDietPref] = useState('Vegetarian');
   const [spicePref, setSpicePref] = useState('Medium');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -272,6 +277,97 @@ export const StudentProfilePage = () => {
               <span>WhatsApp Dispatch:</span>
               <span className="text-white font-semibold">Enabled</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Verified Academic, Clubs & Internship Portfolio Section */}
+      <div className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/25 shadow-2xl p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-purple-500/20 gap-3">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#7955E8]">
+              STUDENT PROFILE & CREDENTIALS
+            </span>
+            <h2 className="text-lg font-black text-white flex items-center gap-2 mt-0.5">
+              <span>Academic, Clubs & Industry Experience</span>
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <a
+              href="https://portfolio-jade-two-92.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition-all"
+            >
+              <Globe className="w-4 h-4" />
+              <span>Live Portfolio</span>
+              <ExternalLink className="w-3 h-3 ml-0.5" />
+            </a>
+
+            <a
+              href="https://www.linkedin.com/in/ayush-pandey-a9161b275"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-[#151C30] hover:bg-[#25334d] border border-blue-500/30 text-blue-400 flex items-center justify-center transition-all"
+              title="LinkedIn Profile"
+            >
+              <Linkedin className="w-4 h-4" />
+            </a>
+
+            <a
+              href="https://github.com/ayush123-star"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-[#151C30] hover:bg-[#25334d] border border-purple-500/30 text-purple-300 flex items-center justify-center transition-all"
+              title="GitHub Profile"
+            >
+              <Github className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Work Experience Card */}
+          <div className="bg-[#151C30]/90 rounded-2xl p-4 border border-purple-500/20 space-y-2.5">
+            <div className="flex items-center gap-2 text-purple-300 font-bold text-xs uppercase tracking-wider">
+              <Briefcase className="w-4 h-4 text-purple-400" />
+              <span>Internships & Industry Training</span>
+            </div>
+            <div className="bg-[#0B1020] p-3 rounded-xl border border-purple-500/20 space-y-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-white">Web Development Intern</h4>
+                <span className="text-[10px] text-purple-300 font-mono">Sep 2026 – Oct 2026</span>
+              </div>
+              <p className="text-[11px] text-emerald-400 font-semibold">Thiranex</p>
+              <p className="text-[11px] text-[#AAB3C5] leading-relaxed">
+                Engineered responsive user interfaces, optimized front-end performance, collaborated on web architecture, and integrated modular UI systems.
+              </p>
+            </div>
+            <p className="text-[11px] text-slate-400 pl-1">
+              &bull; Shortlisted via National Internship Portal for App & AI/ML Internships at UPTOSKILLS & ROBOKWIK.COM.
+            </p>
+          </div>
+
+          {/* Clubs & Student Societies Card */}
+          <div className="bg-[#151C30]/90 rounded-2xl p-4 border border-purple-500/20 space-y-2.5">
+            <div className="flex items-center gap-2 text-purple-300 font-bold text-xs uppercase tracking-wider">
+              <Award className="w-4 h-4 text-purple-400" />
+              <span>Clubs & Student Societies</span>
+            </div>
+            <div className="bg-[#0B1020] p-3 rounded-xl border border-purple-500/20 space-y-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-white">Technical Team Member</h4>
+                <span className="text-[10px] text-emerald-400 font-mono">Oct 2026 – Present</span>
+              </div>
+              <p className="text-[11px] text-blue-400 font-semibold">IEEE MTT-S Student Branch Chapter, MITS-DU</p>
+              <p className="text-[11px] text-[#AAB3C5] leading-relaxed">
+                Active core contributor in organizing technical workshops, microwave and RF engineering sessions, and hands-on coding demonstrations.
+              </p>
+            </div>
+            <p className="text-[11px] text-slate-400 pl-1">
+              &bull; Member: IETE Students' Forum (MITS-DU) &bull; Google Student Ambassador Program 2026.
+            </p>
           </div>
         </div>
       </div>

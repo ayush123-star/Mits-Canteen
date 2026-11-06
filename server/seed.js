@@ -388,7 +388,7 @@ const seedData = async () => {
         userType: 'student',
         studentId: 'BTET25O1039',
         department: 'Electronics and Telecommunication',
-        phone: '9876543210',
+        phone: '9039567623',
         avatar: '/assets/developer/ayush_pandey.jpg',
         favorites: [createdFoods[0]._id, createdFoods[2]._id],
       });
@@ -405,7 +405,7 @@ const seedData = async () => {
         role: 'student',
         studentId: '0901CS221045',
         department: 'Computer Science & Engineering',
-        phone: '9876543210',
+        phone: '9039567623',
         favorites: [createdFoods[0]._id, createdFoods[4]._id, createdFoods[12]._id],
       });
       console.log('[Seed] Created MITS Student: 0901cs221045@mitsgwalior.in / password123');
@@ -437,7 +437,7 @@ const seedData = async () => {
         role: 'student',
         studentId: '0901CS221045',
         department: 'Computer Science & Engineering',
-        phone: '9876543210',
+        phone: '9039567623',
       });
     }
 
@@ -451,7 +451,7 @@ const seedData = async () => {
         role: 'student',
         studentId: 'STU-GMAIL-101',
         department: 'Computer Science & Engineering',
-        phone: '9876543210',
+        phone: '9039567623',
       });
     }
 

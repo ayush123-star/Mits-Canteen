@@ -1,6 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UtensilsCrossed, Clock, MapPin, Phone, ShieldCheck, Heart, Sparkles, Mail, Github, Linkedin } from 'lucide-react';
+import {
+  UtensilsCrossed,
+  Clock,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Heart,
+  Sparkles,
+  Mail,
+  Github,
+  Linkedin,
+  Globe,
+  Briefcase,
+  Award
+} from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -129,32 +143,42 @@ export const Footer = () => {
                   Ayush Pandey
                 </h3>
                 <p className="text-xs text-[#AAB3C5] mt-0.5">
-                  Electronics and Telecommunication &bull; Madhav Institute of Technology & Science, Gwalior
+                  B.Tech Electronics & Telecommunication (2025–2029) &bull; MITS Gwalior
                 </p>
-                <p className="text-[11px] text-purple-300 font-mono mt-0.5">
-                  Enrollment: BTET25O1039 &bull; College Email: 25et1ay39@mitsgwl.ac.in
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <Award className="w-3 h-3 text-emerald-400" />
+                    Technical Team @ IEEE MTT-S Student Branch MITS
+                  </span>
+                  <span className="text-[10px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <Briefcase className="w-3 h-3 text-blue-400" />
+                    Web Dev Intern @ Thiranex
+                  </span>
+                </div>
+                <p className="text-[11px] text-purple-300 font-mono mt-1">
+                  Enrollment: BTET25O1039 &bull; pandeyayush1603@gmail.com &bull; +91 90395 67623
                 </p>
               </div>
             </div>
 
-            {/* Direct Contact & Social Links */}
-            <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {/* Direct Contact & Social Links (Including Portfolio Icon Button) */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <a
-                href="https://mail.google.com/mail/?view=cm&fs=1&to=pandeyayush1603@gmail.com&su=Message%20from%20MITS%20Canteen%20Platform"
+                href="https://portfolio-jade-two-92.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold transition-all shadow-md shadow-purple-500/20 active:scale-95"
-                title="Send direct Gmail message to Ayush Pandey"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-90 text-white text-xs font-bold transition-all shadow-md shadow-purple-500/25"
+                title="Ayush Pandey Portfolio Website"
               >
-                <Mail className="w-4 h-4" />
-                <span>Message Developer</span>
+                <Globe className="w-4 h-4 text-white" />
+                <span>Portfolio</span>
               </a>
 
               <a
-                href="https://www.linkedin.com"
+                href="https://www.linkedin.com/in/ayush-pandey-a9161b275"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-purple-500/30 text-purple-200 text-xs font-bold transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-blue-500/30 text-blue-300 hover:text-white text-xs font-bold transition-all"
                 title="LinkedIn Profile"
               >
                 <Linkedin className="w-3.5 h-3.5 text-blue-400" />
@@ -162,14 +186,25 @@ export const Footer = () => {
               </a>
 
               <a
-                href="https://github.com"
+                href="https://github.com/ayush123-star"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-purple-500/30 text-purple-200 text-xs font-bold transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-purple-500/30 text-purple-200 hover:text-white text-xs font-bold transition-all"
                 title="GitHub Profile"
               >
                 <Github className="w-3.5 h-3.5 text-purple-400" />
                 <span>GitHub</span>
+              </a>
+
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=pandeyayush1603@gmail.com&su=Message%20from%20MITS%20Canteen%20Platform"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0B1020] hover:bg-[#1C263A] border border-pink-500/30 text-pink-300 hover:text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                title="Send direct Gmail message to Ayush Pandey"
+              >
+                <Mail className="w-3.5 h-3.5 text-pink-400" />
+                <span>Email</span>
               </a>
             </div>
           </div>
