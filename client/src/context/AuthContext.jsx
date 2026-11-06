@@ -133,7 +133,9 @@ export const AuthProvider = ({ children }) => {
         userType: 'student',
         department: 'Computer Science & Engineering',
         isActive: true,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        avatar: (cleanEmail.includes('ayush') || studentData.name?.toLowerCase().includes('ayush'))
+        ? '/assets/developer/ayush_pandey.jpg'
+        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         joinedDate: new Date().toISOString().split('T')[0],
       };
       const updated = [...savedUsers, newDiner];
@@ -187,7 +189,9 @@ export const AuthProvider = ({ children }) => {
       department: studentData.department || 'General Campus',
       phone: studentData.phone || '+91 98765 00000',
       isActive: true,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      avatar: (cleanEmail.includes('ayush') || studentData.name?.toLowerCase().includes('ayush'))
+        ? '/assets/developer/ayush_pandey.jpg'
+        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       joinedDate: new Date().toISOString().split('T')[0],
     };
 

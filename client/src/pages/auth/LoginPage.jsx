@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -19,14 +19,32 @@ import {
   GraduationCap,
   Building,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  UserPlus
 } from 'lucide-react';
 
 export const LoginPage = () => {
-  const { loginWithGoogle, login } = useAuth();
+  const { user, isAuthenticated, loginWithGoogle, login } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const developerRef = useRef(null);
+
+  const destination = location.state?.from?.pathname || '/';
+
+  // If already authenticated, redirect to destination or dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role === 'super_admin') {
+        navigate('/super-admin/dashboard', { replace: true });
+      } else if (user?.role === 'canteen_admin' || user?.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate(destination, { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate, destination]);
 
   // Active Google OAuth Modal State: null | 'student' | 'faculty'
   const [oauthModalRole, setOauthModalRole] = useState(null);
@@ -179,7 +197,7 @@ export const LoginPage = () => {
 
       if (res.success) {
         setOauthModalRole(null);
-        navigate('/student/dashboard');
+        navigate(destination, { replace: true });
       } else {
         setAuthError(res.message || 'Google OAuth authentication failed.');
       }
@@ -252,7 +270,7 @@ export const LoginPage = () => {
 
       {/* 1. MITS Top Header Bar */}
       <header className="w-full border-b border-purple-500/20 bg-[#0B1020]/90 backdrop-blur-xl px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40">
-        <Link to="/" className="flex items-center gap-2.5 group">
+        <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-slate-900 border border-purple-500/30 p-1 flex items-center justify-center shrink-0 shadow-sm">
             <img
               src="/assets/campus/mits-logo.png"
@@ -264,14 +282,14 @@ export const LoginPage = () => {
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-black text-base sm:text-lg tracking-tight text-white group-hover:text-purple-300 transition-colors">
+            <span className="font-black text-base sm:text-lg tracking-tight text-white">
               MITS
             </span>
             <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/25">
               CANTEEN
             </span>
           </div>
-        </Link>
+        </div>
 
         {/* Right Nav Action: Developer Pill Button & Theme Icon */}
         <div className="flex items-center gap-2">
@@ -417,6 +435,26 @@ export const LoginPage = () => {
               <Building className="w-3.5 h-3.5 text-orange-400" />
               <span>Teacher (@mitsgwalior)</span>
             </button>
+          </div>
+
+          {/* Mandatory Student Registration / New Account Gate */}
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500/15 via-[#151C30] to-blue-500/15 border border-purple-500/30 flex items-center justify-between gap-3 shadow-inner">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center shrink-0">
+                <UserPlus className="w-4 h-4" />
+              </div>
+              <div className="truncate">
+                <p className="text-xs font-bold text-white leading-tight">New Student at MITS?</p>
+                <p className="text-[10px] text-slate-400">Register once to unlock dining & ordering</p>
+              </div>
+            </div>
+            <Link
+              to="/register"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold shadow-md shadow-purple-500/25 shrink-0 transition-all active:scale-95 flex items-center gap-1"
+            >
+              <span>Register</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           {/* Show Features Toggle Button (As seen on MITS AMS page) */}

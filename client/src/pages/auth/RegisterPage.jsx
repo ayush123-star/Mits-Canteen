@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { MitsCampusBackground } from '../../components/common/MitsCampusBackground';
@@ -28,8 +28,15 @@ export const RegisterPage = () => {
   });
   const [error, setError] = useState('');
 
-  const { registerStudent } = useAuth();
+  const { user, isAuthenticated, registerStudent } = useAuth();
   const navigate = useNavigate();
+
+  // If already logged in, redirect to home
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
@@ -71,7 +78,7 @@ export const RegisterPage = () => {
     });
 
     if (res.success) {
-      navigate('/student/dashboard');
+      navigate('/', { replace: true });
     } else {
       setError(res.message);
     }

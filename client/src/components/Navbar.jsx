@@ -418,7 +418,7 @@ export const Navbar = () => {
                             onClick={() => {
                               logout();
                               setUserDropdownOpen(false);
-                              navigate('/');
+                              navigate('/login');
                             }}
                             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors text-left cursor-pointer"
                           >
@@ -568,14 +568,28 @@ export const Navbar = () => {
               </Link>
             )}
 
-            {!isAuthenticated && (
+            {isAuthenticated ? (
+              <div className="pt-2 border-t border-purple-500/20">
+                <button
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                    navigate('/login');
+                  }}
+                  className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
               <div className="pt-2">
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block text-center py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30"
                 >
-                  Sign In with Google
+                  Sign In to MITS Canteen
                 </Link>
               </div>
             )}

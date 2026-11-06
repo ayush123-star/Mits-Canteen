@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -45,18 +45,32 @@ import { BusinessReportsPage } from './pages/superAdmin/BusinessReportsPage';
 import { SystemAuditLogsPage } from './pages/superAdmin/SystemAuditLogsPage';
 import { SuperAdminSettingsPage } from './pages/superAdmin/SuperAdminSettingsPage';
 
-// Protected Route Guard with Role Isolation
+// Protected Route Guard with Role Isolation (Mandatory Login)
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
     if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+// Public Auth Route Guard (Prevents logged-in users from seeing the login/register screen again)
+const PublicAuthRoute = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
+    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -74,82 +88,46 @@ export function App() {
                 <ChangePasswordModal />
 
                 <Routes>
-                {/* 1. PUBLIC STANDALONE SCREENS */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                {/* 1. PUBLIC AUTH SCREENS (Mandatory first gate for unauthenticated users) */}
+                <Route
+                  path="/login"
+                  element={
+                    <PublicAuthRoute>
+                      <LoginPage />
+                    </PublicAuthRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <PublicAuthRoute>
+                      <RegisterPage />
+                    </PublicAuthRoute>
+                  }
+                />
                 <Route path="/live-tokens" element={<LiveTokenDisplay />} />
 
-                {/* 2. STUDENT PORTAL (Zomato-inspired, zero-queue dining) */}
-                <Route element={<StudentLayout />}>
+                {/* 2. STUDENT PORTAL (MANDATORY LOGIN REQUIRED: Accessible only after login / registration) */}
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <StudentLayout />
+                    </ProtectedRoute>
+                  }
+                >
                   <Route path="/" element={<HomePage />} />
                   <Route path="/menu" element={<MenuPage />} />
                   <Route path="/about" element={<AboutPage />} />
 
                   {/* Student Protected Routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <StudentDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/dashboard"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <StudentDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-orders"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <MyOrdersPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/my-orders"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <MyOrdersPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/feedback"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <FeedbackPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/feedback"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <FeedbackPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <StudentProfilePage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/profile"
-                    element={
-                      <ProtectedRoute allowedRoles={['student']}>
-                        <StudentProfilePage />
-                      </ProtectedRoute>
-                    }
-                  />
+                  <Route path="/dashboard" element={<StudentDashboard />} />
+                  <Route path="/student/dashboard" element={<StudentDashboard />} />
+                  <Route path="/my-orders" element={<MyOrdersPage />} />
+                  <Route path="/student/my-orders" element={<MyOrdersPage />} />
+                  <Route path="/feedback" element={<FeedbackPage />} />
+                  <Route path="/student/feedback" element={<FeedbackPage />} />
+                  <Route path="/profile" element={<StudentProfilePage />} />
+                  <Route path="/student/profile" element={<StudentProfilePage />} />
                 </Route>
 
                 {/* 3. CANTEEN ADMIN / OWNER PORTAL */}
