@@ -272,9 +272,9 @@ export const Navbar = () => {
                 )}
               </button>
 
-              {/* User Dropdown with Ayush's Real Profile Photo */}
+              {/* User Dropdown with Ayush's Real Profile Photo (Desktop only; on mobile it is inside the 3-lines menu) */}
               {isAuthenticated ? (
-                <div className="relative">
+                <div className="relative hidden md:block">
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                     className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/30 transition-all text-left shadow-sm cursor-pointer"
@@ -456,29 +456,97 @@ export const Navbar = () => {
         {mobileMenuOpen && (
           <div className="lg:hidden bg-[#070B16] border-b-2 border-purple-500/30 px-4 pt-3 pb-6 space-y-3 animate-fadeIn shadow-2xl">
             
-            {/* 1. TOP AUTH / SIGN IN HEADER (Inside the 3-lines menu on mobile) */}
+            {/* 1. EXACT "SIGNED IN AS" CARD FROM THE USER DROPDOWN (Shifted inside the 3-lines menu on mobile) */}
             {isAuthenticated ? (
-              <div className="p-3.5 rounded-2xl bg-[#0C1222] border border-purple-500/30 flex items-center gap-3 shadow-md">
-                <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-purple-400 shadow-md ring-2 ring-purple-500/30 shrink-0 bg-slate-800">
-                  <img
-                    src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
-                    alt={user?.name || 'Ayush Pandey'}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
-                  />
-                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#0C1222]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black text-white truncate">{user?.name || 'Ayush Pandey'}</p>
-                    <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      {user?.role?.replace('_', ' ') || 'Student'}
+              <div className="rounded-2xl bg-[#070B16] border-2 border-purple-500/40 shadow-2xl overflow-hidden divide-y divide-purple-500/15">
+                {/* Header with Photo, Name & ID */}
+                <div className="p-3.5 bg-[#0C1222] flex items-center gap-3">
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-purple-400 shadow-md ring-2 ring-purple-500/40 shrink-0 bg-slate-800">
+                    <img
+                      src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
+                      alt={user?.name || 'Ayush Pandey'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = '/assets/campus/ayush_pandey.jpg';
+                      }}
+                    />
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0C1222]" title="Active" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] text-purple-400 uppercase font-black tracking-widest flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-400" />
+                        SIGNED IN AS
+                      </span>
+                      <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        {user?.role?.replace('_', ' ') || 'Student'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-black text-white truncate mt-0.5">
+                      {user?.name || 'Ayush Pandey'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-mono truncate">
+                      {user?.email || '25et1ay39@mitsgwl.ac.in'}
+                    </p>
+                    <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-[#151C30] text-purple-300 font-mono text-[9px] font-bold border border-purple-500/30">
+                      ID: {user?.studentId || 'BTET25O1039'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 font-mono truncate">{user?.email}</p>
-                  <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-[#151C30] text-purple-300 font-mono text-[9px] font-bold border border-purple-500/25">
-                    ID: {user?.studentId || 'BTET25O1039'}
-                  </span>
+                </div>
+
+                {/* Account Actions from Dropdown */}
+                <div className="p-1.5 space-y-0.5 bg-[#070B16]">
+                  {!isAdmin && (
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                    >
+                      <User className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Student Dashboard</span>
+                    </Link>
+                  )}
+
+                  <Link
+                    to="/my-orders"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                  >
+                    <ClipboardList className="w-3.5 h-3.5 text-purple-400" />
+                    <span>My Order History {userActiveOrders > 0 && `(${userActiveOrders})`}</span>
+                  </Link>
+
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                  >
+                    <User className="w-3.5 h-3.5 text-purple-400" />
+                    <span>My Profile</span>
+                  </Link>
+
+                  <Link
+                    to="/feedback"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-[#151C30] transition-colors"
+                  >
+                    <Star className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Rate Dishes & Feedback</span>
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                      navigate('/login');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors text-left cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 shrink-0" />
+                    <span>Sign Out</span>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -498,7 +566,7 @@ export const Navbar = () => {
               </div>
             )}
 
-            {/* 2. CLEAN NAVIGATION LINKS */}
+            {/* 2. GENERAL CANTEEN NAVIGATION LINKS */}
             <div className="space-y-1">
               <Link
                 to="/"
@@ -542,52 +610,6 @@ export const Navbar = () => {
               >
                 🏛️ Explore Campus Spaces
               </Link>
-
-              {isAuthenticated && (
-                <>
-                  <Link
-                    to="/my-orders"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
-                      isActive('/my-orders') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-                    }`}
-                  >
-                    🛍️ My Orders {userActiveOrders > 0 && `(${userActiveOrders})`}
-                  </Link>
-
-                  {!isAdmin && (
-                    <Link
-                      to="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
-                        isActive('/dashboard') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-                      }`}
-                    >
-                      📊 Student Dashboard
-                    </Link>
-                  )}
-
-                  <Link
-                    to="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
-                      isActive('/profile') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-                    }`}
-                  >
-                    👤 My Student Profile
-                  </Link>
-
-                  <Link
-                    to="/feedback"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
-                      isActive('/feedback') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-                    }`}
-                  >
-                    ⭐ Rate Dishes & Feedback
-                  </Link>
-                </>
-              )}
 
               {isAdmin && !isSuperAdmin && (
                 <Link
