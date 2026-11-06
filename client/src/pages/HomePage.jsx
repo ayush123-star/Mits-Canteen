@@ -412,47 +412,110 @@ export const HomePage = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {[
             {
               step: '01',
               title: 'Browse & Customize',
-              desc: 'Select from breakfast, lunch thalis, fast food snacks and beverages with dietary filters.',
+              tag: '🍔 Campus Menu & Combos',
+              desc: 'Select from hot breakfast, lunch thalis, samosas, burgers, and shakes with pure veg dietary filters.',
               icon: UtensilsCrossed,
+              image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80',
+              fallback: '/assets/campus/mits-main-canteen.jpg',
+              badge: '100+ Campus Items',
+              badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
             },
             {
               step: '02',
               title: 'Select Pickup Time',
-              desc: 'Choose ASAP or pre-order precisely for your college lecture break.',
+              tag: '⏱️ Lecture Break Slots',
+              desc: 'Choose ASAP immediate prep (~8m) or schedule precisely for your upcoming college lecture break.',
               icon: Clock,
+              image: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80',
+              fallback: '/assets/campus/mits-academic-block.jpg',
+              badge: 'Zero Queue Wait',
+              badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
             },
             {
               step: '03',
               title: 'Get Unique Token',
-              desc: 'Pay via UPI or Cash at Counter to receive your digital Token and scannable QR Pass.',
+              tag: '🎫 Contactless QR Pass',
+              desc: 'Pay seamlessly via UPI or Cash at counter to instantly receive your digital Token # and scannable QR Pass.',
               icon: QrCode,
+              image: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=600&auto=format&fit=crop&q=80',
+              fallback: '/assets/campus/mits-central-library.jpg',
+              badge: 'Instant QR & SMS Pass',
+              badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
             },
             {
               step: '04',
               title: 'Collect at Counter',
-              desc: 'Watch the live screen or WhatsApp alert. Walk straight to the Counter when ready!',
+              tag: '📍 MITS Main Canteen',
+              desc: 'Watch the live TV screen or get automated WhatsApp alerts. Walk straight to the Counter when ready!',
               icon: CheckCircle2,
+              image: '/assets/campus/mits-main-canteen.jpg',
+              fallback: '/images/mits/mits-main-canteen.jpg',
+              badge: 'Express Counter Pickup',
+              badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
             },
           ].map((card, idx) => {
             const Icon = card.icon;
             return (
               <div
                 key={idx}
-                className="relative bg-[#1C263A]/85 backdrop-blur-xl rounded-3xl p-6 border border-purple-500/20 shadow-xl card-3d group"
+                className="relative bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl p-4 sm:p-5 border border-purple-500/25 shadow-xl hover:shadow-2xl hover:shadow-purple-900/30 hover:border-purple-500/40 transition-all duration-300 card-3d group flex flex-col justify-between overflow-hidden"
               >
-                <div className="text-3xl font-black text-purple-400/25 group-hover:text-purple-400 transition-colors">
-                  {card.step}
+                <div>
+                  {/* Photo Container According to Step Role */}
+                  <div className="relative h-44 sm:h-48 w-full rounded-2xl overflow-hidden bg-[#151C30] mb-4 shadow-inner">
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                      loading="lazy"
+                      onError={(e) => { e.target.src = card.fallback; }}
+                    />
+                    {/* Dark gradient & hover shine sweep */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1C263A] via-[#1C263A]/20 to-black/30" />
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+
+                    {/* Step Number Badge */}
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-xl bg-[#0B1020]/90 backdrop-blur-md border border-purple-500/40 text-xs font-black font-mono text-purple-300 shadow-md flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+                      STEP {card.step}
+                    </div>
+
+                    {/* Step Icon Badge */}
+                    <div className="absolute top-3 right-3 w-9 h-9 rounded-xl bg-gradient-to-br from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center shadow-lg group-hover:rotate-6 group-hover:scale-105 transition-all">
+                      <Icon className="w-4 h-4" />
+                    </div>
+
+                    {/* Role Tag Pill */}
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <span className="px-2.5 py-1 rounded-lg bg-[#0B1020]/90 backdrop-blur-md border border-white/10 text-[10px] font-bold text-slate-200">
+                        {card.tag}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Title & Description */}
+                  <h4 className="font-extrabold text-base text-white group-hover:text-purple-300 transition-colors">
+                    {card.title}
+                  </h4>
+                  <p className="text-xs text-[#AAB3C5] mt-2 leading-relaxed">
+                    {card.desc}
+                  </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-[#151C30] text-purple-300 border border-purple-500/25 flex items-center justify-center my-4 group-hover:bg-gradient-to-r group-hover:from-[#7955E8] group-hover:to-[#526DFF] group-hover:text-white transition-all shadow-xs">
-                  <Icon className="w-6 h-6" />
+
+                {/* Bottom Feature Highlight Badge */}
+                <div className="mt-5 pt-3.5 border-t border-purple-500/20 flex items-center justify-between">
+                  <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${card.badgeColor}`}>
+                    {card.badge}
+                  </span>
+                  <span className="text-[11px] font-bold text-purple-400 group-hover:translate-x-1 transition-transform">
+                    &rarr;
+                  </span>
                 </div>
-                <h4 className="font-extrabold text-base text-white">{card.title}</h4>
-                <p className="text-xs text-[#AAB3C5] mt-2 leading-relaxed">{card.desc}</p>
               </div>
             );
           })}
