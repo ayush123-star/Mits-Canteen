@@ -266,6 +266,21 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
+    if (accessToken && !tokenEmail) {
+      try {
+        const gInfo = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (gInfo.data?.email) {
+          tokenEmail = gInfo.data.email;
+          tokenName = gInfo.data.name;
+          tokenPicture = gInfo.data.picture;
+        }
+      } catch (e) {
+        console.debug('Client userinfo fetch fallback:', e.message);
+      }
+    }
+
     const cleanEmail = String(tokenEmail || '').toLowerCase().trim();
 
     // 1. Strict Domain Validation on Client

@@ -7,11 +7,10 @@ const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { sendOtpViaWhatsApp } = require('../services/whatsappService');
 
-const GOOGLE_CLIENT_ID =
-  process.env.GOOGLE_CLIENT_ID ||
-  '480120540018-geo3h2p5c6eq50rqmnbhkggibfd1t43m.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
-const googleOAuthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleOAuthClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
 const activeOtpStore = new Map();
 
