@@ -50,7 +50,7 @@ export const LiveTokenDisplay = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0B1020] text-white flex flex-col p-4 sm:p-6 lg:p-8 space-y-6 overflow-hidden">
+    <div className="relative min-h-screen bg-[#0B1020] text-white flex flex-col p-4 sm:p-6 lg:p-8 space-y-6 overflow-hidden dark-surface">
       {/* Real Animated MITS Gwalior Campus Drone Reel Background */}
       <MitsCampusBackground overlay="tv" showBadge={true} showControls={false} />
 

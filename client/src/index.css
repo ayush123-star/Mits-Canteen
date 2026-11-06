@@ -41,99 +41,222 @@ html.light {
   }
 }
 
-/* Light Mode Global Theme Styles */
+/* =======================================================
+   LIGHT MODE MODERN CAMPUS THEME
+   ======================================================= */
 html.light body {
   background-color: #F4F6FB !important;
   color: #0F172A !important;
 }
 
-html.light h1,
-html.light h2,
-html.light h3,
-html.light h4,
-html.light h5,
-html.light h6 {
+/* Headings in light mode */
+html.light h1:not(.dark-surface *):not(button *):not(.btn-mits *),
+html.light h2:not(.dark-surface *):not(button *):not(.btn-mits *),
+html.light h3:not(.dark-surface *):not(button *):not(.btn-mits *),
+html.light h4:not(.dark-surface *):not(button *):not(.btn-mits *),
+html.light h5:not(.dark-surface *):not(button *):not(.btn-mits *),
+html.light h6:not(.dark-surface *):not(button *):not(.btn-mits *) {
   color: #0F172A !important;
 }
 
+/* Primary text in light mode (turns dark slate except inside buttons & dark surfaces) */
+html.light .text-white:not(button):not(button *):not(a.bg-gradient-to-r):not(a.bg-gradient-to-r *):not(.btn-mits):not(.btn-mits *):not(.dark-surface):not(.dark-surface *):not([class*="bg-emerald-600"]):not([class*="bg-emerald-600"] *):not([class*="bg-purple-600"]):not([class*="bg-purple-600"] *):not([class*="bg-red-600"]):not([class*="bg-red-600"] *):not([class*="bg-blue-600"]):not([class*="bg-blue-600"] *):not(span[class*="bg-gradient-to-r"]):not(span[class*="bg-gradient-to-r"] *):not(span[class*="bg-orange"]):not(span[class*="bg-orange"] *) {
+  color: #0F172A !important;
+}
+
+html.light .text-slate-100:not(button *):not(.dark-surface *),
+html.light .text-slate-200:not(button *):not(.dark-surface *) {
+  color: #1E293B !important;
+}
+
+/* Secondary & muted text in light mode */
+html.light .text-\[\#AAB3C5\]:not(.dark-surface *),
+html.light .text-slate-400:not(.dark-surface *),
+html.light .text-gray-400:not(.dark-surface *) {
+  color: #475569 !important;
+}
+
+html.light .text-slate-300:not(.dark-surface *) {
+  color: #334155 !important;
+}
+
+/* High-contrast colors for badges & colored accents on light backgrounds */
+html.light .text-purple-300:not(.dark-surface *),
+html.light .text-purple-400:not(.dark-surface *) {
+  color: #6D28D9 !important;
+}
+html.light .text-emerald-300:not(.dark-surface *),
+html.light .text-emerald-400:not(.dark-surface *) {
+  color: #047857 !important;
+}
+html.light .text-blue-300:not(.dark-surface *),
+html.light .text-blue-400:not(.dark-surface *) {
+  color: #1D4ED8 !important;
+}
+html.light .text-amber-300:not(.dark-surface *),
+html.light .text-amber-400:not(.dark-surface *) {
+  color: #B45309 !important;
+}
+html.light .text-red-300:not(.dark-surface *),
+html.light .text-red-400:not(.dark-surface *) {
+  color: #B91C1C !important;
+}
+
+/* Form controls in light mode */
 html.light input,
 html.light select,
 html.light textarea {
   color-scheme: light !important;
-  background-color: #F8FAFC !important;
+  background-color: #FFFFFF !important;
   color: #0F172A !important;
   border-color: rgba(121, 85, 232, 0.25) !important;
 }
-
-html.light header {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  border-color: rgba(121, 85, 232, 0.18) !important;
-  box-shadow: 0 4px 20px -2px rgba(121, 85, 232, 0.08) !important;
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
 }
-
-html.light .bg-\[\#0B1020\],
-html.light .bg-\[\#0B1020\]\/90,
-html.light .bg-\[\#0B1020\]\/80,
-html.light .bg-\[\#0B1020\]\/95 {
-  background-color: rgba(244, 246, 251, 0.95) !important;
-}
-
-html.light .bg-\[\#1C263A\],
-html.light .bg-\[\#1C263A\]\/90,
-html.light .bg-\[\#1C263A\]\/80,
-html.light .bg-\[\#1C263A\]\/95,
-html.light .bg-\[\#1C263A\]\/60 {
+html.light option {
   background-color: #FFFFFF !important;
-  border-color: rgba(121, 85, 232, 0.16) !important;
-  box-shadow: 0 10px 25px -5px rgba(121, 85, 232, 0.07) !important;
-}
-
-html.light .bg-\[\#151C30\],
-html.light .bg-\[\#151C30\]\/80,
-html.light .bg-\[\#151C30\]\/90,
-html.light .bg-\[\#151C30\]\/95,
-html.light .bg-\[\#151C30\]\/98 {
-  background-color: #F8FAFC !important;
-  border-color: rgba(121, 85, 232, 0.15) !important;
-}
-
-html.light .text-white {
   color: #0F172A !important;
 }
 
-html.light .text-\[\#AAB3C5\],
-html.light .text-slate-400 {
-  color: #64748B !important;
+/* Header in light mode */
+html.light header {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(121, 85, 232, 0.16) !important;
+  box-shadow: 0 4px 20px -2px rgba(121, 85, 232, 0.08) !important;
+}
+html.light header a:not([class*="bg-gradient-to-r"]) {
+  color: #475569 !important;
+}
+html.light header a:not([class*="bg-gradient-to-r"]):hover {
+  color: #7955E8 !important;
 }
 
-html.light .text-slate-200,
-html.light .text-slate-300 {
-  color: #334155 !important;
+/* Light mode panels & cards (using substring attribute matching) */
+html.light [class*="bg-[#0B1020]"]:not(.dark-surface):not(.dark-surface *) {
+  background-color: #F4F6FB !important;
 }
 
-html.light .border-purple-500\/20,
-html.light .border-purple-500\/25,
-html.light .border-purple-500\/30,
-html.light .border-purple-500\/40 {
+html.light [class*="bg-[#1C263A]"]:not(.dark-surface):not(.dark-surface *) {
+  background-color: #FFFFFF !important;
+  border-color: rgba(121, 85, 232, 0.16) !important;
+  box-shadow: 0 4px 20px -2px rgba(121, 85, 232, 0.08) !important;
+}
+
+html.light [class*="bg-[#151C30]"]:not(.dark-surface):not(.dark-surface *) {
+  background-color: #F8FAFC !important;
+  border-color: rgba(121, 85, 232, 0.14) !important;
+}
+
+html.light [class*="bg-[#070B16]"]:not(.dark-surface):not(.dark-surface *) {
+  background-color: #FFFFFF !important;
   border-color: rgba(121, 85, 232, 0.18) !important;
+  box-shadow: 0 10px 25px -5px rgba(121, 85, 232, 0.12) !important;
 }
 
-/* Ensure white text remains white inside colored action buttons and badges */
-html.light .bg-gradient-to-r,
-html.light .bg-gradient-to-tr,
-html.light .bg-gradient-to-br,
+html.light [class*="bg-[#0C1222]"]:not(.dark-surface):not(.dark-surface *) {
+  background-color: #F8FAFC !important;
+  border-color: rgba(121, 85, 232, 0.14) !important;
+}
+
+html.light [class*="border-purple-500"]:not(.dark-surface):not(.dark-surface *) {
+  border-color: rgba(121, 85, 232, 0.16) !important;
+}
+
+/* Action Buttons & Vibrant Badges: KEEP WHITE TEXT ALWAYS */
 html.light .btn-mits,
-html.light .bg-emerald-500,
-html.light .bg-emerald-600,
-html.light .bg-red-500,
-html.light .bg-red-600 {
+html.light button.bg-gradient-to-r,
+html.light a.bg-gradient-to-r,
+html.light button[class*="bg-emerald"],
+html.light button[class*="bg-purple"],
+html.light button[class*="bg-red"],
+html.light button[class*="bg-blue"],
+html.light button[class*="bg-indigo"],
+html.light button[class*="bg-orange"],
+html.light span[class*="bg-gradient-to-r"],
+html.light span[class*="bg-purple-600"],
+html.light span[class*="bg-emerald-600"],
+html.light span[class*="bg-red-600"],
+html.light span[class*="bg-blue-600"],
+html.light span[class*="bg-orange-500"] {
   color: #FFFFFF !important;
 }
 
-html.light .bg-gradient-to-r *,
-html.light .bg-gradient-to-tr *,
-html.light .btn-mits * {
+html.light .btn-mits *,
+html.light button.bg-gradient-to-r *,
+html.light a.bg-gradient-to-r *,
+html.light button[class*="bg-emerald"] *,
+html.light button[class*="bg-purple"] *,
+html.light button[class*="bg-red"] *,
+html.light button[class*="bg-blue"] *,
+html.light button[class*="bg-indigo"] *,
+html.light button[class*="bg-orange"] *,
+html.light span[class*="bg-gradient-to-r"] * {
   color: #FFFFFF !important;
+}
+
+/* Sidebar navigation in Admin / Owner Portal */
+html.light aside {
+  background-color: #FFFFFF !important;
+  border-color: rgba(121, 85, 232, 0.15) !important;
+}
+
+html.light aside a:not([class*="bg-gradient-to-r"]) {
+  color: #475569 !important;
+}
+
+html.light aside a:not([class*="bg-gradient-to-r"]):hover {
+  background-color: #F1F5F9 !important;
+  color: #7955E8 !important;
+}
+
+/* Admin tables & cards in light mode */
+html.light table {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+html.light table thead tr,
+html.light table th {
+  background-color: #F8FAFC !important;
+  color: #475569 !important;
+  border-color: rgba(121, 85, 232, 0.15) !important;
+}
+
+html.light table td {
+  border-color: rgba(121, 85, 232, 0.1) !important;
+  color: #1E293B !important;
+}
+
+html.light table tbody tr:hover {
+  background-color: #F8FAFC !important;
+}
+
+/* Protected Dark Surfaces (like Hero Video Banner, TV Display, Midnight Banners) */
+html.light .dark-surface {
+  color: #FFFFFF !important;
+}
+html.light .dark-surface h1,
+html.light .dark-surface h2,
+html.light .dark-surface h3,
+html.light .dark-surface h4,
+html.light .dark-surface h5,
+html.light .dark-surface h6,
+html.light .dark-surface p {
+  color: #FFFFFF !important;
+}
+html.light .dark-surface p.text-slate-300,
+html.light .dark-surface p.text-slate-400,
+html.light .dark-surface span.text-slate-300,
+html.light .dark-surface .text-slate-300,
+html.light .dark-surface .text-slate-400,
+html.light .dark-surface .text-\[\#AAB3C5\] {
+  color: #CBD5E1 !important;
+}
+html.light .dark-surface span.text-purple-300,
+html.light .dark-surface .text-purple-300 {
+  color: #DDD6FE !important;
 }
 
 /* Custom modern MITS AMS scrollbars */

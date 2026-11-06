@@ -60,7 +60,7 @@ export const HomePage = () => {
     <div className="space-y-16 sm:space-y-20 pb-20 overflow-x-hidden text-white">
       
       {/* 1. HERO SECTION WITH FULL-SCREEN MITS GWALIOR BACKGROUND VIDEO */}
-      <section className="relative overflow-hidden bg-[#0B1020] text-white">
+      <section className="relative overflow-hidden bg-[#0B1020] text-white dark-surface">
         <MitsCampusHeroVideo
           videoSrc="/assets/videos/mits-campus-tour.mp4"
           posterSrc="/assets/videos/mits-campus-tour-poster.jpg"
@@ -249,21 +249,21 @@ export const HomePage = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* Canteen Owner Only Quick Live Toolbar */}
         {isAdmin && (
-          <div className="mb-6 p-4 rounded-3xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border-2 border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-fadeIn">
+          <div className="mb-6 p-4 rounded-3xl bg-purple-50/90 dark:bg-gradient-to-r dark:from-purple-900/30 dark:via-indigo-900/20 dark:to-purple-900/30 border-2 border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-fadeIn">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-black shadow-xs shrink-0">
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-purple-300">
+                  <span className="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300">
                     Canteen Owner Controls
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                     Visible Only To Canteen Owner
                   </span>
                 </div>
-                <p className="text-[11px] text-[#AAB3C5]">
+                <p className="text-[11px] text-slate-600 dark:text-[#AAB3C5]">
                   Select which food items appear in "Popular Cravings" & schedule day-wise discount % for students.
                 </p>
               </div>
@@ -272,7 +272,7 @@ export const HomePage = () => {
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <Link
                 to="/admin/homepage-manager"
-                className="px-3.5 py-2 rounded-xl bg-[#1C263A] hover:bg-[#25334d] border border-purple-500/30 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-2xs"
+                className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#1C263A] hover:bg-slate-100 dark:hover:bg-[#25334d] border border-purple-500/30 text-slate-800 dark:text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs"
               >
                 <span>Full Admin Panel</span>
               </Link>
@@ -337,7 +337,7 @@ export const HomePage = () => {
 
       {/* 4. SPECIAL OFFERS SECTION (DYNAMIC CANTEEN OWNER SCHEDULED OFFERS) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-[#1C263A] via-[#151C30] to-[#1C263A] border-2 border-purple-500/30 rounded-3xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden">
+        <div className="dark-surface bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-2 border-purple-500/30 rounded-3xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden">
           <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-gradient-to-br from-[#7955E8]/20 to-[#526DFF]/20 rounded-full blur-2xl"></div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
@@ -350,7 +350,7 @@ export const HomePage = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}
-                    className="px-2.5 py-0.5 rounded-full bg-[#0B1020]/70 hover:bg-[#0B1020] text-purple-200 border border-purple-500/30 text-[11px] font-bold flex items-center gap-1 transition-all"
+                    className="px-2.5 py-0.5 rounded-full bg-slate-800/80 hover:bg-slate-800 text-purple-200 border border-purple-500/30 text-[11px] font-bold flex items-center gap-1 transition-all"
                   >
                     <SlidersHorizontal className="w-3 h-3" />
                     <span>Edit Discount %</span>
@@ -361,9 +361,9 @@ export const HomePage = () => {
               <h3 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight text-white">
                 {todayDiscount.title || `${todayDiscount.day} Special Saver: Flat ${todayDiscount.percent}% OFF!`}
               </h3>
-              <p className="text-sm text-[#AAB3C5] max-w-xl">
+              <p className="text-sm text-slate-300 max-w-xl">
                 Canteen Owner Scheduled Offer: Use promo code{' '}
-                <span className="font-mono font-extrabold bg-[#0B1020] border border-purple-500/40 px-2 py-0.5 rounded-lg text-purple-300">
+                <span className="font-mono font-extrabold bg-slate-950 border border-purple-500/40 px-2 py-0.5 rounded-lg text-purple-300">
                   {todayDiscount.promoCode || 'CAMPUSDAY'}
                 </span>{' '}
                 at checkout on orders above ₹{todayDiscount.minOrderValue || 99} for instant {todayDiscount.percent}% student savings!
@@ -380,11 +380,11 @@ export const HomePage = () => {
 
             <div className="lg:col-span-4 flex justify-center">
               <TiltCard maxTilt={10} className="w-full max-w-sm">
-                <div className="relative p-6 bg-[#151C30]/95 backdrop-blur-md rounded-3xl border border-purple-500/40 text-center space-y-2 shadow-xl overflow-hidden">
+                <div className="relative p-6 bg-slate-950/80 backdrop-blur-md rounded-3xl border border-purple-500/40 text-center space-y-2 shadow-xl overflow-hidden text-white">
                   <BorderBeam size={160} duration={4} colorFrom="#10B981" colorTo="#7955E8" />
                   <Award className="w-12 h-12 text-purple-300 mx-auto animate-bounce" />
                   <h4 className="text-base font-black text-white">Today's {todayDiscount.day} Special Saver</h4>
-                  <p className="text-xs text-[#AAB3C5]">Burger + Peri Fries + Cold Coffee</p>
+                  <p className="text-xs text-slate-300">Burger + Peri Fries + Cold Coffee</p>
                   <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
                     Only ₹{Math.round(210 * (1 - todayDiscount.percent / 100))}
                   </div>
