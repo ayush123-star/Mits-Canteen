@@ -237,46 +237,75 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
-  // Strict Google OAuth Authentication (Students: @mitsgwl.ac.in, Faculty: @mitsgwalior.in)
+  // Strict Google Identity Services OAuth Authentication (Students: @mitsgwl.ac.in, Faculty: @mitsgwalior.in)
   const loginWithGoogle = async (googleData, roleType = 'student') => {
-    const cleanEmail = String(googleData.email || '').toLowerCase().trim();
+    const idToken = googleData?.credential || googleData?.idToken;
+    const accessToken = googleData?.accessToken;
 
-    // 1. Strict Domain Validation
+    // Decode ID token client-side for immediate display/validation if available
+    let tokenEmail = googleData?.email;
+    let tokenName = googleData?.name;
+    let tokenPicture = googleData?.avatar;
+
+    if (idToken && typeof idToken === 'string' && idToken.includes('.')) {
+      try {
+        const base64Url = idToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const parsed = JSON.parse(jsonPayload);
+        if (parsed.email) tokenEmail = parsed.email;
+        if (parsed.name) tokenName = parsed.name;
+        if (parsed.picture) tokenPicture = parsed.picture;
+      } catch (e) {
+        console.warn('Could not decode ID token on client:', e);
+      }
+    }
+
+    const cleanEmail = String(tokenEmail || '').toLowerCase().trim();
+
+    // 1. Strict Domain Validation on Client
     const isStudent = cleanEmail.endsWith('@mitsgwl.ac.in');
     const isFaculty = cleanEmail.endsWith('@mitsgwalior.in');
 
-    if (!isStudent && !isFaculty) {
+    if (cleanEmail && !isStudent && !isFaculty) {
       return {
         success: false,
         code: 'UNAUTHORIZED_DOMAIN',
-        message: 'Access Denied: Personal Gmail and non-institute accounts are strictly prohibited. Please sign in with your official MITS College ID (@mitsgwl.ac.in for students or @mitsgwalior.in for faculty).',
+        message:
+          'Access Denied: Personal Gmail (@gmail.com) and unauthorized outside accounts are strictly rejected. Please sign in with your official MITS College ID (@mitsgwl.ac.in for students or @mitsgwalior.in for faculty).',
       };
     }
 
-    if (roleType === 'student' && !isStudent) {
+    if (roleType === 'student' && cleanEmail && !isStudent) {
       return {
         success: false,
         code: 'ROLE_MISMATCH',
-        message: 'Access Denied: Student portal requires an official @mitsgwl.ac.in student account. The selected account is not an authorized student domain.',
+        message:
+          'Role Mismatch: Student portal requires an official @mitsgwl.ac.in student account. The selected account is not an authorized student domain.',
       };
     }
 
-    if (roleType === 'faculty' && !isFaculty) {
+    if (roleType === 'faculty' && cleanEmail && !isFaculty) {
       return {
         success: false,
         code: 'ROLE_MISMATCH',
-        message: 'Access Denied: Faculty portal requires an official @mitsgwalior.in faculty account. The selected account is not an authorized faculty domain.',
+        message:
+          'Role Mismatch: Teacher portal requires an official @mitsgwalior.in faculty account. The selected account is not an authorized faculty domain.',
       };
     }
 
-    // 2. Attempt Real Backend API
+    // 2. Attempt Real Backend API with Google Token
     try {
       const res = await axios.post('/api/auth/google', {
-        email: cleanEmail,
-        name: googleData.name,
-        avatar: googleData.avatar,
+        idToken,
+        credential: idToken,
+        accessToken,
         roleType,
-        enrollment: googleData.enrollment,
       });
 
       if (res.data?.success) {
@@ -286,28 +315,39 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (apiErr) {
       if (apiErr.response?.data?.message) {
-        return { success: false, message: apiErr.response.data.message };
+        return {
+          success: false,
+          message: apiErr.response.data.message,
+          code: apiErr.response.data.code,
+        };
       }
-      console.debug('Backend offline, fallback to local store:', apiErr.message);
+      console.debug('Backend offline, falling back to local session store:', apiErr.message);
     }
 
     // 3. Fallback Local Store with strict domain authorization
+    if (!cleanEmail) {
+      return { success: false, message: 'Google account email could not be verified.' };
+    }
+
     const savedUsers = JSON.parse(localStorage.getItem('smart_canteen_users') || 'null') || registeredUsers;
     let foundUser = savedUsers.find((u) => (u.email || '').toLowerCase().trim() === cleanEmail);
 
     if (!foundUser) {
       const userType = isFaculty ? 'faculty' : 'student';
+      const emailPrefix = cleanEmail.split('@')[0];
       const newDiner = {
         id: 'user-google-' + Date.now(),
-        name: googleData.name || (isFaculty ? 'MITS Faculty Member' : 'Ayush Pandey'),
+        name: tokenName || (isFaculty ? 'Faculty Member' : 'MITS Student'),
         email: cleanEmail,
         password: 'google_oauth_authorized',
         role: 'student',
         userType,
-        studentId: googleData.enrollment || (cleanEmail.startsWith('25et1ay39') ? 'BTET25O1039' : `0901EC${Math.floor(1000 + Math.random() * 9000)}`),
-        department: googleData.department || 'Electronics and Telecommunication',
-        phone: '+91 98765 43210',
-        avatar: googleData.avatar || '/assets/developer/ayush_pandey.jpg',
+        studentId: cleanEmail.startsWith('25et1ay39')
+          ? 'BTET25O1039'
+          : emailPrefix.toUpperCase(),
+        department: cleanEmail.includes('et') ? 'Electronics and Telecommunication' : 'General Campus',
+        phone: cleanEmail.includes('ayush') ? '+91 90395 67623' : '+91 98765 43210',
+        avatar: tokenPicture || (cleanEmail.includes('ayush') ? '/assets/developer/ayush_pandey.jpg' : ''),
         isActive: true,
         joinedDate: new Date().toISOString().split('T')[0],
       };

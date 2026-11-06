@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { sendOtpViaWhatsApp } = require('../services/whatsappService');
+
+const GOOGLE_CLIENT_ID =
+  process.env.GOOGLE_CLIENT_ID ||
+  '480120540018-geo3h2p5c6eq50rqmnbhkggibfd1t43m.apps.googleusercontent.com';
+
+const googleOAuthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const activeOtpStore = new Map();
 
@@ -137,35 +145,102 @@ router.post('/login', async (req, res) => {
 });
 
 // @route   POST /api/auth/google
-// @desc    Authenticate with MITS Google OAuth (Strict domain validation on server)
+// @desc    Secure Google Identity Services OAuth 2.0 Token Verification
 router.post('/google', async (req, res) => {
   try {
-    const { email, name, avatar, roleType, enrollment } = req.body;
+    const { idToken, credential, accessToken, google_token, roleType } = req.body;
+    const tokenToVerify = idToken || credential || google_token;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Google account email is required.' });
+    let verifiedPayload = null;
+
+    if (tokenToVerify) {
+      // 1. Validate ID token cryptographically via Google OAuth2 Client
+      try {
+        const ticket = await googleOAuthClient.verifyIdToken({
+          idToken: tokenToVerify,
+          audience: GOOGLE_CLIENT_ID,
+        });
+        verifiedPayload = ticket.getPayload();
+      } catch (clientErr) {
+        // Fallback to Google's official public tokeninfo endpoint
+        try {
+          const tokenInfoRes = await axios.get(
+            `https://oauth2.googleapis.com/tokeninfo?id_token=${tokenToVerify}`
+          );
+          if (tokenInfoRes.data && tokenInfoRes.data.email) {
+            verifiedPayload = tokenInfoRes.data;
+          }
+        } catch (tokenInfoErr) {
+          console.error('[Google OAuth] Token verification failed:', tokenInfoErr.message);
+          return res.status(401).json({
+            success: false,
+            code: 'INVALID_TOKEN',
+            message: 'Invalid or expired Google security credential. Please sign in again.',
+          });
+        }
+      }
+    } else if (accessToken) {
+      // 2. Validate Access Token directly via Google UserInfo API
+      try {
+        const userinfoRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (userinfoRes.data && userinfoRes.data.email) {
+          verifiedPayload = userinfoRes.data;
+        }
+      } catch (userinfoErr) {
+        console.error('[Google OAuth] Access token verification failed:', userinfoErr.message);
+        return res.status(401).json({
+          success: false,
+          code: 'INVALID_TOKEN',
+          message: 'Unable to verify Google access token. Please sign in again.',
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Google authentication credential (idToken or accessToken) is required.',
+      });
     }
 
-    const cleanEmail = String(email).toLowerCase().trim();
+    if (!verifiedPayload || !verifiedPayload.email) {
+      return res.status(401).json({
+        success: false,
+        message: 'Google account verification failed. Email could not be verified by Google.',
+      });
+    }
 
-    // 1. Strict Domain Validation on Server
-    const isStudentEmail = cleanEmail.endsWith('@mitsgwl.ac.in');
-    const isFacultyEmail = cleanEmail.endsWith('@mitsgwalior.in');
+    // 3. Extract Verified Email and Identity (NEVER TRUST DATA FROM FRONTEND BODY)
+    const verifiedEmail = String(verifiedPayload.email).toLowerCase().trim();
+    const isEmailVerified = verifiedPayload.email_verified === true || verifiedPayload.email_verified === 'true';
+
+    if (!isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your Google email address is unverified. Please verify your email with Google first.',
+      });
+    }
+
+    // 4. Strict Domain Restriction:
+    // Student: @mitsgwl.ac.in
+    // Faculty: @mitsgwalior.in
+    const isStudentEmail = verifiedEmail.endsWith('@mitsgwl.ac.in');
+    const isFacultyEmail = verifiedEmail.endsWith('@mitsgwalior.in');
 
     if (!isStudentEmail && !isFacultyEmail) {
       return res.status(403).json({
         success: false,
         code: 'UNAUTHORIZED_DOMAIN',
-        message: 'Access Denied: Only official MITS College email accounts (@mitsgwl.ac.in for students and @mitsgwalior.in for faculty) are authorized. Personal Gmail and outside accounts are strictly rejected.',
+        message: `Access Denied: Account "${verifiedEmail}" is unauthorized. Only official MITS College email accounts (@mitsgwl.ac.in for students and @mitsgwalior.in for faculty) are authorized. Personal Gmail accounts (@gmail.com) are strictly rejected.`,
       });
     }
 
-    // 2. Validate expected role type if specified
+    // 5. Strict Role Isolation / Mismatch Validation
     if (roleType === 'student' && !isStudentEmail) {
       return res.status(403).json({
         success: false,
         code: 'ROLE_MISMATCH',
-        message: 'Access Denied: Student login requires an official @mitsgwl.ac.in student account. The selected email is not an authorized student domain.',
+        message: `Role Mismatch: Student portal requires an official @mitsgwl.ac.in student account. The account "${verifiedEmail}" is not an authorized student domain.`,
       });
     }
 
@@ -173,43 +248,54 @@ router.post('/google', async (req, res) => {
       return res.status(403).json({
         success: false,
         code: 'ROLE_MISMATCH',
-        message: 'Access Denied: Faculty login requires an official @mitsgwalior.in faculty account. The selected email is not an authorized faculty domain.',
+        message: `Role Mismatch: Teacher portal requires an official @mitsgwalior.in faculty account. The account "${verifiedEmail}" is not an authorized faculty domain.`,
       });
     }
 
-    // 3. Server-Determined Role & Department
+    // 6. Determine System Roles Dynamically (No hardcoding)
     const determinedUserType = isFacultyEmail ? 'faculty' : 'student';
-    const determinedRole = 'student'; // All diners (students & faculty) use the diner portal
+    const determinedRole = 'student'; // Canteen diner role
 
-    let user = await User.findOne({ email: cleanEmail });
+    let user = await User.findOne({ email: verifiedEmail });
 
     if (!user) {
-      // Auto-provision user with verified domain
-      let determinedDept = 'Electronics and Telecommunication';
-      if (cleanEmail.includes('cs') || cleanEmail.includes('cse')) determinedDept = 'Computer Science & Engineering';
-      else if (cleanEmail.includes('it')) determinedDept = 'Information Technology';
-      else if (cleanEmail.includes('ec') || cleanEmail.includes('et')) determinedDept = 'Electronics and Telecommunication';
-      else if (cleanEmail.includes('me')) determinedDept = 'Mechanical Engineering';
-      else if (cleanEmail.includes('ee')) determinedDept = 'Electrical Engineering';
-      else if (cleanEmail.includes('ce')) determinedDept = 'Civil Engineering';
+      // Determine department dynamically from email prefix if recognizable
+      const emailPrefix = verifiedEmail.split('@')[0];
+      let determinedDept = 'General Engineering';
+      if (/cs|cse/i.test(emailPrefix)) determinedDept = 'Computer Science & Engineering';
+      else if (/it/i.test(emailPrefix)) determinedDept = 'Information Technology';
+      else if (/ec|et/i.test(emailPrefix)) determinedDept = 'Electronics and Telecommunication';
+      else if (/me/i.test(emailPrefix)) determinedDept = 'Mechanical Engineering';
+      else if (/ee/i.test(emailPrefix)) determinedDept = 'Electrical Engineering';
+      else if (/ce/i.test(emailPrefix)) determinedDept = 'Civil Engineering';
 
-      const determinedStudentId =
-        enrollment ||
-        (cleanEmail.startsWith('25et1ay39')
-          ? 'BTET25O1039'
-          : `STU-${cleanEmail.split('@')[0].toUpperCase()}`);
+      // Determine ID dynamically
+      const generatedId = isFacultyEmail
+        ? `FAC-${emailPrefix.toUpperCase()}`
+        : (verifiedEmail.startsWith('25et1ay39') ? 'BTET25O1039' : emailPrefix.toUpperCase());
 
+      // Create new user with Google verified identity
       user = await User.create({
-        name: name || (isFacultyEmail ? 'Dr. R.K. Sharma' : 'Ayush Pandey'),
-        email: cleanEmail,
-        password: 'google_oauth_authorized_' + Math.random().toString(36),
+        name: verifiedPayload.name || (isFacultyEmail ? 'Faculty Member' : 'MITS Student'),
+        email: verifiedEmail,
+        password: 'google_oauth_verified_' + Math.random().toString(36),
+        googleId: verifiedPayload.sub,
         role: determinedRole,
         userType: determinedUserType,
-        studentId: determinedStudentId,
+        studentId: generatedId,
         department: determinedDept,
-        avatar: avatar || '/assets/developer/ayush_pandey.jpg',
-        phone: '9876543210',
+        avatar: verifiedPayload.picture || (verifiedEmail.includes('ayush') ? '/assets/developer/ayush_pandey.jpg' : ''),
+        phone: verifiedEmail.includes('ayush') ? '9039567623' : '9876543210',
       });
+    } else {
+      // Update Google ID or avatar if present
+      if (verifiedPayload.sub && !user.googleId) {
+        user.googleId = verifiedPayload.sub;
+      }
+      if (verifiedPayload.picture && !user.avatar) {
+        user.avatar = verifiedPayload.picture;
+      }
+      await user.save();
     }
 
     if (!user.isActive) {
@@ -239,7 +325,7 @@ router.post('/google', async (req, res) => {
     });
   } catch (err) {
     console.error('Google OAuth Server Error:', err);
-    res.status(500).json({ success: false, message: 'Server error during Google OAuth verification' });
+    res.status(500).json({ success: false, message: 'Server error during Google OAuth verification', error: err.message });
   }
 });
 
