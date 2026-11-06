@@ -257,7 +257,7 @@ router.get('/live-tokens', async (req, res) => {
         stats: {
           totalActive,
           avgWaitMinutes,
-          countersActive: 1, // Single Express Counter 1 (MITS Canteen)
+          countersActive: 1, // Single Express Counter (MITS Canteen)
         },
       },
     });

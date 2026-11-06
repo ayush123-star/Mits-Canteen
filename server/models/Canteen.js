@@ -14,7 +14,7 @@ const canteenSchema = new mongoose.Schema({
   },
   location: {
     type: String,
-    default: 'MITS Main Canteen, Counter 1, MITS Gwalior',
+    default: 'MITS Main Canteen, Counter, MITS Gwalior',
   },
   isOpen: {
     type: Boolean,
@@ -35,7 +35,7 @@ const canteenSchema = new mongoose.Schema({
   },
   activeCounters: {
     type: Number,
-    default: 1, // Single Express Counter 1
+    default: 1, // Single Express Counter
   },
   managerName: {
     type: String,

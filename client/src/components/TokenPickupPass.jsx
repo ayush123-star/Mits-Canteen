@@ -62,7 +62,7 @@ export const TokenPickupPass = ({ order, onClose }) => {
             </span>
             <span className="px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold bg-[#151C30] border border-purple-500/30 text-purple-200 flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-purple-400" />
-              Counter 1 (Main Canteen)
+              Counter (Main Canteen)
             </span>
           </div>
         </div>
@@ -86,7 +86,7 @@ export const TokenPickupPass = ({ order, onClose }) => {
 
           <div>
             <p className="text-xs font-extrabold text-white">
-              Show QR at Counter 1 (MITS Main Canteen)
+              Show QR at Counter (MITS Main Canteen)
             </p>
             <p className="text-[11px] text-[#AAB3C5] font-medium mt-0.5">
               Pickup address: Central Campus Quad, MITS Gwalior

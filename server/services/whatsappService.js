@@ -316,23 +316,23 @@ const sendOrderStatusNotification = async (order, newStatus, options = {}, io = 
 
     switch (newStatus) {
       case 'Placed':
-        messageText = `🎉 *MITS Canteen — Order Placed!*\n\nHello *${studentName}*!\nYour order has been placed successfully!\n\n🎫 *Token Number:* #${tokenNumber}\n🍽️ *Items:* ${itemsSummary}\n💰 *Total Amount:* ₹${finalAmount} (${paymentMethod})\n⏳ *Estimated Wait:* ~${prepMins} Minutes\n📍 *Pickup Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n\nWe will update you on WhatsApp as your meal is prepared. Thank you! 🚀`;
+        messageText = `🎉 *MITS Canteen — Order Placed!*\n\nHello *${studentName}*!\nYour order has been placed successfully!\n\n🎫 *Token Number:* #${tokenNumber}\n🍽️ *Items:* ${itemsSummary}\n💰 *Total Amount:* ₹${finalAmount} (${paymentMethod})\n⏳ *Estimated Wait:* ~${prepMins} Minutes\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nWe will update you on WhatsApp as your meal is prepared. Thank you! 🚀`;
         break;
 
       case 'Accepted':
-        messageText = `👨‍🍳 *MITS Canteen — Order Accepted!*\n\nHello *${studentName}*!\nYour order has been accepted by the canteen.\n\n🎫 *Token Number:* #${tokenNumber}\n⏳ *Estimated Preparation Time:* ~${prepMins} Minutes\n⏰ *Expected Ready By:* ${formattedReadyTime}\n📍 *Pickup Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nOur kitchen has started preparing your food fresh! 🍳`;
+        messageText = `👨‍🍳 *MITS Canteen — Order Accepted!*\n\nHello *${studentName}*!\nYour order has been accepted by the canteen.\n\n🎫 *Token Number:* #${tokenNumber}\n⏳ *Estimated Preparation Time:* ~${prepMins} Minutes\n⏰ *Expected Ready By:* ${formattedReadyTime}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nOur kitchen has started preparing your food fresh! 🍳`;
         break;
 
       case 'Preparing':
-        messageText = `🔥 *MITS Canteen — Food Being Prepared!*\n\nHello *${studentName}*!\nYour food is being prepared.\n\n🎫 *Token Number:* #${tokenNumber}\n🍽️ *Items:* ${itemsSummary}\n📍 *Pickup Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n\nAlmost ready! We will send you another message the moment it is ready for collection. ⏳`;
+        messageText = `🔥 *MITS Canteen — Food Being Prepared!*\n\nHello *${studentName}*!\nYour food is being prepared.\n\n🎫 *Token Number:* #${tokenNumber}\n🍽️ *Items:* ${itemsSummary}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nAlmost ready! We will send you another message the moment it is ready for collection. ⏳`;
         break;
 
       case 'Ready for Pickup':
-        messageText = `🔔 *MITS Canteen — Order Ready for Pickup!*\n\nHello *${studentName}*!\nYour order is ready! Please collect it from the canteen.\n\n🎫 *Token Number:* #${tokenNumber}\n📍 *Pickup Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nPlease show your Token Number or QR Pass at Counter 1 for contactless collection.\n\nEnjoy your meal! 😋`;
+        messageText = `🔔 *MITS Canteen — Order Ready for Pickup!*\n\nHello *${studentName}*!\nYour order is ready! Please collect it from the canteen.\n\n🎫 *Token Number:* #${tokenNumber}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nPlease show your Token Number or QR Pass at Counter for contactless collection.\n\nEnjoy your meal! 😋`;
         break;
 
       case 'Completed':
-        messageText = `✅ *MITS Canteen — Order Completed!*\n\nHello *${studentName}*!\nYour order has been completed. Thank you!\n\n🎫 *Token Number:* #${tokenNumber}\n💰 *Amount:* ₹${finalAmount}\n📍 *Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n\nWe hope you enjoyed your meal! Have a great day ahead! 🌟`;
+        messageText = `✅ *MITS Canteen — Order Completed!*\n\nHello *${studentName}*!\nYour order has been completed. Thank you!\n\n🎫 *Token Number:* #${tokenNumber}\n💰 *Amount:* ₹${finalAmount}\n📍 *Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nWe hope you enjoyed your meal! Have a great day ahead! 🌟`;
         break;
 
       case 'Cancelled':
@@ -341,7 +341,7 @@ const sendOrderStatusNotification = async (order, newStatus, options = {}, io = 
         break;
 
       default:
-        messageText = `ℹ️ *MITS Canteen Alert*\n\nHello *${studentName}*!\nYour order *#${tokenNumber}* status has been updated to *${newStatus}*.\n\nCounter: MITS Main Canteen (Counter 1, MITS Gwalior)`;
+        messageText = `ℹ️ *MITS Canteen Alert*\n\nHello *${studentName}*!\nYour order *#${tokenNumber}* status has been updated to *${newStatus}*.\n\nCounter: MITS Main Canteen (Counter, MITS Gwalior)`;
         break;
     }
 
@@ -499,7 +499,7 @@ const handleWhatsAppWebhookEvent = async (webhookBody, io = null) => {
  */
 const sendOtpViaWhatsApp = async (rawPhone, otpCode) => {
   const formattedPhone = formatPhoneNumber(rawPhone);
-  const messageText = `🔐 *MITS Gwalior Canteen - Security OTP*\n\nYour one-time login verification code is: *${otpCode}*\n\nValid for 5 minutes. Please do not share this code with anyone. Enjoy your meal at MITS Main Canteen Counter 1! 🍛`;
+  const messageText = `🔐 *MITS Gwalior Canteen - Security OTP*\n\nYour one-time login verification code is: *${otpCode}*\n\nValid for 5 minutes. Please do not share this code with anyone. Enjoy your meal at MITS Main Canteen Counter! 🍛`;
 
   try {
     const res = await sendMetaWhatsAppMessage({
@@ -548,7 +548,7 @@ const notifyOwnerNewOrder = async (order) => {
       `💰 *Total Amount:* *₹${amount}*\n` +
       `💳 *Payment:* ${payment} (${paymentStatus})\n` +
       `⏰ *Pickup Slot:* ${slot}\n` +
-      `📍 *Pickup Counter:* MITS Main Canteen (Counter 1)\n\n` +
+      `📍 *Pickup Counter:* MITS Main Canteen (Counter)\n\n` +
       `_Automatic Background Dispatch — MITS Smart Canteen_ 🚀`;
 
     console.log(`[WhatsApp Service] Background dispatching new order #${token} to Owner WhatsApp (+${targetPhone})...`);

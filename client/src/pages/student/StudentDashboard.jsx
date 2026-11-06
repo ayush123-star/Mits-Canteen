@@ -196,7 +196,7 @@ export const StudentDashboard = () => {
 
                     <div className="text-right">
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-purple-500/20 border border-purple-500/30 text-purple-300">
-                        <MapPin className="w-3.5 h-3.5" /> Counter 1 (Express)
+                        <MapPin className="w-3.5 h-3.5" /> Counter
                       </span>
                       <p className="text-[11px] text-[#AAB3C5] mt-1">
                         Pickup: {order.scheduledPickupTime || 'ASAP'}
@@ -232,7 +232,7 @@ export const StudentDashboard = () => {
                   {isReady && (
                     <div className="my-2 p-3 rounded-2xl bg-emerald-600 text-white flex items-center justify-between animate-pulse">
                       <span className="text-xs font-black">
-                        🔔 Food is Ready for Collection at MITS Main Canteen (Counter 1)!
+                        🔔 Food is Ready for Collection at MITS Main Canteen (Counter)!
                       </span>
                       <span className="text-[10px] uppercase font-bold bg-white/20 px-2 py-0.5 rounded-full">
                         Collect Now

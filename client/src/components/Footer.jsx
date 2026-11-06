@@ -46,7 +46,7 @@ export const Footer = () => {
               Madhav Institute of Technology & Science (MITS), Gwalior. Official smart campus dining and live digital token tracking system.
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl w-fit">
-              <ShieldCheck className="w-4 h-4" /> 100% Pure Veg &bull; Express Counter 1
+              <ShieldCheck className="w-4 h-4" /> 100% Pure Veg &bull; Express Counter
             </div>
           </div>
 
@@ -84,7 +84,7 @@ export const Footer = () => {
               <div className="bg-[#151C30]/80 p-3 rounded-2xl border border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-300 font-extrabold mb-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  MITS Main Canteen • Counter 1 (Express Pickup)
+                  MITS Main Canteen • Counter (Express Pickup)
                 </div>
                 <p className="text-[11px] text-[#AAB3C5] leading-relaxed">
                   Address: MITS Main Canteen, MITS Campus, Race Course Road, Gola Ka Mandir, Gwalior (M.P.) - 474005.

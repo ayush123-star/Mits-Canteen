@@ -136,7 +136,7 @@ export const INITIAL_CANTEENS = [
     id: 'canteen-1',
     name: 'MITS Main Canteen',
     code: 'MITS-01',
-    location: 'MITS Main Canteen, Counter 1, MITS Campus, Gwalior',
+    location: 'MITS Main Canteen, Counter, MITS Campus, Gwalior',
     isOpen: true,
     status: 'Operational',
     openingTime: '08:00 AM',

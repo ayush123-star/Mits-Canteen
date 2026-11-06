@@ -35,7 +35,7 @@ router.get('/current', async (req, res) => {
       canteen = await Canteen.create({
         name: 'MITS Main Canteen',
         code: 'MITS-01',
-        location: 'MITS Main Canteen, Counter 1, MITS Gwalior',
+        location: 'MITS Main Canteen, Counter, MITS Gwalior',
         isOpen: true,
         status: 'Operational',
         openingTime: '08:00 AM',

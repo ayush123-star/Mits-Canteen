@@ -76,7 +76,7 @@ export const HomePage = () => {
                   />
                   <span className="text-purple-300 shrink-0">MITS GWALIOR</span>
                   <span className="text-slate-500 shrink-0">&bull;</span>
-                  <span className="text-[#AAB3C5] truncate">Main Canteen Counter 1</span>
+                  <span className="text-[#AAB3C5] truncate">Main Canteen Counter</span>
                 </div>
 
                 {/* HEADING */}
@@ -96,7 +96,7 @@ export const HomePage = () => {
                 </p>
 
                 <p className="text-sm sm:text-base text-[#AAB3C5] max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
-                  Designed exclusively for MITSians! Pre-order hot breakfast, fresh lunch thalis, samosas, and cold coffee right from lecture halls, and collect directly at MITS Main Canteen Counter 1.
+                  Designed exclusively for MITSians! Pre-order hot breakfast, fresh lunch thalis, samosas, and cold coffee right from lecture halls, and collect directly at MITS Main Canteen Counter.
                 </p>
 
                 {/* CTAs */}
@@ -142,7 +142,7 @@ export const HomePage = () => {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-2xl font-black text-purple-300">Main Canteen</p>
-                    <p className="text-[11px] text-[#AAB3C5] font-medium">Counter 1 Express</p>
+                    <p className="text-[11px] text-[#AAB3C5] font-medium">Express Counter</p>
                   </div>
                 </div>
               </div>
@@ -155,7 +155,7 @@ export const HomePage = () => {
                     <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
                     <div className="text-left">
                       <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-emerald-200">
-                        Now Serving &bull; Counter 1
+                        Now Serving &bull; Counter
                       </p>
                       <p className="text-xs sm:text-sm font-black font-mono">TOKEN #TK-101</p>
                     </div>
@@ -181,7 +181,7 @@ export const HomePage = () => {
                         MITS Main Canteen
                       </span>
                       <h4 className="text-lg font-black mt-1">MITS Main Canteen</h4>
-                      <p className="text-xs text-[#AAB3C5]">Campus Dining Hall & Live Token Counter 1</p>
+                      <p className="text-xs text-[#AAB3C5]">Campus Dining Hall & Live Token Counter</p>
                     </div>
                   </div>
 
@@ -429,8 +429,8 @@ export const HomePage = () => {
             },
             {
               step: '04',
-              title: 'Collect at Counter 1',
-              desc: 'Watch the live screen or WhatsApp alert. Walk straight to Counter 1 (Express Pickup) when ready!',
+              title: 'Collect at Counter',
+              desc: 'Watch the live screen or WhatsApp alert. Walk straight to the Counter when ready!',
               icon: CheckCircle2,
             },
           ].map((card, idx) => {
@@ -477,13 +477,13 @@ export const HomePage = () => {
               {
                 name: 'Ananya Sen',
                 branch: 'IT Department - 2nd Year, MITS Gwalior',
-                comment: 'The live token screen in the canteen is super clear. You immediately know when Counter 1 calls your number and the WhatsApp alert tells you exact prep time. Game changer!',
+                comment: 'The live token screen in the canteen is super clear. You immediately know when the Counter calls your number and the WhatsApp alert tells you exact prep time. Game changer!',
                 rating: 5,
               },
               {
                 name: 'Prof. S. K. Nair',
                 branch: 'Faculty of Engineering, MITS',
-                comment: 'Faculty members can also pre-order tea and thali without squeezing into crowded student counters. Express Counter 1 makes pickup instantaneous.',
+                comment: 'Faculty members can also pre-order tea and thali without squeezing into crowded student counters. The Counter makes pickup instantaneous.',
                 rating: 5,
               },
             ].map((review, i) => (

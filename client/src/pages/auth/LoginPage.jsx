@@ -389,7 +389,7 @@ export const LoginPage = () => {
                 <span className="text-base">📺</span>
                 <div>
                   <h4 className="font-bold text-white text-xs">Live Token Calling TV Screen</h4>
-                  <p className="text-[11px] text-slate-400">Real-time counter token callout screen placed at MITS Canteen Counter 1.</p>
+                  <p className="text-[11px] text-slate-400">Real-time counter token callout screen placed at MITS Canteen Counter.</p>
                 </div>
               </div>
 

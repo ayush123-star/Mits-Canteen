@@ -102,7 +102,7 @@ export const AdminLayout = () => {
               <div>
                 <h2 className="font-extrabold text-sm tracking-tight text-white">MITS CANTEEN</h2>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">
-                  Manager &bull; Counter 1
+                  Manager &bull; Counter
                 </span>
               </div>
             </div>

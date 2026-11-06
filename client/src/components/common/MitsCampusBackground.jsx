@@ -27,8 +27,8 @@ const MITS_SCENES = [
     id: 'canteen',
     src: '/assets/campus/mits-main-canteen.jpg',
     title: 'MITS Main Canteen & Dining Hall',
-    caption: 'Campus Dining Hall & Express Counter 1 • MITS Gwalior',
-    tag: 'MITS Main Canteen Counter 1'
+    caption: 'Campus Dining Hall & Express Counter • MITS Gwalior',
+    tag: 'MITS Main Canteen Counter'
   },
   {
     id: 'library',

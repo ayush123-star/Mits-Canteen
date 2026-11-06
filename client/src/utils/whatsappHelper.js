@@ -58,7 +58,7 @@ export const formatOrderWhatsAppMessage = (order) => {
     `💰 *Total Amount:* *₹${amount}*\n` +
     `💳 *Payment Method:* ${payment} (${paymentStatus})\n` +
     `⏰ *Pickup Slot:* ${slot}\n` +
-    `📍 *Pickup Counter:* MITS Main Canteen (Counter 1)\n\n` +
+    `📍 *Pickup Counter:* MITS Main Canteen (Counter)\n\n` +
     `_Sent via MITS Smart Canteen Portal_ 🚀`
   );
 };

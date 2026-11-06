@@ -23,13 +23,13 @@ const CAMPUS_ITEMS = [
     id: 'main-canteen',
     category: 'canteen',
     title: 'MITS Main Canteen & Dining Hall',
-    subtitle: 'Primary Campus Dining Hub & Live Token Counter 1',
+    subtitle: 'Primary Campus Dining Hub & Live Token Counter',
     description: 'The heartbeat of campus dining at MITS Gwalior! Features an expansive student dining hall, live TV token calling display, 100% pure vegetarian live kitchen, and express pickup stations.',
     image: '/assets/campus/mits-main-canteen.jpg',
     tag: '⭐ Primary Dining Hub',
     isPrimary: true,
     location: 'Central Campus Core (Opposite Architecture Block)',
-    canteenNote: '📍 Main Food Pickup Counter 1 Here',
+    canteenNote: '📍 Main Food Pickup Counter Here',
     actionText: 'Browse Live Food Menu',
     actionLink: '/menu'
   },
@@ -177,7 +177,7 @@ export const MitsCampusGallery = () => {
               </div>
               <div className="px-3.5 py-1.5 rounded-xl bg-[#151C30]/80 border border-purple-500/25 flex items-center gap-2 text-slate-200">
                 <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="font-bold">MITS Main Canteen Counter 1</span>
+                <span className="font-bold">MITS Main Canteen Counter</span>
               </div>
               <div className="px-3.5 py-1.5 rounded-xl bg-[#151C30]/80 border border-purple-500/25 flex items-center gap-2 text-slate-200">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />

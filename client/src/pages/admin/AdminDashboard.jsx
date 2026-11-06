@@ -286,7 +286,7 @@ export const AdminDashboard = () => {
         <div className="flex items-center gap-2 shrink-0 bg-[#151C30] border border-purple-500/30 px-3 py-1.5 rounded-xl shadow-xs self-start sm:self-auto">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           <span className="text-[11px] sm:text-xs font-black text-slate-200">
-            Pickup Counter: <span className="text-purple-300">Counter 1 (Express)</span>
+            Pickup Counter: <span className="text-purple-300">Counter</span>
           </span>
         </div>
       </div>
@@ -394,7 +394,7 @@ export const AdminDashboard = () => {
                   {/* Payment & Counter info */}
                   <div className="pt-2 flex items-center justify-between text-[10px] sm:text-[11px]">
                     <span className="text-[#AAB3C5]">
-                      Counter: <strong className="text-white">Counter {order.assignedCounter || 1}</strong>
+                      Pickup: <strong className="text-white">Counter</strong>
                     </span>
                     <span
                       className={`font-black ${
@@ -495,7 +495,7 @@ export const AdminDashboard = () => {
         const readyTimeObj = new Date(Date.now() + customPrepMinutes * 60 * 1000);
         const readyTimeStr = readyTimeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const itemsSummary = (acceptModalOrder.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ');
-        const previewWhatsAppText = `🎉 *MITS Canteen Alert*\n\nHello *${acceptModalOrder.studentName || 'Student'}*!\nYour food order *#${acceptModalOrder.tokenNumber}* has been *ACCEPTED* by MITS Canteen! 👨‍🍳\n\n⏳ *Estimated Preparation Time:* ~${customPrepMinutes} Minutes\n⏰ *Expected Ready By:* ${readyTimeStr}\n📍 *Pickup Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nOur kitchen has started preparing your food fresh. You will receive another message as soon as your order is ready for pickup! 🚀`;
+        const previewWhatsAppText = `🎉 *MITS Canteen Alert*\n\nHello *${acceptModalOrder.studentName || 'Student'}*!\nYour food order *#${acceptModalOrder.tokenNumber}* has been *ACCEPTED* by MITS Canteen! 👨‍🍳\n\n⏳ *Estimated Preparation Time:* ~${customPrepMinutes} Minutes\n⏰ *Expected Ready By:* ${readyTimeStr}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nOur kitchen has started preparing your food fresh. You will receive another message as soon as your order is ready for pickup! 🚀`;
         const whatsappWebLink = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(previewWhatsAppText)}`;
 
         return (

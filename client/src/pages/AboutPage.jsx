@@ -33,7 +33,7 @@ export const AboutPage = () => {
           </h1>
 
           <p className="text-base sm:text-lg text-[#AAB3C5] max-w-2xl mx-auto leading-relaxed font-normal">
-            Engineered exclusively for MITSians across the 44.6-acre campus. Order fresh breakfast, student thalis, and refreshments right from your departments, and pick up without standing in 20-minute break lines at MITS Main Canteen Counter 1.
+            Engineered exclusively for MITSians across the 44.6-acre campus. Order fresh breakfast, student thalis, and refreshments right from your departments, and pick up without standing in 20-minute break lines at MITS Main Canteen Counter.
           </p>
 
           <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
@@ -116,7 +116,7 @@ export const AboutPage = () => {
                 <p className="text-[10px] text-[#AAB3C5] font-semibold uppercase">Green Campus</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-purple-300">Counter 1</p>
+                <p className="text-2xl font-black text-purple-300">Counter</p>
                 <p className="text-[10px] text-[#AAB3C5] font-semibold uppercase">Main Canteen Hub</p>
               </div>
             </div>
@@ -152,7 +152,7 @@ export const AboutPage = () => {
               MITS Campus Infrastructure
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-              Consolidated Express Pickup Counter 1
+              Consolidated Express Pickup Counter
             </h2>
             <p className="text-xs sm:text-sm text-[#AAB3C5] mt-1 max-w-2xl">
               All student orders are routed to a single streamlined counter at MITS Main Canteen for maximum clarity and speed.
@@ -163,7 +163,7 @@ export const AboutPage = () => {
             <div className="p-6 rounded-2xl bg-[#151C30] border border-purple-500/30 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white">
-                  Counter 1 &bull; Express Station
+                  Counter &bull; Express Station
                 </span>
                 <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Active

@@ -491,12 +491,12 @@ const seedData = async () => {
       {
         name: 'MITS Main Canteen',
         code: 'MITS-01',
-        location: 'MITS Main Canteen, Counter 1, MITS Gwalior',
+        location: 'MITS Main Canteen, Counter, MITS Gwalior',
         isOpen: true,
         status: 'Operational',
         openingTime: '08:00 AM',
         closingTime: '07:30 PM',
-        activeCounters: 1, // Single Express Counter 1
+        activeCounters: 1, // Single Express Counter
         managerName: 'MITS Canteen Incharge',
         managerPhone: '+91 98112 23344',
         rating: 4.9,

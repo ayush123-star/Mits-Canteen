@@ -70,11 +70,11 @@ export const LiveTokenDisplay = () => {
                 MITS CANTEEN &bull; LIVE TV TOKEN DISPLAY
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white animate-pulse shadow-md shadow-purple-500/30">
-                MITS MAIN CANTEEN COUNTER 1
+                MITS MAIN CANTEEN COUNTER
               </span>
             </div>
             <p className="text-xs text-[#AAB3C5] flex items-center gap-2 mt-0.5">
-              <span>Address: MITS Main Canteen, Counter 1, MITS Campus, Gwalior</span>
+              <span>Address: MITS Main Canteen, Counter, MITS Campus, Gwalior</span>
               <span>•</span>
               <span className="text-emerald-400 font-bold">Kitchen Synced</span>
             </p>
@@ -179,7 +179,7 @@ export const LiveTokenDisplay = () => {
                     </span>
                     <div className="mt-1 px-3 py-1 rounded-full bg-emerald-400 text-emerald-950 text-xs font-black flex items-center gap-1 shadow-sm">
                       <MapPin className="w-3 h-3" />
-                      Counter {ord.assignedCounter || 1}
+                      Counter
                     </div>
                   </div>
                 ))}
@@ -260,7 +260,7 @@ export const LiveTokenDisplay = () => {
                         <Clock className="w-3.5 h-3.5" />
                         ~{ord.estimatedPrepMinutes || 8}m
                       </span>
-                      <span className="font-bold text-white">C{ord.assignedCounter || 1}</span>
+                      <span className="font-bold text-white">Counter</span>
                     </div>
                   </div>
                 ))}
@@ -276,7 +276,7 @@ export const LiveTokenDisplay = () => {
             </div>
             <div className="bg-[#151C30] p-2.5 rounded-xl border border-purple-500/20">
               <span className="text-[10px] text-[#AAB3C5] block">Pickup Counter</span>
-              <span className="font-black text-emerald-400">Counter 1</span>
+              <span className="font-black text-emerald-400">Counter</span>
             </div>
             <div className="bg-[#151C30] p-2.5 rounded-xl border border-purple-500/20">
               <span className="text-[10px] text-[#AAB3C5] block">Active Total</span>

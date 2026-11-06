@@ -32,7 +32,7 @@ async function sendTest() {
         type: 'text',
         text: {
           preview_url: false,
-          body: `🎉 *MITS Canteen — WhatsApp Notification Test*\n\nHello! Your Meta WhatsApp Cloud API is connected and working with MITS Canteen.\n\nYou will receive automatic updates whenever orders are placed, accepted, or ready at Counter 1! 🚀`,
+          body: `🎉 *MITS Canteen — WhatsApp Notification Test*\n\nHello! Your Meta WhatsApp Cloud API is connected and working with MITS Canteen.\n\nYou will receive automatic updates whenever orders are placed, accepted, or ready at Counter! 🚀`,
         },
       },
       {

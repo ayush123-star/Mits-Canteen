@@ -373,9 +373,7 @@ export const MenuManagementPage = () => {
                     onChange={(e) => setFormData({ ...formData, counter: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/20 text-white font-bold focus:outline-none focus:border-[#7955E8]"
                   >
-                    <option value="1" className="bg-[#151C30] text-white">Counter 1</option>
-                    <option value="2" className="bg-[#151C30] text-white">Counter 2</option>
-                    <option value="3" className="bg-[#151C30] text-white">Counter 3</option>
+                    <option value="1" className="bg-[#151C30] text-white">Counter</option>
                   </select>
                 </div>
 
