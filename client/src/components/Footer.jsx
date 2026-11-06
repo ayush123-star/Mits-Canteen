@@ -11,9 +11,7 @@ import {
   Mail,
   Github,
   Linkedin,
-  Globe,
-  Briefcase,
-  Award
+  Globe
 } from 'lucide-react';
 
 export const Footer = () => {
@@ -145,19 +143,6 @@ export const Footer = () => {
                 <p className="text-xs text-[#AAB3C5] mt-0.5">
                   B.Tech Electronics & Telecommunication (2025–2029) &bull; MITS Gwalior
                 </p>
-                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md flex items-center gap-1">
-                    <Award className="w-3 h-3 text-emerald-400" />
-                    Technical Team @ IEEE MTT-S Student Branch MITS
-                  </span>
-                  <span className="text-[10px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-md flex items-center gap-1">
-                    <Briefcase className="w-3 h-3 text-blue-400" />
-                    Web Dev Intern @ Thiranex
-                  </span>
-                </div>
-                <p className="text-[11px] text-purple-300 font-mono mt-1">
-                  Enrollment: BTET25O1039 &bull; pandeyayush1603@gmail.com &bull; +91 90395 67623
-                </p>
               </div>
             </div>
 
@@ -210,12 +195,22 @@ export const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-purple-500/20 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#AAB3C5] gap-4">
-          <p>© {new Date().getFullYear()} MITS Canteen — Madhav Institute of Technology & Science, Gwalior. All rights reserved.</p>
-          <div className="flex items-center gap-1 text-slate-400">
-            Crafted for MITSians with <Heart className="w-3.5 h-3.5 text-purple-400 fill-purple-400 inline" />
-          </div>
+        {/* Bottom Bar — Clean centered format as requested */}
+        <div className="border-t border-purple-500/20 pt-8 pb-3 flex flex-col items-center justify-center text-center text-xs text-[#AAB3C5] space-y-1.5">
+          <p className="text-slate-300 font-medium tracking-wide">
+            © {new Date().getFullYear()} MITS Gwalior Canteen
+          </p>
+          <p className="text-slate-400 text-xs">
+            Made by{' '}
+            <a
+              href="https://portfolio-jade-two-92.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#526DFF] hover:text-blue-400 font-semibold transition-colors"
+            >
+              Ayush Pandey
+            </a>
+          </p>
         </div>
       </div>
     </footer>

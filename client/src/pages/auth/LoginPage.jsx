@@ -558,9 +558,6 @@ export const LoginPage = () => {
                 <p className="text-xs text-purple-300 font-medium truncate mt-0.5">
                   Electronics and Telecommunication &bull; MITS Gwalior
                 </p>
-                <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                  IEEE MTT-S Technical Team &bull; Web Dev Intern @ Thiranex
-                </p>
 
                 {/* Social & Portfolio Icons Row: Portfolio, LinkedIn, GitHub, Email */}
                 <div className="flex items-center gap-2 mt-2">
@@ -630,6 +627,22 @@ export const LoginPage = () => {
                 <p className="text-[10px] text-slate-400">MITS Gwalior</p>
               </div>
             </div>
+          </div>
+
+          {/* Bottom Copyright Matched with Image 1 */}
+          <div className="pt-2 text-center text-xs text-[#AAB3C5] space-y-1">
+            <p className="text-slate-400">© {new Date().getFullYear()} MITS Gwalior Canteen</p>
+            <p className="text-slate-400 text-[11px]">
+              Made by{' '}
+              <a
+                href="https://portfolio-jade-two-92.vercel.app/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[#526DFF] hover:text-blue-400 font-semibold transition-colors"
+              >
+                Ayush Pandey
+              </a>
+            </p>
           </div>
         </div>
       </footer>

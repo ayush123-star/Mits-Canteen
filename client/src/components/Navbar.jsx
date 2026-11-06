@@ -797,9 +797,6 @@ export const Navbar = () => {
                 <p className="text-[11px] text-[#AAB3C5] mt-0.5">
                   Madhav Institute of Technology & Science (MITS), Gwalior
                 </p>
-                <p className="text-[10px] font-mono text-purple-400 mt-0.5">
-                  Enrollment: BTET25O1039 &bull; Gwalior, Madhya Pradesh
-                </p>
               </div>
 
               {/* Social & Portfolio Action Icons Row */}
