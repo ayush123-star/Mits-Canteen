@@ -1,0 +1,710 @@
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
+import {
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ChefHat,
+  Search,
+  Bell,
+  Volume2,
+  VolumeX,
+  AlertTriangle,
+  QrCode,
+  Flame,
+  Check,
+  DollarSign,
+  Filter,
+  Smartphone,
+  Phone,
+  ArrowRight,
+  Sparkles,
+  MapPin,
+  RefreshCw,
+  MessageSquare,
+  ExternalLink,
+  Send
+} from 'lucide-react';
+
+export const AdminDashboard = () => {
+  const { user } = useAuth();
+  const { orders, updateOrderStatus, cancelOrder } = useData();
+
+  const [searchToken, setSearchToken] = useState('');
+  const [selectedCounter, setSelectedCounter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [rejectModalOrder, setRejectModalOrder] = useState(null);
+  const [rejectReason, setRejectReason] = useState('Ingredients temporarily unavailable');
+  const [acceptModalOrder, setAcceptModalOrder] = useState(null);
+  const [customPrepMinutes, setCustomPrepMinutes] = useState(15);
+  const [verifiedTokenModal, setVerifiedTokenModal] = useState(null);
+
+  // Active kitchen orders
+  const activeOrders = orders.filter((o) =>
+    ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
+  );
+
+  // Filtered orders
+  const filteredOrders = orders.filter((ord) => {
+    // Search
+    if (searchToken.trim()) {
+      const q = searchToken.toLowerCase().trim();
+      const matchToken = ord.tokenNumber.toLowerCase().includes(q);
+      const matchName = ord.studentName?.toLowerCase().includes(q);
+      const matchPhone = ord.studentPhone?.includes(q);
+      if (!matchToken && !matchName && !matchPhone) return false;
+    }
+
+    // Counter
+    if (selectedCounter !== 'ALL') {
+      if (String(ord.assignedCounter) !== String(selectedCounter)) return false;
+    }
+
+    // Status
+    if (statusFilter === 'ACTIVE') {
+      return ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(ord.status);
+    } else if (statusFilter !== 'ALL') {
+      return ord.status === statusFilter;
+    }
+
+    return true;
+  });
+
+  // Calculate quick metrics
+  const totalOrdersToday = orders.length;
+  const preparingCount = orders.filter((o) => o.status === 'Preparing').length;
+  const readyCount = orders.filter((o) => o.status === 'Ready for Pickup').length;
+  const placedCount = orders.filter((o) => o.status === 'Placed').length;
+  const totalRevenueToday = orders
+    .filter((o) => o.status !== 'Cancelled')
+    .reduce((sum, o) => sum + (o.finalAmount || 0), 0);
+
+  // Direct 1-Click Accept with Automated WhatsApp Notification
+  const handleDirectAccept = (order) => {
+    const actor = user?.name || 'Canteen Owner';
+    const estMins = order.estimatedPrepMinutes || 12;
+    updateOrderStatus(order.id, 'Accepted', actor, {
+      estimatedMinutes: estMins,
+      note: `Order accepted. Automatic WhatsApp alert sent (~${estMins}m)`,
+    });
+  };
+
+  const handleAdvanceStatus = (order) => {
+    const actor = user?.name || 'Kitchen Manager';
+    if (order.status === 'Placed') {
+      handleDirectAccept(order);
+    } else if (order.status === 'Accepted') {
+      updateOrderStatus(order.id, 'Preparing', actor);
+    } else if (order.status === 'Preparing') {
+      updateOrderStatus(order.id, 'Ready for Pickup', actor);
+    } else if (order.status === 'Ready for Pickup') {
+      updateOrderStatus(order.id, 'Completed', actor);
+    }
+  };
+
+  const handleConfirmAccept = () => {
+    if (!acceptModalOrder) return;
+    const actor = user?.name || 'Canteen Owner';
+    updateOrderStatus(acceptModalOrder.id, 'Accepted', actor, {
+      estimatedMinutes: customPrepMinutes,
+      note: `Order accepted with custom prep time: ${customPrepMinutes} mins. WhatsApp alert dispatched!`,
+    });
+    setAcceptModalOrder(null);
+  };
+
+  const handleConfirmReject = () => {
+    if (!rejectModalOrder) return;
+    cancelOrder(rejectModalOrder.id, `Rejected by canteen: ${rejectReason}`);
+    setRejectModalOrder(null);
+  };
+
+  const handleVerifyTokenSubmit = (e) => {
+    e.preventDefault();
+    if (!searchToken.trim()) return;
+    const cleanQ = searchToken.replace('#', '').trim().toLowerCase();
+    const found = orders.find(
+      (o) =>
+        o.tokenNumber.toLowerCase() === cleanQ ||
+        o.tokenNumber.toLowerCase() === `#${cleanQ}` ||
+        o.id.toLowerCase() === cleanQ ||
+        (o.studentEnrollment && o.studentEnrollment.toLowerCase().includes(cleanQ)) ||
+        (o.studentRoll && o.studentRoll.toLowerCase().includes(cleanQ))
+    );
+
+    if (found) {
+      setVerifiedTokenModal(found);
+    } else {
+      alert(`No active order found matching "${searchToken}".`);
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-fadeIn text-white">
+      {/* 1. Header Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              Live Kitchen Calling & Orders Queue
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-[#AAB3C5] mt-1">
+            Real-time live queue management with automated recipe inventory deductions and WhatsApp readiness alerts.
+          </p>
+        </div>
+
+        {/* Quick Token Call / Scanner Box */}
+        <form onSubmit={handleVerifyTokenSubmit} className="flex items-center gap-2">
+          <div className="relative">
+            <QrCode className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchToken}
+              onChange={(e) => setSearchToken(e.target.value)}
+              placeholder="Verify Token (e.g. TK-101)..."
+              className="pl-10 pr-4 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/30 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-[#7955E8] shadow-xs"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-md shadow-purple-500/30 transition-all cursor-pointer"
+          >
+            Verify
+          </button>
+        </form>
+      </div>
+
+      {/* 2. Stat Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
+          <p className="text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider">New Incoming</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-2xl sm:text-3xl font-black text-purple-300">{placedCount}</span>
+            <span className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
+              🔔
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
+          <p className="text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider">In Preparation</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-2xl sm:text-3xl font-black text-blue-400">{preparingCount}</span>
+            <span className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-xs border border-blue-500/30">
+              👨‍🍳
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
+          <p className="text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider">Ready at Counters</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-2xl sm:text-3xl font-black text-emerald-400">{readyCount}</span>
+            <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs border border-emerald-500/30">
+              📦
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
+          <p className="text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider">Total Orders Today</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-2xl sm:text-3xl font-black text-white">{totalOrdersToday}</span>
+            <span className="w-8 h-8 rounded-xl bg-[#151C30] text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
+              📊
+            </span>
+          </div>
+        </div>
+
+        <div className="col-span-2 lg:col-span-1 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-xl shadow-purple-500/30">
+          <p className="text-[11px] font-bold text-purple-200 uppercase tracking-wider">Today's Revenue</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-2xl sm:text-3xl font-black privacy-sensitive" title="Hover to view (Protected by Privacy Shield)">₹{totalRevenueToday}</span>
+            <DollarSign className="w-6 h-6 text-purple-200" />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Filters Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#1C263A]/90 backdrop-blur-xl p-4 rounded-3xl border border-purple-500/20 shadow-xl">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <button
+            onClick={() => setStatusFilter('ACTIVE')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'ACTIVE'
+                ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            Active Queue ({activeOrders.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('Placed')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'Placed'
+                ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            New ({placedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('Preparing')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'Preparing'
+                ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            Preparing ({preparingCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('Ready for Pickup')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'Ready for Pickup'
+                ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            Ready ({readyCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'ALL'
+                ? 'bg-[#151C30] text-white border border-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            All History
+          </button>
+        </div>
+
+        {/* Dedicated Single Express Counter Indicator */}
+        <div className="flex items-center gap-2 shrink-0 bg-[#151C30] border border-purple-500/30 px-3.5 py-1.5 rounded-xl shadow-xs">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span className="text-xs font-black text-slate-200">
+            Pickup Counter: <span className="text-purple-300">Counter 1 (MITS Express)</span>
+          </span>
+        </div>
+      </div>
+
+      {/* 4. Orders Grid */}
+      {filteredOrders.length === 0 ? (
+        <div className="py-20 text-center bg-[#1C263A]/85 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl space-y-2">
+          <div className="w-16 h-16 rounded-full bg-[#151C30] text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          </div>
+          <h3 className="text-base font-extrabold text-white">Kitchen Queue Is Clear!</h3>
+          <p className="text-xs text-[#AAB3C5]">All current orders have been processed and collected.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredOrders.map((order) => {
+            const isPlaced = order.status === 'Placed';
+            const isAccepted = order.status === 'Accepted';
+            const isPreparing = order.status === 'Preparing';
+            const isReady = order.status === 'Ready for Pickup';
+            const isCompleted = order.status === 'Completed';
+            const isCancelled = order.status === 'Cancelled';
+
+            return (
+              <div
+                key={order.id || order._id}
+                className={`rounded-3xl border-2 bg-[#1C263A]/90 backdrop-blur-xl p-5 shadow-xl flex flex-col justify-between transition-all hover:border-purple-500/50 ${
+                  isReady
+                    ? 'border-emerald-500 shadow-emerald-500/20'
+                    : isPreparing
+                    ? 'border-blue-500'
+                    : isPlaced
+                    ? 'border-purple-500 animate-pulse'
+                    : 'border-purple-500/20'
+                }`}
+              >
+                <div>
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-purple-500/20">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-11 h-11 rounded-2xl bg-[#151C30] border border-purple-500/30 text-purple-300 flex flex-col items-center justify-center font-mono">
+                        <span className="text-[8px] font-black uppercase text-[#AAB3C5]">TOKEN</span>
+                        <span className="text-xs font-black text-white">{order.tokenNumber}</span>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-white">{order.studentName}</h4>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-purple-200 font-mono font-bold bg-[#151C30] px-1.5 py-0.5 rounded border border-purple-500/30">
+                            Enroll: {order.studentEnrollment || order.studentRoll || 'BTET25O1039'}
+                          </span>
+                          <span className="text-[10px] text-purple-300 font-bold bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 truncate max-w-[150px]">
+                            {order.studentDepartment && order.studentDepartment !== 'Campus'
+                              ? order.studentDepartment
+                              : 'Electronics and Telecommunication'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          isReady
+                            ? 'bg-emerald-500 text-white animate-pulse'
+                            : isPreparing
+                            ? 'bg-blue-600 text-white'
+                            : isAccepted
+                            ? 'bg-[#7955E8] text-white'
+                            : isPlaced
+                            ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white'
+                            : isCancelled
+                            ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                            : 'bg-slate-700 text-slate-200'
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                      <p className="text-[10px] text-[#AAB3C5] mt-1 flex items-center gap-1 justify-end">
+                        <Clock className="w-3 h-3 text-purple-400" />
+                        {order.scheduledPickupTime || 'Immediate'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Items list */}
+                  <div className="py-3 space-y-1.5 border-b border-purple-500/20">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-[#151C30] border border-purple-500/20 font-black text-[11px] text-purple-300 flex items-center justify-center">
+                            {item.quantity}x
+                          </span>
+                          <span className="font-extrabold text-white">{item.name}</span>
+                        </div>
+                        <span className="font-bold text-[#AAB3C5]">₹{(item.price || 50) * item.quantity}</span>
+                      </div>
+                    ))}
+                    {order.orderNotes && (
+                      <p className="text-[11px] text-purple-200 bg-[#151C30] p-1.5 rounded-lg italic border border-purple-500/20">
+                        Note: {order.orderNotes}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Payment & Counter info */}
+                  <div className="pt-2 flex items-center justify-between text-[11px]">
+                    <span className="text-[#AAB3C5]">
+                      Counter: <strong className="text-white">Counter {order.assignedCounter || 1}</strong>
+                    </span>
+                    <span
+                      className={`font-black ${
+                        order.paymentStatus === 'PAID' ? 'text-emerald-400' : 'text-amber-400'
+                      }`}
+                    >
+                      {order.paymentMethod === 'UPI' ? 'UPI (PAID)' : 'CASH (Collect ₹' + order.finalAmount + ')'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card Action Buttons based on status */}
+                <div className="mt-4 pt-3 border-t border-purple-500/20 flex items-center gap-2">
+                  {isPlaced && (
+                    <>
+                      <button
+                        onClick={() => handleDirectAccept(order)}
+                        className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                        title="1-Click: Accept order and automatically send WhatsApp preparation time notification"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Accept & WhatsApp</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAcceptModalOrder(order);
+                          setCustomPrepMinutes(order.estimatedPrepMinutes || 15);
+                        }}
+                        className="p-2.5 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-purple-300 font-bold text-xs transition-colors cursor-pointer border border-purple-500/30"
+                        title="Set custom preparation minutes if needed"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRejectModalOrder(order)}
+                        className="py-2.5 px-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-xs transition-colors cursor-pointer border border-red-500/30"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+
+                  {isAccepted && (
+                    <button
+                      onClick={() => handleAdvanceStatus(order)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all"
+                    >
+                      <ChefHat className="w-4 h-4" />
+                      Start Preparing (Auto-Deduct Stock)
+                    </button>
+                  )}
+
+                  {isPreparing && (
+                    <button
+                      onClick={() => handleAdvanceStatus(order)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all"
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      Mark Ready (Send WhatsApp Alert)
+                    </button>
+                  )}
+
+                  {isReady && (
+                    <button
+                      onClick={() => handleAdvanceStatus(order)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      Hand Over & Complete
+                    </button>
+                  )}
+
+                  {isCompleted && (
+                    <div className="w-full py-2 text-center text-xs font-bold text-[#AAB3C5] bg-[#151C30] rounded-xl border border-purple-500/20">
+                      Order Picked Up & Completed
+                    </div>
+                  )}
+
+                  {isCancelled && (
+                    <div className="w-full py-2 text-center text-xs font-bold text-red-400 bg-red-500/15 rounded-xl border border-red-500/30">
+                      Cancelled / Rejected
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 4b. Accept Order & Send WhatsApp Time Alert Modal */}
+      {acceptModalOrder && (() => {
+        const cleanPhone = String(acceptModalOrder.studentPhone || '9876543210').replace(/\D/g, '');
+        const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const readyTimeObj = new Date(Date.now() + customPrepMinutes * 60 * 1000);
+        const readyTimeStr = readyTimeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const itemsSummary = (acceptModalOrder.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ');
+        const previewWhatsAppText = `🎉 *MITS Canteen Alert*\n\nHello *${acceptModalOrder.studentName || 'Student'}*!\nYour food order *#${acceptModalOrder.tokenNumber}* has been *ACCEPTED* by MITS Canteen! 👨‍🍳\n\n⏳ *Estimated Preparation Time:* ~${customPrepMinutes} Minutes\n⏰ *Expected Ready By:* ${readyTimeStr}\n📍 *Pickup Counter:* MITS Main Canteen (Counter 1, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nOur kitchen has started preparing your food fresh. You will receive another message as soon as your order is ready for pickup! 🚀`;
+        const whatsappWebLink = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(previewWhatsAppText)}`;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn text-white">
+            <div className="bg-[#1C263A] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border border-purple-500/30 space-y-5">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-purple-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
+                    <MessageSquare className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                      Accept Order & WhatsApp Alert
+                    </h3>
+                    <p className="text-xs text-[#AAB3C5]">
+                      Token: <strong className="text-white font-mono">#{acceptModalOrder.tokenNumber}</strong> • Student: <strong className="text-white">{acceptModalOrder.studentName}</strong>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setAcceptModalOrder(null)}
+                  className="text-[#AAB3C5] hover:text-white p-1.5 rounded-lg"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Prep Time Selector */}
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider text-[#AAB3C5] block mb-2">
+                  Estimated Preparation Time (Minutes)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[8, 12, 15, 20, 25].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setCustomPrepMinutes(mins)}
+                      className={`py-2 rounded-xl text-xs font-black border transition-all ${
+                        customPrepMinutes === mins
+                          ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white border-transparent shadow-md shadow-purple-500/30'
+                          : 'bg-[#151C30] text-[#AAB3C5] border-purple-500/20 hover:bg-[#25334d] hover:text-white'
+                      }`}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3 bg-[#151C30] border border-purple-500/25 p-3 rounded-2xl text-xs">
+                  <div className="flex items-center gap-2 text-white font-bold">
+                    <Clock className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span>Custom:</span>
+                    <input
+                      type="number"
+                      min="2"
+                      max="90"
+                      value={customPrepMinutes}
+                      onChange={(e) => setCustomPrepMinutes(Math.max(1, Number(e.target.value)))}
+                      className="w-16 px-2 py-1 rounded-lg border border-purple-500/30 text-xs font-black text-center bg-[#0B1020] text-white"
+                    />
+                    <span>mins</span>
+                  </div>
+                  <span className="text-[11px] font-black text-purple-300">
+                    Ready by ~{readyTimeStr}
+                  </span>
+                </div>
+              </div>
+
+              {/* WhatsApp Message Preview Box */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#AAB3C5]">
+                    WhatsApp Message Preview ({acceptModalOrder.studentPhone})
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Auto-Dispatched
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-[#0B1020] border border-purple-500/20 text-xs text-slate-200 font-mono space-y-1.5 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto">
+                  {previewWhatsAppText.replace(/\*/g, '')}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+                <button
+                  onClick={() => setAcceptModalOrder(null)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold text-[#AAB3C5] hover:text-white hover:bg-[#151C30]"
+                >
+                  Cancel
+                </button>
+                <a
+                  href={whatsappWebLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-purple-500/30 bg-[#151C30] hover:bg-[#25334d] text-purple-300 text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  WhatsApp Web
+                </a>
+                <button
+                  onClick={handleConfirmAccept}
+                  className="flex-1 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Accept & Send WhatsApp Alert
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 5. Reject Order Modal */}
+      {rejectModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn text-white">
+          <div className="bg-[#1C263A] rounded-3xl p-6 max-w-md w-full shadow-2xl border border-purple-500/30 space-y-4">
+            <div className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="text-base font-extrabold text-white">
+                Reject Order #{rejectModalOrder.tokenNumber}
+              </h3>
+            </div>
+            <p className="text-xs text-[#AAB3C5]">
+              Select the reason why the kitchen cannot fulfill this order. The student will be notified immediately.
+            </p>
+
+            <select
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/30 text-xs font-bold text-white focus:outline-none focus:border-red-500"
+            >
+              <option value="Ingredients temporarily unavailable">Ingredients temporarily unavailable</option>
+              <option value="Counter closed for rush break">Counter closed for rush break</option>
+              <option value="Duplicate or test order">Duplicate or test order</option>
+              <option value="Kitchen deep cleaning in progress">Kitchen deep cleaning in progress</option>
+            </select>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setRejectModalOrder(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#AAB3C5] hover:text-white hover:bg-[#151C30]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReject}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md shadow-red-600/30"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Verified Token Modal */}
+      {verifiedTokenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn text-white">
+          <div className="bg-[#1C263A] rounded-3xl p-6 max-w-md w-full shadow-2xl border border-purple-500/30 space-y-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto font-black text-xl">
+              ✓
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#AAB3C5]">
+                VERIFIED TOKEN PASS
+              </span>
+              <h3 className="text-2xl font-black text-white font-mono mt-0.5">
+                #{verifiedTokenModal.tokenNumber}
+              </h3>
+              <p className="text-xs font-extrabold text-purple-300 mt-1">
+                Student: {verifiedTokenModal.studentName} • Enroll: {verifiedTokenModal.studentEnrollment || verifiedTokenModal.studentRoll} • {verifiedTokenModal.studentDepartment && verifiedTokenModal.studentDepartment !== 'Campus' ? verifiedTokenModal.studentDepartment : 'Electronics and Telecommunication'}
+              </p>
+            </div>
+
+            <div className="bg-[#151C30] p-3 rounded-2xl text-left text-xs space-y-1 border border-purple-500/20">
+              <span className="font-bold text-white block">Ordered Food:</span>
+              {verifiedTokenModal.items.map((i, idx) => (
+                <div key={idx} className="flex justify-between text-[#AAB3C5]">
+                  <span>{i.quantity}x {i.name}</span>
+                  <span className="font-bold text-white">₹{(i.price || 50) * i.quantity}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={() => setVerifiedTokenModal(null)}
+                className="flex-1 py-2.5 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-white text-xs font-bold border border-purple-500/30"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  updateOrderStatus(verifiedTokenModal.id, 'Completed', user?.name || 'Counter Operator');
+                  setVerifiedTokenModal(null);
+                  alert(`Order #${verifiedTokenModal.tokenNumber} marked as completed and handed over!`);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/30"
+              >
+                Hand Over Food
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminDashboard;

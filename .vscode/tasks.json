@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Full App (Server + Client)",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Seed Database (Food Items & Demo Users)",
+      "type": "shell",
+      "command": "npm run seed",
+      "problemMatcher": []
+    }
+  ]
+}

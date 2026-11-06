@@ -1,0 +1,628 @@
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
+import {
+  UtensilsCrossed,
+  ShoppingBag,
+  Tv,
+  ClipboardList,
+  ShieldAlert,
+  User,
+  LogOut,
+  Menu,
+  X,
+  Code,
+  Sun,
+  Moon,
+  ChevronDown,
+  Building2,
+  Crown,
+  Star,
+  Sparkles,
+  Mail,
+  Linkedin,
+  Github,
+  GraduationCap
+} from 'lucide-react';
+
+export const Navbar = () => {
+  const { user, isAuthenticated, isAdmin, isSuperAdmin, logout } = useAuth();
+  const { totalItemCount, setIsCartOpen } = useCart();
+  const { canteens, orders } = useData();
+  const { theme, toggleTheme, isDark } = useTheme();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [isDeveloperModalOpen, setIsDeveloperModalOpen] = useState(false);
+
+  const canteenStatus = canteens[0] || { isOpen: true, name: 'MITS Main Canteen' };
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isActive = (path) => location.pathname === path;
+
+  // Active orders count for badge
+  const userActiveOrders = isAuthenticated
+    ? orders.filter(
+        (o) =>
+          (o.studentId === user?.id || o.studentEmail === user?.email) &&
+          ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
+      ).length
+    : 0;
+
+  // Direct Gmail Composer Launcher
+  const handleContactDeveloperEmail = (e) => {
+    e.preventDefault();
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+
+    if (isMobile) {
+      window.location.href = 'mailto:pandeyayush1603@gmail.com';
+    } else {
+      const gmailWeb = 'https://mail.google.com/mail/?view=cm&fs=1&to=pandeyayush1603@gmail.com';
+      const win = window.open(gmailWeb, '_blank');
+      if (!win) {
+        window.location.href = 'mailto:pandeyayush1603@gmail.com';
+      }
+    }
+  };
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 bg-[#0B1020]/90 backdrop-blur-xl border-b border-purple-500/20 text-white shadow-xl shadow-black/40 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            
+            {/* 1. Left: MITS Crest Logo & Brand Name */}
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <div className="relative w-9 h-9 rounded-full bg-slate-900 border border-purple-500/30 p-1 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform duration-300 overflow-hidden shrink-0">
+                <img
+                  src="/assets/campus/mits-logo.png"
+                  alt="MITS Gwalior Logo"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.target.src = '/images/mits/mits-logo.png';
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="font-black text-lg tracking-tight text-white group-hover:text-purple-300 transition-colors">
+                  MITS
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/25">
+                  CANTEEN
+                </span>
+
+                {/* Compact Live Status Indicator */}
+                <div className="hidden sm:flex items-center gap-1.5 ml-1 px-2 py-0.5 rounded-full bg-[#151C30] border border-purple-500/20 text-[10px]">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      canteenStatus.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'
+                    }`}
+                  ></span>
+                  <span
+                    className={`font-bold ${
+                      canteenStatus.isOpen ? 'text-emerald-400' : 'text-red-400'
+                    }`}
+                  >
+                    {canteenStatus.isOpen ? 'Open' : 'Closed'}
+                  </span>
+                </div>
+              </div>
+            </Link>
+
+            {/* 2. Middle: Clean Desktop Navigation Links */}
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+              <Link
+                to="/"
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive('/')
+                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
+                    : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
+                }`}
+              >
+                Home
+              </Link>
+
+              <Link
+                to="/menu"
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive('/menu')
+                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
+                    : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
+                }`}
+              >
+                Food Menu
+              </Link>
+
+              <Link
+                to="/live-tokens"
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  isActive('/live-tokens')
+                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
+                    : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5 text-purple-400" />
+                Live Tokens
+              </Link>
+
+              <Link
+                to="/#campus-spaces"
+                onClick={() => {
+                  const el = document.getElementById('campus-spaces');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  location.hash === '#campus-spaces'
+                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
+                    : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
+                }`}
+              >
+                Campus Spaces
+              </Link>
+
+              {isAuthenticated && (
+                <Link
+                  to="/my-orders"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    isActive('/my-orders')
+                      ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
+                      : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
+                  }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  <span>My Orders</span>
+                  {userActiveOrders > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 font-black text-[9px] flex items-center justify-center animate-pulse">
+                      {userActiveOrders}
+                    </span>
+                  )}
+                </Link>
+              )}
+
+              {isAuthenticated && !isAdmin && (
+                <Link
+                  to="/dashboard"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive('/dashboard')
+                      ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 font-bold'
+                      : 'text-[#AAB3C5] hover:text-white hover:bg-[#1C263A]/80'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+              )}
+
+              {isAdmin && !isSuperAdmin && (
+                <Link
+                  to="/admin"
+                  className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 transition-all flex items-center gap-1.5 ml-1"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 text-purple-400" />
+                  Admin
+                </Link>
+              )}
+
+              {isSuperAdmin && (
+                <Link
+                  to="/super-admin"
+                  className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-all flex items-center gap-1.5 ml-1"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  Super Admin
+                </Link>
+              )}
+            </nav>
+
+            {/* 3. Right Action Area: Developer Button + Light/Dark Mode Toggle + Cart + User */}
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              
+              {/* Signature MITS AMS Developer Pill Button */}
+              <button
+                type="button"
+                onClick={() => setIsDeveloperModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                title="View Lead Developer: Ayush Pandey"
+              >
+                <Code className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden sm:inline">Developer</span>
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              </button>
+
+              {/* Functional Light / Dark Mode Toggle Button */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="w-8 h-8 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/25 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs"
+                title={isDark ? "Switch to Light Academic Theme" : "Switch to MITS AMS Dark Theme"}
+                aria-label="Toggle Theme Mode"
+              >
+                {isDark ? (
+                  <Sun className="w-4 h-4 text-amber-300 hover:text-amber-200 transition-transform hover:rotate-45" />
+                ) : (
+                  <Moon className="w-4 h-4 text-[#7955E8] hover:text-[#526DFF] transition-transform hover:-rotate-12" />
+                )}
+              </button>
+
+              {/* Food Cart Drawer Trigger */}
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2 rounded-xl bg-[#151C30] hover:bg-[#1C263A] text-white transition-all border border-purple-500/20 flex items-center gap-1.5 group shadow-sm cursor-pointer"
+                title="Open Food Cart"
+              >
+                <ShoppingBag className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline text-xs font-bold text-slate-200">Cart</span>
+                {totalItemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/50 animate-bounce">
+                    {totalItemCount}
+                  </span>
+                )}
+              </button>
+
+              {/* User Dropdown or Single Sleek Sign In Button */}
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/20 transition-all text-left shadow-sm cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                      {user?.name?.charAt(0) || 'U'}
+                    </div>
+                    <div className="hidden md:block">
+                      <p className="text-xs font-bold text-white leading-tight truncate max-w-[90px]">
+                        {user?.name}
+                      </p>
+                      <p className="text-[9px] text-purple-300 capitalize leading-none mt-0.5">{user?.role?.replace('_', ' ')}</p>
+                    </div>
+                    <ChevronDown className="w-3 h-3 text-[#AAB3C5]" />
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div
+                      className="absolute right-0 mt-2 w-56 rounded-2xl bg-[#151C30]/98 backdrop-blur-2xl border border-purple-500/30 shadow-2xl py-2 z-50 divide-y divide-purple-500/10 animate-fadeIn"
+                      onMouseLeave={() => setUserDropdownOpen(false)}
+                    >
+                      <div className="px-4 py-2.5">
+                        <p className="text-[10px] text-[#AAB3C5] uppercase font-bold tracking-wider">Signed in as</p>
+                        <p className="text-xs font-bold text-white truncate mt-0.5">{user?.email}</p>
+                        {user?.studentId && (
+                          <p className="text-[11px] text-purple-300 font-mono mt-0.5">ID: {user?.studentId}</p>
+                        )}
+                      </div>
+
+                      <div className="py-1">
+                        {!isAdmin && (
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
+                          >
+                            <User className="w-4 h-4 text-purple-400" />
+                            Student Dashboard
+                          </Link>
+                        )}
+                        <Link
+                          to="/my-orders"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
+                        >
+                          <ClipboardList className="w-4 h-4 text-purple-400" />
+                          My Order History
+                        </Link>
+                        {!isAdmin && (
+                          <>
+                            <Link
+                              to="/profile"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
+                            >
+                              <User className="w-4 h-4 text-purple-400" />
+                              My Profile
+                            </Link>
+                            <Link
+                              to="/feedback"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-200 hover:bg-[#1C263A] hover:text-white"
+                            >
+                              <Star className="w-4 h-4 text-amber-400" />
+                              Rate Dishes & Feedback
+                            </Link>
+                          </>
+                        )}
+                        {isAdmin && !isSuperAdmin && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-purple-300 hover:bg-[#1C263A] hover:text-white"
+                          >
+                            <ShieldAlert className="w-4 h-4 text-purple-400" />
+                            Canteen Admin Panel
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link
+                            to="/super-admin"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-amber-300 hover:bg-[#1C263A] hover:text-white"
+                          >
+                            <Crown className="w-4 h-4 text-amber-400" />
+                            Super Admin Console
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            logout();
+                            setUserDropdownOpen(false);
+                            navigate('/');
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white shadow-md shadow-purple-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </Link>
+              )}
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 rounded-xl text-[#AAB3C5] hover:text-white hover:bg-[#151C30] cursor-pointer"
+                aria-label="Open Mobile Menu"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-[#0B1020]/95 backdrop-blur-2xl border-b border-purple-500/20 px-4 pt-3 pb-6 space-y-2 animate-fadeIn">
+            {/* Theme Toggle row for mobile */}
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#151C30] border border-purple-500/20 mb-2">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-purple-400" />}
+                <span>Theme: {isDark ? 'Dark AMS' : 'Light Mode'}</span>
+              </span>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="px-3 py-1 rounded-lg text-xs font-bold bg-[#1C263A] text-purple-300 border border-purple-500/30"
+              >
+                Switch to {isDark ? 'Light' : 'Dark'}
+              </button>
+            </div>
+
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
+                isActive('/') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+              }`}
+            >
+              Home
+            </Link>
+
+            <Link
+              to="/menu"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
+                isActive('/menu') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+              }`}
+            >
+              Food Menu
+            </Link>
+
+            <Link
+              to="/live-tokens"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                isActive('/live-tokens') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-purple-300 hover:bg-[#151C30]'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5 text-purple-400" />
+              Live Tokens
+            </Link>
+
+            <Link
+              to="/#campus-spaces"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                const el = document.getElementById('campus-spaces');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="block px-3.5 py-2 rounded-xl text-xs font-semibold text-purple-300 hover:bg-[#151C30]"
+            >
+              🏛️ Explore Campus Spaces
+            </Link>
+
+            {isAuthenticated && (
+              <Link
+                to="/my-orders"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
+                  isActive('/my-orders') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                }`}
+              >
+                My Orders {userActiveOrders > 0 && `(${userActiveOrders})`}
+              </Link>
+            )}
+
+            {isAuthenticated && !isAdmin && (
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
+                  isActive('/dashboard') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                }`}
+              >
+                Student Dashboard
+              </Link>
+            )}
+
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setIsDeveloperModalOpen(true);
+              }}
+              className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-blue-400 hover:bg-[#151C30] flex items-center gap-2"
+            >
+              <Code className="w-3.5 h-3.5 text-blue-400" />
+              <span>Developer Profile (Ayush Pandey)</span>
+            </button>
+
+            {isAdmin && !isSuperAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3.5 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30]"
+              >
+                Canteen Admin Console
+              </Link>
+            )}
+
+            {isSuperAdmin && (
+              <Link
+                to="/super-admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3.5 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30]"
+              >
+                👑 Super Admin Console
+              </Link>
+            )}
+
+            {!isAuthenticated && (
+              <div className="pt-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-center py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30"
+                >
+                  Sign In with Google
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+      </header>
+
+      {/* 4. Interactive Developer Profile Modal (Opened by clicking </> Developer button) */}
+      {isDeveloperModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-[#1C263A] rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-purple-500/30 relative text-white space-y-5">
+            <button
+              onClick={() => setIsDeveloperModalOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#151C30] hover:bg-purple-500/20 border border-purple-500/20 flex items-center justify-center text-[#AAB3C5] hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#7955E8]">
+                MITS CANTEEN PLATFORM
+              </span>
+              <h3 className="text-lg font-black text-white">DEVELOPED BY</h3>
+            </div>
+
+            {/* Profile Card */}
+            <div className="bg-gradient-to-b from-[#151C30] to-[#121829] rounded-2xl p-5 border border-purple-500/25 flex flex-col items-center text-center space-y-3.5 shadow-inner">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-[#7955E8] to-[#526DFF] shadow-lg shadow-purple-500/30">
+                  <img
+                    src="/assets/developer/ayush_pandey.jpg"
+                    alt="Ayush Pandey"
+                    className="w-full h-full rounded-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/assets/campus/ayush_pandey.jpg';
+                    }}
+                  />
+                </div>
+                <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-[#151C30] flex items-center justify-center text-[10px] text-white font-bold" title="Verified Creator">
+                  ✓
+                </span>
+              </div>
+
+              <div>
+                <h4 className="text-lg font-black text-white flex items-center justify-center gap-1.5">
+                  Ayush Pandey
+                </h4>
+                <p className="text-xs text-purple-300 font-bold mt-0.5">
+                  Electronics and Telecommunication
+                </p>
+                <p className="text-[11px] text-[#AAB3C5] mt-0.5">
+                  Madhav Institute of Technology & Science, Gwalior
+                </p>
+              </div>
+
+              {/* Social / Email Action Icons */}
+              <div className="flex items-center gap-2 pt-1">
+                <a
+                  href="https://www.linkedin.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-xl bg-[#1C263A] hover:bg-[#233049] border border-purple-500/20 text-[#AAB3C5] hover:text-white flex items-center justify-center transition-colors shadow-xs"
+                  title="LinkedIn Profile"
+                >
+                  <Linkedin className="w-4 h-4" />
+                </a>
+
+                <a
+                  href="https://github.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-xl bg-[#1C263A] hover:bg-[#233049] border border-purple-500/20 text-[#AAB3C5] hover:text-white flex items-center justify-center transition-colors shadow-xs"
+                  title="GitHub Profile"
+                >
+                  <Github className="w-4 h-4" />
+                </a>
+
+                {/* Direct Gmail Composer Launcher */}
+                <button
+                  type="button"
+                  onClick={handleContactDeveloperEmail}
+                  className="w-9 h-9 rounded-xl bg-[#1C263A] hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:text-purple-200 flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="Send Email to pandeyayush1603@gmail.com"
+                >
+                  <Mail className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Email Contact CTA Button */}
+            <button
+              type="button"
+              onClick={handleContactDeveloperEmail}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-black text-xs shadow-md shadow-purple-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Mail className="w-4 h-4" />
+              <span>Contact: pandeyayush1603@gmail.com</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default Navbar;
