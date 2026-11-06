@@ -223,11 +223,11 @@ export const Navbar = () => {
             {/* 3. Right Action Area: Developer Button + Light/Dark Mode Toggle + Cart + User */}
             <div className="flex items-center gap-1.5 sm:gap-2.5">
               
-              {/* Signature MITS AMS Developer Pill Button (Always visible with Ayush's photo) */}
+              {/* Signature MITS AMS Developer Pill Button (Desktop & Tablet only to keep mobile navbar clean) */}
               <button
                 type="button"
                 onClick={() => setIsDeveloperModalOpen(true)}
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                 title="View Lead Developer: Ayush Pandey"
               >
                 <div className="w-5 h-5 rounded-full overflow-hidden border border-purple-400 shrink-0 shadow-xs">
@@ -238,7 +238,7 @@ export const Navbar = () => {
                     onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
                   />
                 </div>
-                <span className="hidden sm:inline text-xs">Developer</span>
+                <span className="text-xs">Developer</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               </button>
 
@@ -433,7 +433,7 @@ export const Navbar = () => {
               ) : (
                 <Link
                   to="/login"
-                  className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white shadow-md shadow-purple-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="hidden md:inline-flex px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white shadow-md shadow-purple-500/30 items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <User className="w-3.5 h-3.5" />
                   <span>Sign In</span>
@@ -452,147 +452,263 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Navigation Drawer (Three Lines Menu - Clean, Organized & Spacious) */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#0B1020]/95 backdrop-blur-2xl border-b border-purple-500/20 px-4 pt-3 pb-6 space-y-2 animate-fadeIn">
-            {/* Theme Toggle row for mobile */}
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#151C30] border border-purple-500/20 mb-2">
-              <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-purple-400" />}
-                <span>Theme: {isDark ? 'Dark AMS' : 'Light Mode'}</span>
-              </span>
+          <div className="lg:hidden bg-[#070B16] border-b-2 border-purple-500/30 px-4 pt-3 pb-6 space-y-3 animate-fadeIn shadow-2xl">
+            
+            {/* 1. TOP AUTH / SIGN IN HEADER (Inside the 3-lines menu on mobile) */}
+            {isAuthenticated ? (
+              <div className="p-3.5 rounded-2xl bg-[#0C1222] border border-purple-500/30 flex items-center gap-3 shadow-md">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-purple-400 shadow-md ring-2 ring-purple-500/30 shrink-0 bg-slate-800">
+                  <img
+                    src={user?.avatar || '/assets/developer/ayush_pandey.jpg'}
+                    alt={user?.name || 'Ayush Pandey'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
+                  />
+                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#0C1222]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black text-white truncate">{user?.name || 'Ayush Pandey'}</p>
+                    <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      {user?.role?.replace('_', ' ') || 'Student'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono truncate">{user?.email}</p>
+                  <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-[#151C30] text-purple-300 font-mono text-[9px] font-bold border border-purple-500/25">
+                    ID: {user?.studentId || 'BTET25O1039'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#151C30] via-[#1C263A] to-[#151C30] border border-purple-500/30 flex items-center justify-between gap-3 shadow-md">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white">Student / Faculty Access</p>
+                  <p className="text-[10px] text-[#AAB3C5]">Sign in to order food & skip canteen lines</p>
+                </div>
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30 flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </Link>
+              </div>
+            )}
+
+            {/* 2. CLEAN NAVIGATION LINKS */}
+            <div className="space-y-1">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                  isActive('/') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                }`}
+              >
+                🏠 Home
+              </Link>
+
+              <Link
+                to="/menu"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                  isActive('/menu') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                }`}
+              >
+                🍲 Food Menu
+              </Link>
+
+              <Link
+                to="/live-tokens"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                  isActive('/live-tokens') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-purple-300 hover:bg-[#151C30]'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5 text-purple-400" />
+                <span>Live TV Tokens</span>
+              </Link>
+
+              <Link
+                to="/#campus-spaces"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  const el = document.getElementById('campus-spaces');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="block px-3.5 py-2.5 rounded-xl text-xs font-semibold text-purple-300 hover:bg-[#151C30]"
+              >
+                🏛️ Explore Campus Spaces
+              </Link>
+
+              {isAuthenticated && (
+                <>
+                  <Link
+                    to="/my-orders"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                      isActive('/my-orders') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                    }`}
+                  >
+                    🛍️ My Orders {userActiveOrders > 0 && `(${userActiveOrders})`}
+                  </Link>
+
+                  {!isAdmin && (
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                        isActive('/dashboard') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                      }`}
+                    >
+                      📊 Student Dashboard
+                    </Link>
+                  )}
+
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                      isActive('/profile') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                    }`}
+                  >
+                    👤 My Student Profile
+                  </Link>
+
+                  <Link
+                    to="/feedback"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3.5 py-2.5 rounded-xl text-xs font-semibold ${
+                      isActive('/feedback') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
+                    }`}
+                  >
+                    ⭐ Rate Dishes & Feedback
+                  </Link>
+                </>
+              )}
+
+              {isAdmin && !isSuperAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30]"
+                >
+                  ⚡ Canteen Admin Console
+                </Link>
+              )}
+
+              {isSuperAdmin && (
+                <Link
+                  to="/super-admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30]"
+                >
+                  👑 Super Admin Console
+                </Link>
+              )}
+            </div>
+
+            {/* 3. DEDICATED LEAD DEVELOPER SECTION (Inside the 3 lines menu on mobile) */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-b from-[#151C30] to-[#0E1424] border-2 border-blue-500/30 shadow-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-black uppercase tracking-wider text-blue-400 flex items-center gap-1">
+                  <Code className="w-3 h-3 text-blue-400" />
+                  Lead Developer
+                </span>
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-purple-400 ring-2 ring-purple-500/30 shrink-0 bg-slate-800 shadow-md">
+                  <img
+                    src="/assets/developer/ayush_pandey.jpg"
+                    alt="Ayush Pandey"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.src = '/assets/campus/ayush_pandey.jpg'; }}
+                  />
+                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#151C30]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-black text-white truncate">Ayush Pandey</h4>
+                  <p className="text-[10px] text-purple-300 font-medium truncate">Electronics & Telecommunication</p>
+                  <p className="text-[9px] text-[#AAB3C5] font-mono truncate">MITS Gwalior (BTET25O1039)</p>
+                </div>
+              </div>
+
+              {/* Developer Action Buttons */}
+              <div className="flex items-center gap-2 pt-1 border-t border-purple-500/15">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleContactDeveloperEmail();
+                  }}
+                  className="flex-1 py-1.5 px-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-200 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Mail className="w-3 h-3 text-purple-300" />
+                  <span>Email Ayush</span>
+                </button>
+
+                <a
+                  href="https://www.linkedin.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-7 h-7 rounded-xl bg-[#1C263A] hover:bg-[#25334d] border border-blue-500/25 text-blue-400 flex items-center justify-center transition-colors"
+                  title="LinkedIn"
+                >
+                  <Linkedin className="w-3.5 h-3.5" />
+                </a>
+
+                <a
+                  href="https://github.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-7 h-7 rounded-xl bg-[#1C263A] hover:bg-[#25334d] border border-purple-500/25 text-purple-300 flex items-center justify-center transition-colors"
+                  title="GitHub"
+                >
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsDeveloperModalOpen(true);
+                  }}
+                  className="py-1.5 px-2.5 rounded-xl bg-[#1C263A] hover:bg-[#25334d] border border-purple-500/25 text-[#AAB3C5] hover:text-white text-[10px] font-bold cursor-pointer transition-colors"
+                >
+                  Modal &rarr;
+                </button>
+              </div>
+            </div>
+
+            {/* 4. THEME & SIGN OUT FOOTER */}
+            <div className="pt-2 border-t border-purple-500/20 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="px-3 py-1 rounded-lg text-xs font-bold bg-[#1C263A] text-purple-300 border border-purple-500/30"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-[#151C30] text-slate-200 border border-purple-500/20"
               >
-                Switch to {isDark ? 'Light' : 'Dark'}
+                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-purple-400" />}
+                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
-            </div>
 
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
-                isActive('/') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-              }`}
-            >
-              Home
-            </Link>
-
-            <Link
-              to="/menu"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
-                isActive('/menu') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-              }`}
-            >
-              Food Menu
-            </Link>
-
-            <Link
-              to="/live-tokens"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                isActive('/live-tokens') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-purple-300 hover:bg-[#151C30]'
-              }`}
-            >
-              <Tv className="w-3.5 h-3.5 text-purple-400" />
-              Live Tokens
-            </Link>
-
-            <Link
-              to="/#campus-spaces"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                const el = document.getElementById('campus-spaces');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="block px-3.5 py-2 rounded-xl text-xs font-semibold text-purple-300 hover:bg-[#151C30]"
-            >
-              🏛️ Explore Campus Spaces
-            </Link>
-
-            {isAuthenticated && (
-              <Link
-                to="/my-orders"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
-                  isActive('/my-orders') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-                }`}
-              >
-                My Orders {userActiveOrders > 0 && `(${userActiveOrders})`}
-              </Link>
-            )}
-
-            {isAuthenticated && !isAdmin && (
-              <Link
-                to="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3.5 py-2 rounded-xl text-xs font-semibold ${
-                  isActive('/dashboard') ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-bold' : 'text-[#AAB3C5] hover:bg-[#151C30]'
-                }`}
-              >
-                Student Dashboard
-              </Link>
-            )}
-
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setIsDeveloperModalOpen(true);
-              }}
-              className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-blue-400 hover:bg-[#151C30] flex items-center gap-2"
-            >
-              <Code className="w-3.5 h-3.5 text-blue-400" />
-              <span>Developer Profile (Ayush Pandey)</span>
-            </button>
-
-            {isAdmin && !isSuperAdmin && (
-              <Link
-                to="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3.5 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30]"
-              >
-                Canteen Admin Console
-              </Link>
-            )}
-
-            {isSuperAdmin && (
-              <Link
-                to="/super-admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3.5 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30]"
-              >
-                👑 Super Admin Console
-              </Link>
-            )}
-
-            {isAuthenticated ? (
-              <div className="pt-2 border-t border-purple-500/20">
+              {isAuthenticated && (
                 <button
                   onClick={() => {
                     logout();
                     setMobileMenuOpen(false);
                     navigate('/login');
                   }}
-                  className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 flex items-center gap-2"
+                  className="px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 flex items-center gap-1.5 border border-red-500/25"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
                 </button>
-              </div>
-            ) : (
-              <div className="pt-2">
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block text-center py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30"
-                >
-                  Sign In to MITS Canteen
-                </Link>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </header>

@@ -291,12 +291,12 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        {/* Right Nav Action: Developer Pill Button & Theme Icon */}
+        {/* Right Nav Action: Developer Pill Button (Desktop & Tablet) & Theme Icon */}
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={scrollToDeveloper}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-blue-500/30 text-blue-400 hover:text-blue-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
           >
             <Code className="w-3.5 h-3.5 text-blue-400" />
             <span>Developer</span>
@@ -320,15 +320,15 @@ export const LoginPage = () => {
       </header>
 
       {/* 2. Main Login Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-10 z-10 w-full max-w-lg mx-auto space-y-5">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 sm:py-10 z-10 w-full max-w-lg mx-auto space-y-4">
         
-        {/* MITS Seal Crest & Heading */}
-        <div className="text-center space-y-2">
-          <div className="w-20 h-20 rounded-full bg-slate-900/90 border-2 border-orange-500/40 p-2 mx-auto flex items-center justify-center shadow-xl shadow-orange-500/20 ring-4 ring-orange-500/10">
+        {/* MITS Seal Crest & Heading - Clean & Well-proportioned */}
+        <div className="text-center space-y-1 pt-1">
+          <div className="w-14 h-14 rounded-2xl bg-white p-1.5 mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20 border-2 border-purple-500/40">
             <img
               src="/assets/campus/mits-logo.png"
-              alt="MITS Gwalior Official Crest"
-              className="w-full h-full object-contain filter drop-shadow-md"
+              alt="MITS Gwalior Logo"
+              className="w-full h-full object-contain filter drop-shadow-sm"
               onError={(e) => {
                 e.target.src = '/images/mits/mits-logo.png';
               }}
@@ -336,35 +336,33 @@ export const LoginPage = () => {
           </div>
 
           <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            MITS Canteen
+            MITS Canteen Portal
           </h1>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-xs text-[#AAB3C5]">
             Madhav Institute of Technology & Science, Gwalior
           </p>
         </div>
 
-        {/* 3. Center Glassmorphism Login Card (Normal, clean, compact) */}
-        <div className="w-full bg-[#0D1527]/95 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-black/80 space-y-4">
+        {/* 3. Center Glassmorphism Login Card (Clean, well-spaced, zero clipping) */}
+        <div className="w-full bg-[#0D1527]/95 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl shadow-black/80 space-y-4">
           
           {/* Lock Icon in Circular Badge */}
-          <div className="w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-11 h-11 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
             <Lock className="w-5 h-5 stroke-[2.2]" />
           </div>
 
-          {/* Card Heading & Domain Guidelines */}
-          <div className="text-center space-y-1">
+          {/* Card Heading & Clean Domain Guidelines */}
+          <div className="text-center space-y-2">
             <h2 className="text-lg sm:text-xl font-bold text-white">
               Sign in to your account
             </h2>
-            <div className="text-xs text-slate-300 space-y-0.5 pt-0.5">
-              <p className="flex items-center justify-center gap-1.5 text-slate-400 font-medium text-[11px]">
-                <Mail className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Login with Institute email:</span>
-              </p>
-              <p className="font-mono text-xs font-semibold">
-                <span className="text-indigo-400 font-bold">@mitsgwalior.in</span> (Faculty) &bull;{' '}
-                <span className="text-orange-400 font-bold">@mitsgwl.ac.in</span> (Students)
-              </p>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5 text-[11px]">
+              <span className="px-2 py-0.5 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-300 font-mono font-semibold">
+                Students: @mitsgwl.ac.in
+              </span>
+              <span className="px-2 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-mono font-semibold">
+                Faculty: @mitsgwalior.in
+              </span>
             </div>
           </div>
 
@@ -437,23 +435,23 @@ export const LoginPage = () => {
             </button>
           </div>
 
-          {/* Mandatory Student Registration / New Account Gate */}
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500/15 via-[#151C30] to-blue-500/15 border border-purple-500/30 flex items-center justify-between gap-3 shadow-inner">
-            <div className="flex items-center gap-2.5 min-w-0">
+          {/* Mandatory Student Registration / New Account Gate - Responsive, No Truncation */}
+          <div className="p-3.5 rounded-2xl bg-[#151C30]/90 border border-purple-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center shrink-0">
                 <UserPlus className="w-4 h-4" />
               </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-white leading-tight">New Student at MITS?</p>
-                <p className="text-[10px] text-slate-400">Register once to unlock dining & ordering</p>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white">New Student at MITS?</p>
+                <p className="text-[11px] text-[#AAB3C5]">Register with your college ID</p>
               </div>
             </div>
             <Link
               to="/register"
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold shadow-md shadow-purple-500/25 shrink-0 transition-all active:scale-95 flex items-center gap-1"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold shadow-md shadow-purple-500/25 text-center flex items-center justify-center gap-1.5 transition-all active:scale-95 shrink-0"
             >
-              <span>Register</span>
-              <ArrowRight className="w-3 h-3" />
+              <span>Register Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -519,7 +517,7 @@ export const LoginPage = () => {
       </main>
 
       {/* 4. MITS AMS "DEVELOPED BY" Section (NORMAL, SLEEK & COMPACT) */}
-      <footer id="developer-section" ref={developerRef} className="w-full px-4 py-8 z-10 border-t border-slate-800/80 bg-[#070B16]/90 backdrop-blur-xl">
+      <footer id="developer-section" ref={developerRef} className="w-full px-4 py-5 sm:py-6 z-10 border-t border-purple-500/20 bg-[#070B16]/95 backdrop-blur-xl">
         <div className="max-w-md mx-auto space-y-6">
           
           {/* Section Heading */}
