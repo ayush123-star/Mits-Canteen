@@ -341,7 +341,7 @@ export const AdminLayout = () => {
                   setIsConsoleLocked(false);
                   setUnlockPin('');
                 } else {
-                  setUnlockError('Invalid PIN! Correct owner PIN required (1957).');
+                  setUnlockError('Invalid PIN! Correct owner security PIN required.');
                 }
               }}
               className="space-y-3"
@@ -352,7 +352,7 @@ export const AdminLayout = () => {
                 maxLength={10}
                 value={unlockPin}
                 onChange={(e) => setUnlockPin(e.target.value)}
-                placeholder="Owner PIN (1957)"
+                placeholder="Enter Owner PIN"
                 className="w-full py-2.5 px-3 rounded-xl bg-[#151C30] border border-purple-500/30 text-center font-mono text-sm tracking-widest text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
               />
               <button
