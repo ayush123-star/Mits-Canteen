@@ -37,8 +37,9 @@ export const FoodCard = ({ food, onSelect }) => {
           loading="lazy"
         />
 
-        {/* Gradient Overlay */}
+        {/* Gradient Overlay & Glass Sweep Shine */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#1C263A] via-transparent to-black/40"></div>
+        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
 
         {/* Dietary Pure Veg Badge */}
         <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex items-center gap-1.5">

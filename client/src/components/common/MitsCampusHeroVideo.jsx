@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Camera, Video, Compass, Sparkles } from 'lucide-react';
+import { CyberParticlesCanvas } from './CyberParticlesCanvas';
 
 export const MitsCampusHeroVideo = ({
   videoSrc = '/assets/videos/mits-campus-tour.mp4',
@@ -106,6 +107,9 @@ export const MitsCampusHeroVideo = ({
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="w-[200%] h-full bg-gradient-to-r from-transparent via-white/5 to-transparent animate-light-sweep" />
         </div>
+
+        {/* 4.5 Interactive Cyber Constellation Particles Canvas */}
+        <CyberParticlesCanvas />
       </div>
 
       {/* 5. Hero Content (Text, Heading, CTAs, Floating Badges) */}

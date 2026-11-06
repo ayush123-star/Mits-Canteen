@@ -8,6 +8,12 @@ import { useAuth } from '../context/AuthContext';
 import { MitsCampusHeroVideo } from '../components/common/MitsCampusHeroVideo';
 import { MitsCampusGallery } from '../components/common/MitsCampusGallery';
 import { HomepageCravingsModal } from '../components/admin/HomepageCravingsModal';
+import { LiveCanteenTicker } from '../components/common/LiveCanteenTicker';
+import { TextRotator } from '../components/common/TextRotator';
+import { FloatingFoodBadges } from '../components/common/FloatingFoodBadges';
+import { TiltCard } from '../components/common/TiltCard';
+import { BorderBeam } from '../components/common/BorderBeam';
+import { CampusVibeFab } from '../components/common/CampusVibeFab';
 import {
   UtensilsCrossed,
   Clock,
@@ -90,10 +96,11 @@ export const HomePage = () => {
                   </span>
                 </h1>
 
-                {/* SUBTITLE */}
-                <p className="text-lg sm:text-xl lg:text-2xl text-purple-200/95 font-extrabold max-w-xl mx-auto lg:mx-0 tracking-tight drop-shadow">
-                  Order Fresh. Skip Queues. Enjoy Campus Life.
-                </p>
+                {/* SUBTITLE WITH 3D TEXT ROTATOR */}
+                <div className="text-lg sm:text-xl lg:text-2xl text-purple-200/95 font-extrabold max-w-xl mx-auto lg:mx-0 tracking-tight drop-shadow flex items-center justify-center lg:justify-start gap-2 flex-wrap">
+                  <span>Smart Campus Dining with</span>
+                  <TextRotator />
+                </div>
 
                 <p className="text-sm sm:text-base text-[#AAB3C5] max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
                   Designed exclusively for MITSians! Pre-order hot breakfast, fresh lunch thalis, samosas, and cold coffee right from lecture halls, and collect directly at MITS Main Canteen Counter.
@@ -147,63 +154,74 @@ export const HomePage = () => {
                 </div>
               </div>
 
-              {/* Right Column: Hero Visual Card with Real MITS Campus Architecture */}
+              {/* Right Column: Hero Visual Card with Real MITS Campus Architecture & 3D Tilt */}
               <div className="lg:col-span-5 relative perspective-1000">
-                <div className="relative mx-auto max-w-md bg-gradient-to-tr from-[#1C263A]/90 via-[#151C30]/90 to-[#1C263A]/90 p-4 rounded-3xl border border-purple-500/30 shadow-2xl card-3d transform-style-3d backdrop-blur-xl">
-                  {/* 3D Floating Live Token Preview Badge */}
-                  <div className="absolute -top-4 left-2 sm:-left-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-xl shadow-emerald-900/40 flex items-center gap-2 border border-emerald-300/40 animate-float-slow z-20">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
-                    <div className="text-left">
-                      <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-emerald-200">
-                        Now Serving &bull; Counter
-                      </p>
-                      <p className="text-xs sm:text-sm font-black font-mono">TOKEN #TK-101</p>
+                {/* 3D Floating Interactive Food Badges with confetti on tap! */}
+                <FloatingFoodBadges />
+
+                <TiltCard className="mx-auto max-w-md" maxTilt={8}>
+                  <div className="relative mx-auto max-w-md bg-gradient-to-tr from-[#1C263A]/90 via-[#151C30]/90 to-[#1C263A]/90 p-4 rounded-3xl border border-purple-500/30 shadow-2xl card-3d transform-style-3d backdrop-blur-xl overflow-hidden">
+                    {/* Glowing animated border beam */}
+                    <BorderBeam size={220} duration={5} colorFrom="#7955E8" colorTo="#526DFF" />
+
+                    {/* 3D Floating Live Token Preview Badge */}
+                    <div className="absolute -top-4 left-2 sm:-left-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-xl shadow-emerald-900/40 flex items-center gap-2 border border-emerald-300/40 animate-float-slow z-20">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+                      <div className="text-left">
+                        <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-emerald-200">
+                          Now Serving &bull; Counter
+                        </p>
+                        <p className="text-xs sm:text-sm font-black font-mono">TOKEN #TK-101</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* 3D Floating MITS Verified Badge Bottom Right */}
-                  <div className="absolute -bottom-3 right-2 sm:-right-3 bg-[#0B1020]/95 text-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl shadow-xl flex items-center gap-2 border border-purple-500/40 backdrop-blur-md z-20">
-                    <Flame className="w-4 h-4 text-purple-400" />
-                    <span className="text-[11px] sm:text-xs font-bold text-slate-200">MITS Main Canteen</span>
-                  </div>
+                    {/* 3D Floating MITS Verified Badge Bottom Right */}
+                    <div className="absolute -bottom-3 right-2 sm:-right-3 bg-[#0B1020]/95 text-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl shadow-xl flex items-center gap-2 border border-purple-500/40 backdrop-blur-md z-20">
+                      <Flame className="w-4 h-4 text-purple-400" />
+                      <span className="text-[11px] sm:text-xs font-bold text-slate-200">MITS Main Canteen</span>
+                    </div>
 
-                  {/* Real MITS Main Canteen Dining Hall & Counter Photo */}
-                  <div className="relative h-80 rounded-2xl overflow-hidden shadow-inner bg-[#0B1020]">
-                    <img
-                      src="/assets/campus/mits-main-canteen.jpg"
-                      alt="MITS Gwalior Main Canteen"
-                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                      onError={(e) => { e.target.src = '/images/mits/mits-main-canteen.jpg'; }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B1020]/95 via-[#0B1020]/30 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 right-4 text-white">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-[#7955E8] to-[#526DFF] shadow-sm">
-                        MITS Main Canteen
+                    {/* Real MITS Main Canteen Dining Hall & Counter Photo */}
+                    <div className="relative h-80 rounded-2xl overflow-hidden shadow-inner bg-[#0B1020]">
+                      <img
+                        src="/assets/campus/mits-main-canteen.jpg"
+                        alt="MITS Gwalior Main Canteen"
+                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                        onError={(e) => { e.target.src = '/images/mits/mits-main-canteen.jpg'; }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0B1020]/95 via-[#0B1020]/30 to-transparent"></div>
+                      <div className="absolute bottom-4 left-4 right-4 text-white">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-[#7955E8] to-[#526DFF] shadow-sm">
+                          MITS Main Canteen
+                        </span>
+                        <h4 className="text-lg font-black mt-1">MITS Main Canteen</h4>
+                        <p className="text-xs text-[#AAB3C5]">Campus Dining Hall & Live Token Counter</p>
+                      </div>
+                    </div>
+
+                    {/* Floating TV Kiosk Teaser Pill */}
+                    <Link
+                      to="/live-tokens"
+                      className="mt-3 w-full bg-[#151C30]/90 hover:bg-[#7955E8] text-white p-3 rounded-xl border border-purple-500/30 flex items-center justify-between text-xs font-bold transition-all shadow-md group"
+                    >
+                      <span className="flex items-center gap-2 text-purple-300 group-hover:text-white">
+                        <Tv className="w-4 h-4" /> Live TV Token Calling Screen
                       </span>
-                      <h4 className="text-lg font-black mt-1">MITS Main Canteen</h4>
-                      <p className="text-xs text-[#AAB3C5]">Campus Dining Hall & Live Token Counter</p>
-                    </div>
+                      <span className="text-[#AAB3C5] group-hover:text-white text-[11px] flex items-center">
+                        Open TV Display &rarr;
+                      </span>
+                    </Link>
                   </div>
-
-                  {/* Floating TV Kiosk Teaser Pill */}
-                  <Link
-                    to="/live-tokens"
-                    className="mt-3 w-full bg-[#151C30]/90 hover:bg-[#7955E8] text-white p-3 rounded-xl border border-purple-500/30 flex items-center justify-between text-xs font-bold transition-all shadow-md group"
-                  >
-                    <span className="flex items-center gap-2 text-purple-300 group-hover:text-white">
-                      <Tv className="w-4 h-4" /> Live TV Token Calling Screen
-                    </span>
-                    <span className="text-[#AAB3C5] group-hover:text-white text-[11px] flex items-center">
-                      Open TV Display &rarr;
-                    </span>
-                  </Link>
-                </div>
+                </TiltCard>
               </div>
 
             </div>
           </div>
         </MitsCampusHeroVideo>
       </section>
+
+      {/* 1.5 INFINITE SMOOTH LIVE MARQUEE TICKER */}
+      <LiveCanteenTicker />
 
       {/* 2. LIVE ORDER STATUS TICKER BAR */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20">
@@ -377,17 +395,20 @@ export const HomePage = () => {
             </div>
 
             <div className="lg:col-span-4 flex justify-center">
-              <div className="p-6 bg-[#151C30]/90 backdrop-blur-md rounded-3xl border border-purple-500/30 text-center space-y-2 shadow-xl">
-                <Award className="w-12 h-12 text-purple-300 mx-auto" />
-                <h4 className="text-base font-black text-white">Today's {todayDiscount.day} Special Saver</h4>
-                <p className="text-xs text-[#AAB3C5]">Burger + Peri Fries + Cold Coffee</p>
-                <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-                  Only ₹{Math.round(210 * (1 - todayDiscount.percent / 100))}
+              <TiltCard maxTilt={10} className="w-full max-w-sm">
+                <div className="relative p-6 bg-[#151C30]/95 backdrop-blur-md rounded-3xl border border-purple-500/40 text-center space-y-2 shadow-xl overflow-hidden">
+                  <BorderBeam size={160} duration={4} colorFrom="#10B981" colorTo="#7955E8" />
+                  <Award className="w-12 h-12 text-purple-300 mx-auto animate-bounce" />
+                  <h4 className="text-base font-black text-white">Today's {todayDiscount.day} Special Saver</h4>
+                  <p className="text-xs text-[#AAB3C5]">Burger + Peri Fries + Cold Coffee</p>
+                  <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
+                    Only ₹{Math.round(210 * (1 - todayDiscount.percent / 100))}
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full inline-block">
+                    Save {todayDiscount.percent}% Flat
+                  </span>
                 </div>
-                <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full inline-block">
-                  Save {todayDiscount.percent}% Flat
-                </span>
-              </div>
+              </TiltCard>
             </div>
           </div>
         </div>
@@ -526,6 +547,9 @@ export const HomePage = () => {
           onClose={() => setIsEditModalOpen(false)}
         />
       )}
+
+      {/* Floating Interactive Campus Cheer & Confetti Magic FAB */}
+      <CampusVibeFab />
     </div>
   );
 };
