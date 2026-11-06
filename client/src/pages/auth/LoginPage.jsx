@@ -604,33 +604,8 @@ export const LoginPage = () => {
             </div>
           </div>
 
-          {/* BUILT UNDER THE GUIDANCE OF Section (Compact & Clean) */}
-          <div className="pt-1 text-center">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3">
-              BUILT UNDER THE GUIDANCE OF
-            </h4>
-
-            <div className="flex items-center justify-center gap-8 sm:gap-12">
-              <div className="text-center">
-                <div className="w-11 h-11 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 flex items-center justify-center mx-auto shadow-sm">
-                  <GraduationCap className="w-5 h-5 text-indigo-400" />
-                </div>
-                <p className="font-bold text-xs text-white mt-1.5">Dr. R.K. Sharma</p>
-                <p className="text-[10px] text-slate-400">Professor & HOD, CSE</p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-11 h-11 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 flex items-center justify-center mx-auto shadow-sm">
-                  <Building className="w-5 h-5 text-orange-400" />
-                </div>
-                <p className="font-bold text-xs text-white mt-1.5">Campus Directorate</p>
-                <p className="text-[10px] text-slate-400">MITS Gwalior</p>
-              </div>
-            </div>
-          </div>
-
           {/* Bottom Copyright Matched with Image 1 */}
-          <div className="pt-2 text-center text-xs text-[#AAB3C5] space-y-1">
+          <div className="pt-3 text-center text-xs text-[#AAB3C5] space-y-1">
             <p className="text-slate-400">© {new Date().getFullYear()} MITS Gwalior Canteen</p>
             <p className="text-slate-400 text-[11px]">
               Made by{' '}
