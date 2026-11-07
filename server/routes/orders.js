@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const Order = require('../models/Order');
 const FoodItem = require('../models/FoodItem');
 const NotificationLog = require('../models/NotificationLog');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, optionalAuth } = require('../middleware/auth');
 const {
   sendOrderPlacedNotification,
   sendOrderStatusNotification,
@@ -26,7 +26,7 @@ const generateCampusToken = async () => {
 
 // @route   POST /api/orders
 // @desc    Place a new food order
-router.post('/', protect, async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const {
       items,
@@ -48,31 +48,36 @@ router.post('/', protect, async (req, res) => {
     const populatedItems = [];
 
     for (const item of items) {
-      const food = await FoodItem.findById(item.foodItemId || item._id);
-      if (!food) {
-        return res.status(400).json({ message: `Item not found: ${item.name}` });
-      }
-      if (!food.isAvailable) {
-        return res.status(400).json({ message: `${food.name} is currently out of stock` });
-      }
+      let food = null;
+      try {
+        if (item.foodItemId && String(item.foodItemId).length === 24) {
+          food = await FoodItem.findById(item.foodItemId);
+        }
+      } catch (e) {}
+
+      const name = food ? food.name : (item.name || 'Campus Food Item');
+      const price = food ? food.price : (Number(item.price) || 50);
+      const prepTime = food ? food.preparationTime : 8;
+      const isVeg = food ? food.isVeg : (item.isVeg !== undefined ? item.isVeg : true);
+      const counter = food ? (food.counter || 1) : (item.counter || 1);
 
       const qty = Number(item.quantity) || 1;
-      const itemSubtotal = food.price * qty;
+      const itemSubtotal = price * qty;
       totalAmount += itemSubtotal;
 
-      if (food.preparationTime > maxPrepTime) {
-        maxPrepTime = food.preparationTime;
+      if (prepTime > maxPrepTime) {
+        maxPrepTime = prepTime;
       }
-      primaryCounter = food.counter || primaryCounter;
+      primaryCounter = counter || primaryCounter;
 
       populatedItems.push({
-        foodItem: food._id,
-        name: food.name,
-        price: food.price,
+        foodItem: food ? food._id : undefined,
+        name,
+        price,
         quantity: qty,
-        image: food.image,
-        isVeg: food.isVeg,
-        counter: food.counter || 1,
+        image: food ? food.image : (item.image || '/assets/campus/cravings/burger.jpg'),
+        isVeg,
+        counter,
         specialInstructions: item.specialInstructions || '',
       });
     }
@@ -185,6 +190,20 @@ router.post('/', protect, async (req, res) => {
   } catch (err) {
     console.error('Order creation error:', err);
     res.status(500).json({ message: 'Failed to place order', error: err.message });
+  }
+});
+
+// @route   GET /api/orders
+// @desc    Get all active & recent orders for real-time synchronization across devices
+router.get('/', async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate('user', 'name studentId phone')
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.json({ success: true, count: orders.length, orders });
+  } catch (err) {
+    res.json({ success: true, count: 0, orders: [] });
   }
 });
 

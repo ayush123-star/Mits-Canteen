@@ -215,7 +215,7 @@ export const speakAnnouncement = (text) => {
 };
 
 // Complete Canteen Token Calling: Chime + Voice Broadcast
-export const announceTokenCall = (tokenNumber, counter = 'Counter') => {
+export const announceTokenCall = (tokenNumber, counter = 'counter') => {
   // Ensure audio context is ready
   unlockAudio();
 
@@ -225,8 +225,8 @@ export const announceTokenCall = (tokenNumber, counter = 'Counter') => {
   // 2. Announce token clearly after chime completes
   setTimeout(() => {
     const raw = String(tokenNumber).replace('#', '').trim();
-    // Pronounce letters/hyphens cleanly: e.g. "T 101" or "101"
-    const formattedToken = raw.replace('-', ' ');
-    speakAnnouncement(`Attention please. Token number ${formattedToken}, your order is ready at the ${counter}!`);
+    // Pronounce letters/hyphens cleanly: e.g. "T K 114"
+    const formattedToken = raw.replace('TK-', 'T K ').replace('TK', 'T K ').replace('-', ' ');
+    speakAnnouncement(`Attention please! Token number ${formattedToken} is ready for pickup. Please collect your order from the ${counter}.`);
   }, 700);
 };

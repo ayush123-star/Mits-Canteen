@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   INITIAL_USERS,
@@ -277,6 +277,165 @@ export const DataProvider = ({ children }) => {
     localStorage.setItem('smart_canteen_transactions', JSON.stringify(stockTransactions));
   }, [stockTransactions]);
 
+  // 1. Cross-Tab & Cross-Window Instant Real-time Orders Synchronization Channel
+  const ordersBroadcastRef = useRef(null);
+
+  const persistAndBroadcastOrders = (nextOrders, eventType = 'SYNC', meta = {}) => {
+    setOrders(nextOrders);
+    try {
+      localStorage.setItem('smart_canteen_orders', JSON.stringify(nextOrders));
+    } catch (e) {
+      console.debug('Failed to write orders to localStorage:', e);
+    }
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({
+          type: eventType,
+          orders: nextOrders,
+          timestamp: Date.now(),
+          ...meta,
+        });
+      } catch (err) {
+        console.debug('BroadcastChannel postMessage error:', err);
+      }
+    }
+
+    // Trigger local DOM event for active components
+    window.dispatchEvent(
+      new CustomEvent('smartcanteen:orders_sync', {
+        detail: { orders: nextOrders, type: eventType, ...meta },
+      })
+    );
+  };
+
+  useEffect(() => {
+    // A. BroadcastChannel for zero-latency multi-tab sync
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('smart_canteen_orders_channel');
+      ordersBroadcastRef.current = channel;
+
+      channel.onmessage = (event) => {
+        const { type, orders: incomingOrders, newOrder } = event.data || {};
+        if (incomingOrders && Array.isArray(incomingOrders)) {
+          setOrders((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(incomingOrders)) return prev;
+            return incomingOrders;
+          });
+        }
+        if (type === 'NEW_ORDER' && newOrder) {
+          playNotificationSound('new_order');
+        }
+      };
+    }
+
+    // B. Window Storage event listener (across browser tabs)
+    const handleStorage = (e) => {
+      if (e.key === 'smart_canteen_orders' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setOrders((prev) => {
+              if (JSON.stringify(prev) === JSON.stringify(parsed)) return prev;
+              return parsed;
+            });
+          }
+        } catch (err) {
+          console.debug('Storage sync error:', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // C. Socket.IO Events
+    const handleSocketOrderNew = (e) => {
+      const incoming = e.detail;
+      if (!incoming) return;
+      setOrders((prev) => {
+        const exists = prev.some(
+          (o) =>
+            (o.id && o.id === incoming.id) ||
+            (o.tokenNumber && o.tokenNumber === incoming.tokenNumber)
+        );
+        if (exists) return prev;
+        const updated = [incoming, ...prev];
+        persistAndBroadcastOrders(updated, 'NEW_ORDER', { newOrder: incoming });
+        return updated;
+      });
+      playNotificationSound('new_order');
+    };
+
+    const handleSocketStatusUpdated = (e) => {
+      const updated = e.detail;
+      if (!updated) return;
+      setOrders((prev) => {
+        const nextList = prev.map((o) =>
+          (o.id && o.id === updated.id) ||
+          (o.tokenNumber && o.tokenNumber === updated.tokenNumber)
+            ? { ...o, ...updated }
+            : o
+        );
+        persistAndBroadcastOrders(nextList, 'STATUS_UPDATED', { updatedOrder: updated });
+        return nextList;
+      });
+    };
+
+    window.addEventListener('smartcanteen:order_new', handleSocketOrderNew);
+    window.addEventListener('smartcanteen:order_status_updated', handleSocketStatusUpdated);
+
+    // D. Periodic Server Fetch (Every 3 seconds to sync cross-device when online)
+    let isMounted = true;
+    const syncWithServer = async () => {
+      try {
+        const res = await axios.get('/api/orders', { timeout: 3000 });
+        if (isMounted && res.data?.orders && Array.isArray(res.data.orders)) {
+          const serverOrders = res.data.orders;
+          setOrders((prev) => {
+            const map = new Map();
+            // Start with server orders
+            serverOrders.forEach((o) => {
+              const key = o.tokenNumber || o.id || o._id;
+              map.set(key, { ...o, id: o.id || o._id, tokenNumber: o.tokenNumber });
+            });
+            // Merge with local orders
+            prev.forEach((o) => {
+              const key = o.tokenNumber || o.id || o._id;
+              if (!map.has(key)) {
+                map.set(key, o);
+              } else {
+                map.set(key, { ...map.get(key), ...o });
+              }
+            });
+            const merged = Array.from(map.values());
+            if (JSON.stringify(prev) !== JSON.stringify(merged)) {
+              try {
+                localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        // Mock / offline fallback
+      }
+    };
+
+    syncWithServer();
+    const interval = setInterval(syncWithServer, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('smartcanteen:order_new', handleSocketOrderNew);
+      window.removeEventListener('smartcanteen:order_status_updated', handleSocketStatusUpdated);
+      if (ordersBroadcastRef.current) {
+        ordersBroadcastRef.current.close();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('smart_canteen_orders', JSON.stringify(orders));
   }, [orders]);
@@ -342,7 +501,8 @@ export const DataProvider = ({ children }) => {
       stockDeducted: false,
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    const nextOrders = [newOrder, ...orders];
+    persistAndBroadcastOrders(nextOrders, 'NEW_ORDER', { newOrder });
     playNotificationSound('new_order');
     logActivity(newOrder.studentName, 'ORDER_PLACED', 'ORDERS', `Placed order #${tokenNumber} for ₹${newOrder.finalAmount}`);
 
@@ -384,8 +544,8 @@ export const DataProvider = ({ children }) => {
   };
 
   const updateOrderStatus = (orderId, newStatus, actorName = 'Kitchen Supervisor', extraOptions = {}) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((ord) => {
+    let targetUpdatedOrder = null;
+    const nextOrders = orders.map((ord) => {
         if (ord.id !== orderId) return ord;
 
         const updated = { ...ord, status: newStatus };
@@ -514,10 +674,12 @@ export const DataProvider = ({ children }) => {
           updated.paymentStatus = 'PAID';
         }
 
+        targetUpdatedOrder = updated;
         logActivity(actorName, 'ORDER_STATUS_UPDATE', 'ORDERS', `Updated order #${ord.tokenNumber} status to ${newStatus}`);
         return updated;
-      })
-    );
+      });
+
+    persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', { orderId, newStatus, updatedOrder: targetUpdatedOrder });
 
     // Sync status & notify backend
     axios
@@ -588,21 +750,19 @@ export const DataProvider = ({ children }) => {
   };
 
   const cancelOrder = (orderId, reason = 'Student requested cancellation') => {
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          logActivity(ord.studentName, 'ORDER_CANCELLED', 'ORDERS', `Cancelled order #${ord.tokenNumber}: ${reason}`);
-          return { ...ord, status: 'Cancelled', cancellationReason: reason };
-        }
-        return ord;
-      })
-    );
+    const nextOrders = orders.map((ord) => {
+      if (ord.id === orderId) {
+        logActivity(ord.studentName, 'ORDER_CANCELLED', 'ORDERS', `Cancelled order #${ord.tokenNumber}: ${reason}`);
+        return { ...ord, status: 'Cancelled', cancellationReason: reason };
+      }
+      return ord;
+    });
+    persistAndBroadcastOrders(nextOrders, 'CANCELLED', { orderId, reason });
   };
 
   const markCashPaymentCollected = (orderId, adminName) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: 'PAID' } : ord))
-    );
+    const nextOrders = orders.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: 'PAID' } : ord));
+    persistAndBroadcastOrders(nextOrders, 'PAYMENT_COLLECTED', { orderId });
     logActivity(adminName, 'CASH_PAYMENT_COLLECTED', 'PAYMENTS', `Collected cash for order`);
   };
 

@@ -65,35 +65,62 @@ export const LiveTokenDisplay = () => {
     };
   }, []);
 
-  // Track announced tokens to prevent spamming duplicates, but announce new ready tokens automatically
-  const announcedTokensRef = useRef(new Set());
-  const isInitialMount = useRef(true);
+  // Automatic Continuous Audio & Voice Announcement System for Ready Tokens
+  const isSpeakingRef = useRef(false);
+  const currentTokenIdxRef = useRef(0);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      // Record already ready tokens on page load
-      readyTokens.forEach((o) => {
-        if (o.tokenNumber) announcedTokensRef.current.add(String(o.tokenNumber));
-      });
-      isInitialMount.current = false;
+    // If audio is muted or there are no ready tokens, cancel speech and reset
+    if (!audioEnabled || readyTokens.length === 0) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeakingRef.current = false;
       return;
     }
 
-    if (!audioEnabled) return;
+    let loopTimer = null;
+    let isCancelled = false;
 
-    // Detect newly ready tokens
-    readyTokens.forEach((ord) => {
-      const key = String(ord.tokenNumber);
-      if (key && !announcedTokensRef.current.has(key)) {
-        announcedTokensRef.current.add(key);
-        setLastCalledToken(ord.tokenNumber);
-        setAudioToast({
-          message: `Now Calling Token #${ord.tokenNumber} at Counter! 📣`,
-          active: true,
-        });
-        announceTokenCall(ord.tokenNumber, 'Counter');
+    const playNextReadyAnnouncement = () => {
+      if (isCancelled || !audioEnabled || readyTokens.length === 0) return;
+      if (isSpeakingRef.current) return;
+
+      if (currentTokenIdxRef.current >= readyTokens.length) {
+        currentTokenIdxRef.current = 0;
       }
-    });
+
+      const orderToCall = readyTokens[currentTokenIdxRef.current];
+      if (!orderToCall || !orderToCall.tokenNumber) return;
+
+      isSpeakingRef.current = true;
+      setLastCalledToken(orderToCall.tokenNumber);
+      setAudioToast({
+        message: `Calling Token #${orderToCall.tokenNumber} at Counter! 📣`,
+        active: true,
+      });
+
+      announceTokenCall(orderToCall.tokenNumber, 'Counter');
+
+      // The chime + speech takes ~5 seconds; release speaking flag and increment token index
+      setTimeout(() => {
+        isSpeakingRef.current = false;
+        currentTokenIdxRef.current = (currentTokenIdxRef.current + 1) % readyTokens.length;
+      }, 5500);
+    };
+
+    // Immediately trigger announcement when an order is ready
+    playNextReadyAnnouncement();
+
+    // Automatically repeat announcement every 11 seconds until order is collected
+    loopTimer = setInterval(() => {
+      playNextReadyAnnouncement();
+    }, 11000);
+
+    return () => {
+      isCancelled = true;
+      if (loopTimer) clearInterval(loopTimer);
+    };
   }, [readyTokens, audioEnabled]);
 
   // Auto-dismiss floating audio toast
@@ -125,18 +152,6 @@ export const LiveTokenDisplay = () => {
         active: true,
       });
     }
-  };
-
-  // Manual Test Sound or Re-Announce specific token
-  const handleTestSound = (tokenToCall = null) => {
-    unlockAudio();
-    const tokenNum = tokenToCall || readyTokens[0]?.tokenNumber || '101';
-    setLastCalledToken(tokenNum);
-    setAudioToast({
-      message: `Calling Token #${tokenNum} at Counter 📣`,
-      active: true,
-    });
-    announceTokenCall(tokenNum, 'Counter');
   };
 
   const toggleFullScreen = () => {
@@ -207,16 +222,11 @@ export const LiveTokenDisplay = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Quick Test Voice & Sound Button */}
-            <button
-              onClick={() => handleTestSound()}
-              className="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-lg shadow-purple-500/25 flex items-center gap-1.5 transition-all transform active:scale-95"
-              title="Test token announcement chime and natural voice speech"
-            >
-              <Megaphone className="w-4 h-4 animate-bounce" />
-              <span className="hidden sm:inline">Test Voice</span>
-              <span className="sm:hidden">Test</span>
-            </button>
+            {/* Auto Calling Status Indicator */}
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold">
+              <span className={`w-2 h-2 rounded-full ${audioEnabled && readyTokens.length > 0 ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`} />
+              <span>{readyTokens.length > 0 ? `${readyTokens.length} Ready • Auto-Calling` : 'Auto-Calling Ready'}</span>
+            </div>
 
             {/* Audio Toggle Button */}
             <button
@@ -284,14 +294,6 @@ export const LiveTokenDisplay = () => {
                   </p>
                 </div>
                 <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    onClick={() => handleTestSound('101')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-black transition-all shadow-md active:scale-95"
-                    title="Test airport chime and token voice calling"
-                  >
-                    <Megaphone className="w-4 h-4 text-purple-300 animate-pulse" />
-                    <span>Test Calling Sound 🔊</span>
-                  </button>
                   <a
                     href="/menu"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-lg shadow-purple-500/30 transition-all"
@@ -306,7 +308,11 @@ export const LiveTokenDisplay = () => {
                 {readyTokens.map((ord) => (
                   <div
                     key={ord.id || ord._id}
-                    className="p-5 rounded-3xl bg-gradient-to-b from-emerald-950/80 to-emerald-900/60 border-2 border-emerald-400 shadow-xl flex flex-col items-center justify-center text-center transform transition-transform hover:scale-105 animate-pulse-glow relative group"
+                    className={`p-5 rounded-3xl bg-gradient-to-b from-emerald-950/80 to-emerald-900/60 border-2 shadow-xl flex flex-col items-center justify-center text-center transform transition-transform hover:scale-105 relative group ${
+                      lastCalledToken === ord.tokenNumber
+                        ? 'border-emerald-300 ring-4 ring-emerald-400/40 animate-pulse'
+                        : 'border-emerald-400'
+                    }`}
                   >
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
                       TOKEN
@@ -319,18 +325,16 @@ export const LiveTokenDisplay = () => {
                       Counter
                     </div>
 
-                    {/* Manual Call Again Sound Trigger Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTestSound(ord.tokenNumber);
-                      }}
-                      className="mt-2.5 px-3 py-1 rounded-xl bg-emerald-400/20 hover:bg-emerald-400/30 border border-emerald-400/40 text-emerald-200 text-[11px] font-black flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                      title="Broadcast token calling chime and voice announcement"
-                    >
-                      <Megaphone className="w-3 h-3 text-emerald-300" />
-                      <span>Call Again 📣</span>
-                    </button>
+                    <div className="mt-2.5 px-3 py-0.5 rounded-xl bg-emerald-400/20 text-emerald-200 text-[10px] font-black flex items-center gap-1 shadow-xs">
+                      {lastCalledToken === ord.tokenNumber ? (
+                        <>
+                          <Megaphone className="w-3 h-3 text-emerald-300 animate-bounce" />
+                          <span>Calling Live 📣</span>
+                        </>
+                      ) : (
+                        <span>Ready at Counter</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

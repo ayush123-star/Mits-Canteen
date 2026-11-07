@@ -39,6 +39,11 @@ export const SocketProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('smartcanteen:whatsapp_alert', { detail: data }));
     });
 
+    socketInstance.on('order:new', (data) => {
+      console.log('[Socket] New incoming order event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_new', { detail: data }));
+    });
+
     socketInstance.on('order:status_updated', (data) => {
       window.dispatchEvent(new CustomEvent('smartcanteen:order_status_updated', { detail: data }));
     });

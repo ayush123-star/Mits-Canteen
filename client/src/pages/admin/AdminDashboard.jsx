@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { playNotificationSound } from '../../utils/audio';
 import {
   Clock,
   CheckCircle2,
@@ -40,6 +41,35 @@ export const AdminDashboard = () => {
   const [acceptModalOrder, setAcceptModalOrder] = useState(null);
   const [customPrepMinutes, setCustomPrepMinutes] = useState(15);
   const [verifiedTokenModal, setVerifiedTokenModal] = useState(null);
+  const [newOrderAlert, setNewOrderAlert] = useState(null);
+  const prevCountRef = useRef(orders.length);
+
+  // Instant notification when a new order arrives
+  useEffect(() => {
+    if (orders.length > prevCountRef.current) {
+      const latest = orders[0];
+      if (latest && latest.status === 'Placed') {
+        setNewOrderAlert(latest);
+        playNotificationSound('new_order');
+        setTimeout(() => setNewOrderAlert(null), 8000);
+      }
+    }
+    prevCountRef.current = orders.length;
+  }, [orders]);
+
+  // Listen to cross-tab orders update event
+  useEffect(() => {
+    const handleSync = (e) => {
+      const { type, newOrder } = e.detail || {};
+      if (type === 'NEW_ORDER' && newOrder) {
+        setNewOrderAlert(newOrder);
+        playNotificationSound('new_order');
+        setTimeout(() => setNewOrderAlert(null), 8000);
+      }
+    };
+    window.addEventListener('smartcanteen:orders_sync', handleSync);
+    return () => window.removeEventListener('smartcanteen:orders_sync', handleSync);
+  }, []);
 
   // Active kitchen orders
   const activeOrders = orders.filter((o) =>
@@ -142,6 +172,26 @@ export const AdminDashboard = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn text-white">
+      {/* Real-time New Incoming Order Alert Banner */}
+      {newOrderAlert && (
+        <div className="fixed top-16 right-4 z-50 max-w-sm p-4 rounded-2xl bg-gradient-to-r from-red-600 to-purple-600 text-white shadow-2xl border-2 border-white/20 animate-bounce flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl animate-spin">🔔</span>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">New Order Received!</p>
+              <p className="text-sm font-black font-mono">Token #{newOrderAlert.tokenNumber} • ₹{newOrderAlert.finalAmount}</p>
+              <p className="text-[10px] text-purple-200">{newOrderAlert.studentName || 'Student'} ({newOrderAlert.items?.length || 1} items)</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setNewOrderAlert(null)}
+            className="p-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* 1. Header Toolbar (Mobile-Adaptive Layout) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div>
