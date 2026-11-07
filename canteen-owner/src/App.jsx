@@ -6,6 +6,7 @@ import { CartProvider } from './context/CartContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal';
+import { GlobalVoiceCallingAnnouncer } from './components/common/GlobalVoiceCallingAnnouncer';
 
 // Layout
 import { AdminLayout } from './layouts/AdminLayout';
@@ -60,6 +61,8 @@ export function App() {
           <DataProvider>
             <AuthProvider>
               <CartProvider>
+                {/* Global Audio Chime & Speech Announcer across all owner pages */}
+                <GlobalVoiceCallingAnnouncer />
                 <ChangePasswordModal />
 
                 <Routes>

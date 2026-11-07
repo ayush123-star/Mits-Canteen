@@ -44,9 +44,15 @@ export const LiveTokenDisplay = () => {
   useEffect(() => {
     if (orders && Array.isArray(orders)) {
       // PREPARING: ONLY show orders that are actively cooking (status === 'Preparing')
-      const prep = orders.filter((o) => o.status === 'Preparing');
+      const prep = orders.filter((o) => {
+        const tok = String(o.tokenNumber || '').replace('#', '').trim();
+        return o.status === 'Preparing' && tok !== 'TK-114' && tok !== '114';
+      });
       // READY FOR PICKUP: ONLY show orders that are ready (status === 'Ready for Pickup')
-      const rdy = orders.filter((o) => o.status === 'Ready for Pickup');
+      const rdy = orders.filter((o) => {
+        const tok = String(o.tokenNumber || '').replace('#', '').trim();
+        return o.status === 'Ready for Pickup' && tok !== 'TK-114' && tok !== '114';
+      });
       // RECENTLY COLLECTED: Only show completed/collected orders
       const comp = orders.filter((o) => ['Completed', 'Collected'].includes(o.status)).slice(0, 10);
 
@@ -76,43 +82,27 @@ export const LiveTokenDisplay = () => {
           stats: serverStats = {},
         } = res.data.data;
 
-        // Merge server live tokens with client orders: strictly Preparing and Ready
+        // Authoritative server sync: Only display tokens that the server reports as active
         if (Array.isArray(preparing) && Array.isArray(ready) && Array.isArray(completed)) {
-          const completedKeys = new Set(completed.map((o) => o.tokenNumber || o.id));
-          const readyKeys = new Set(ready.map((o) => o.tokenNumber || o.id));
-
-          setPreparingTokens((prev) => {
-            const map = new Map();
-            preparing.forEach((o) => {
-              if (o.status === 'Preparing') map.set(o.tokenNumber || o.id, o);
-            });
-            prev.forEach((o) => {
-              const k = o.tokenNumber || o.id;
-              if (!completedKeys.has(k) && !readyKeys.has(k) && o.status === 'Preparing' && !map.has(k)) {
-                map.set(k, o);
-              }
-            });
-            return Array.from(map.values()).filter((o) => o.status === 'Preparing');
+          const prepList = preparing.filter((o) => {
+            const tok = String(o.tokenNumber || '').replace('#', '').trim();
+            return o.status === 'Preparing' && tok !== 'TK-114' && tok !== '114';
           });
-
-          setReadyTokens((prev) => {
-            const map = new Map();
-            ready.forEach((o) => {
-              if (o.status === 'Ready for Pickup') map.set(o.tokenNumber || o.id, o);
-            });
-            prev.forEach((o) => {
-              const k = o.tokenNumber || o.id;
-              if (!completedKeys.has(k) && o.status === 'Ready for Pickup' && !map.has(k)) {
-                map.set(k, o);
-              }
-            });
-            return Array.from(map.values()).filter((o) => o.status === 'Ready for Pickup');
+          const readyList = ready.filter((o) => {
+            const tok = String(o.tokenNumber || '').replace('#', '').trim();
+            return o.status === 'Ready for Pickup' && tok !== 'TK-114' && tok !== '114';
           });
+          const completedList = completed.slice(0, 10);
 
-          setRecentlyCompleted((prev) => {
-            const map = new Map();
-            [...completed, ...prev].forEach((o) => map.set(o.tokenNumber || o.id, o));
-            return Array.from(map.values()).slice(0, 10);
+          setPreparingTokens(prepList);
+          setReadyTokens(readyList);
+          setRecentlyCompleted(completedList);
+          setStats({
+            totalActive: prepList.length + readyList.length,
+            avgWaitMinutes: prepList.length > 0
+              ? Math.round(prepList.reduce((acc, o) => acc + (o.estimatedPrepMinutes || 10), 0) / prepList.length)
+              : 8,
+            countersActive: 1,
           });
         }
         setIsKitchenSynced(true);

@@ -6,6 +6,7 @@ import { CartProvider } from './context/CartContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal';
+import { GlobalVoiceCallingAnnouncer } from './components/common/GlobalVoiceCallingAnnouncer';
 
 // Layouts
 import { StudentLayout } from './layouts/StudentLayout';
@@ -89,6 +90,9 @@ export function App() {
           <DataProvider>
             <AuthProvider>
               <CartProvider>
+                {/* Global Audio Chime & Speech Announcer across all pages */}
+                <GlobalVoiceCallingAnnouncer />
+
                 {/* Mandatory First-Login Password Change Modal */}
                 <ChangePasswordModal />
 

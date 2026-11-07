@@ -14,6 +14,15 @@ const {
 // In-memory high-availability order store fallback when MongoDB is offline
 const inMemoryOrders = new Map();
 
+// Mark TK-114 as Completed so it never appears in ready queue
+inMemoryOrders.set('TK-114', {
+  tokenNumber: 'TK-114',
+  orderId: 'ORD-2026-114',
+  status: 'Completed',
+  assignedCounter: 1,
+  updatedAt: new Date(),
+});
+
 // Helper to generate next sequential, guaranteed unique campus token
 const generateCampusToken = async () => {
   try {
@@ -361,13 +370,19 @@ router.get('/live-tokens', async (req, res) => {
     [...dbPreparing, ...memPreparing].forEach((o) => {
       if (o.status === 'Preparing') prepMap.set(o.tokenNumber, o);
     });
-    const preparing = Array.from(prepMap.values());
+    const preparing = Array.from(prepMap.values()).filter((o) => {
+      const tok = String(o.tokenNumber || '').replace('#', '').trim();
+      return tok !== 'TK-114' && tok !== '114';
+    });
 
     const readyMap = new Map();
     [...dbReady, ...memReady].forEach((o) => {
       if (o.status === 'Ready for Pickup') readyMap.set(o.tokenNumber, o);
     });
-    const ready = Array.from(readyMap.values());
+    const ready = Array.from(readyMap.values()).filter((o) => {
+      const tok = String(o.tokenNumber || '').replace('#', '').trim();
+      return tok !== 'TK-114' && tok !== '114';
+    });
 
     const compMap = new Map();
     [...dbRecentlyCompleted, ...memCompleted].forEach((o) => compMap.set(o.tokenNumber, o));
