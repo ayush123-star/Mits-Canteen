@@ -4,12 +4,17 @@
   "description": "Smart Campus Canteen – Zero Queue Food Ordering System",
   "private": true,
   "scripts": {
-    "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"yellow.bold,cyan.bold\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,STUDENT,OWNER\" -c \"yellow.bold,cyan.bold,magenta.bold\" \"npm run dev --prefix server\" \"npm run dev --prefix client\" \"npm run dev --prefix canteen-owner\"",
+    "dev:main": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"yellow.bold,cyan.bold\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:owner": "concurrently -k -p \"[{name}]\" -n \"SERVER,OWNER\" -c \"yellow.bold,magenta.bold\" \"npm run dev --prefix server\" \"npm run dev --prefix canteen-owner\"",
     "build": "npm run build --prefix client",
+    "build:owner": "npm run build --prefix canteen-owner",
+    "build:all": "npm run build --prefix client && npm run build --prefix canteen-owner",
     "server": "npm run dev --prefix server",
     "client": "npm run dev --prefix client",
+    "owner": "npm run dev --prefix canteen-owner",
     "seed": "npm run seed --prefix server",
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install && cd ../canteen-owner && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

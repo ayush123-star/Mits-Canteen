@@ -58,12 +58,6 @@ export const LoginPage = () => {
   // UI Interactive States
   const [showFeatures, setShowFeatures] = useState(false);
 
-  // Canteen Owner Security PIN Authorization States
-  const [isOwnerModalOpen, setIsOwnerModalOpen] = useState(false);
-  const [ownerPin, setOwnerPin] = useState('');
-  const [ownerError, setOwnerError] = useState('');
-  const [ownerLoading, setOwnerLoading] = useState(false);
-
   // Smooth scroll to Developer section
   const scrollToDeveloper = () => {
     if (developerRef.current) {
@@ -121,52 +115,6 @@ export const LoginPage = () => {
     setTargetRole(role);
     setAuthError('');
     triggerGoogleLogin();
-  };
-
-  // Canteen Owner Master PIN Verification (PIN: 1957)
-  const verifyOwnerPin = async (pinValue) => {
-    const pinToTest = (pinValue !== undefined ? pinValue : ownerPin).trim();
-    setOwnerError('');
-
-    if (pinToTest === '1957') {
-      setOwnerLoading(true);
-      try {
-        const res = await login('admin@campus.edu', 'admin123');
-        if (res.success) {
-          setIsOwnerModalOpen(false);
-          navigate('/admin/dashboard');
-        } else {
-          setOwnerError(res.message || 'Owner authentication failed');
-        }
-      } catch (err) {
-        setOwnerError(err.message || 'Error authenticating owner');
-      } finally {
-        setOwnerLoading(false);
-      }
-    } else {
-      setOwnerError('⛔ Access Denied! Invalid Owner PIN. Authorized staff only.');
-    }
-  };
-
-  const handleOwnerPinSubmit = (e) => {
-    if (e) e.preventDefault();
-    verifyOwnerPin(ownerPin);
-  };
-
-  const handleNumpadPress = (digit) => {
-    if (ownerLoading) return;
-    if (ownerPin.length >= 4) return;
-    const nextPin = ownerPin + digit;
-    setOwnerPin(nextPin);
-    if (nextPin.length === 4) {
-      verifyOwnerPin(nextPin);
-    }
-  };
-
-  const handleNumpadBackspace = () => {
-    if (ownerLoading) return;
-    setOwnerPin((prev) => prev.slice(0, -1));
-    setOwnerError('');
   };
 
   return (
@@ -402,22 +350,6 @@ export const LoginPage = () => {
               </div>
             </div>
           )}
-
-          {/* Restricted Canteen Staff Access */}
-          <div className="pt-2 text-center border-t border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => {
-                setOwnerPin('');
-                setOwnerError('');
-                setIsOwnerModalOpen(true);
-              }}
-              className="w-full py-2.5 px-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 border border-amber-500/30 hover:border-amber-500/50 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-[0.99]"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="truncate">Canteen Staff & Owner Restricted Portal</span>
-            </button>
-          </div>
         </div>
       </main>
 
@@ -523,128 +455,6 @@ export const LoginPage = () => {
           </div>
         </div>
       </footer>
-
-      {/* 5. Canteen Owner Security PIN Authorization Modal (Fully Mobile-Optimized) */}
-      {isOwnerModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="relative w-full max-w-xs sm:max-w-sm bg-[#0D1527] border-2 border-orange-500/40 rounded-3xl p-5 sm:p-6 text-white shadow-2xl space-y-4 my-auto">
-            
-            <button
-              type="button"
-              onClick={() => setIsOwnerModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
-              aria-label="Close Modal"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center space-y-1">
-              <div className="w-11 h-11 rounded-2xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center mx-auto shadow-md">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                Canteen Owner Gate
-              </h3>
-              <p className="text-[11px] text-slate-300">
-                Restricted access for MITS canteen operators
-              </p>
-            </div>
-
-            {ownerError && (
-              <div className="p-2 rounded-xl bg-red-500/15 border border-red-500/40 text-red-400 text-xs font-semibold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span className="leading-tight">{ownerError}</span>
-              </div>
-            )}
-
-            {/* 4-Digit PIN Visual Boxes */}
-            <div className="flex justify-center items-center gap-2.5 py-1">
-              {[0, 1, 2, 3].map((idx) => {
-                const isFilled = ownerPin.length > idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`w-10 h-11 sm:w-11 sm:h-12 rounded-xl flex items-center justify-center text-base sm:text-lg font-black font-mono transition-all border ${
-                      isFilled
-                        ? 'border-orange-500 bg-orange-500/20 text-orange-300 shadow-md shadow-orange-500/20 scale-105'
-                        : 'border-slate-700 bg-slate-900/90 text-slate-600'
-                    }`}
-                  >
-                    {isFilled ? '●' : '○'}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Phone-Friendly Touch Numeric Keypad */}
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  disabled={ownerLoading}
-                  onClick={() => handleNumpadPress(String(num))}
-                  className="h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-white font-extrabold text-sm sm:text-base active:scale-95 transition-all cursor-pointer shadow-xs"
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                type="button"
-                disabled={ownerLoading}
-                onClick={() => {
-                  setOwnerPin('');
-                  setOwnerError('');
-                }}
-                className="h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-slate-900/50 hover:bg-slate-800 text-slate-400 font-bold text-xs active:scale-95 transition-all cursor-pointer"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                disabled={ownerLoading}
-                onClick={() => handleNumpadPress('0')}
-                className="h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-white font-extrabold text-sm sm:text-base active:scale-95 transition-all cursor-pointer shadow-xs"
-              >
-                0
-              </button>
-              <button
-                type="button"
-                disabled={ownerLoading}
-                onClick={handleNumpadBackspace}
-                className="h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-slate-900/50 hover:bg-slate-800 text-orange-400 font-bold text-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
-                aria-label="Backspace"
-              >
-                ⌫
-              </button>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="button"
-              disabled={ownerLoading || ownerPin.length === 0}
-              onClick={() => verifyOwnerPin(ownerPin)}
-              className="w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-[0.99]"
-            >
-              {ownerLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Verifying PIN...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Unlock Owner Console</span>
-                </>
-              )}
-            </button>
-
-            <div className="text-center text-[9px] sm:text-[10px] text-slate-500">
-              MITS Main Canteen Operations Console &bull; Security Protected
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

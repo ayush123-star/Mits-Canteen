@@ -15,6 +15,7 @@ import { SuperAdminLayout } from './layouts/SuperAdminLayout';
 // Public & Auth Pages
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/auth/LoginPage';
+import { OwnerLoginPage } from './pages/auth/OwnerLoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { LiveTokenDisplay } from './pages/LiveTokenDisplay';
 import { AboutPage } from './pages/AboutPage';
@@ -51,11 +52,14 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
+  const isOwnerRoute = allowedRoles.includes('canteen_admin') || allowedRoles.includes('admin');
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={isOwnerRoute ? '/admin/login' : '/login'} state={{ from: location }} replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    if (isOwnerRoute) return <Navigate to="/admin/login" replace />;
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
     if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
     return <Navigate to="/" replace />;
@@ -106,6 +110,11 @@ export function App() {
                     </PublicAuthRoute>
                   }
                 />
+                {/* Dedicated Canteen Owner Login Gate */}
+                <Route path="/admin/login" element={<OwnerLoginPage />} />
+                <Route path="/canteen-owner/login" element={<OwnerLoginPage />} />
+                <Route path="/owner/login" element={<OwnerLoginPage />} />
+
                 <Route path="/live-tokens" element={<LiveTokenDisplay />} />
 
                 {/* 2. STUDENT PORTAL (MANDATORY LOGIN REQUIRED: Accessible only after login / registration) */}
@@ -134,6 +143,28 @@ export function App() {
                 {/* 3. CANTEEN ADMIN / OWNER PORTAL */}
                 <Route
                   path="/admin"
+                  element={
+                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin']}>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="menu" element={<MenuManagementPage />} />
+                  <Route path="inventory" element={<InventoryPage />} />
+                  <Route path="recipes" element={<RecipeManagementPage />} />
+                  <Route path="stock-history" element={<StockHistoryPage />} />
+                  <Route path="payments" element={<PaymentsManagementPage />} />
+                  <Route path="reports" element={<AdminReportsPage />} />
+                  <Route path="settings" element={<CanteenSettingsPage />} />
+                  <Route path="homepage-manager" element={<HomepageManagerPage />} />
+                  <Route path="feedback" element={<AdminFeedbackPage />} />
+                </Route>
+
+                {/* Dedicated Alias Routes for Canteen Owner Portal */}
+                <Route
+                  path="/canteen-owner"
                   element={
                     <ProtectedRoute allowedRoles={['canteen_admin', 'admin']}>
                       <AdminLayout />
