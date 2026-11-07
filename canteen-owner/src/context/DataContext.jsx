@@ -490,6 +490,21 @@ export const DataProvider = ({ children }) => {
         return;
       }
 
+      if (type === 'SNAPSHOT_SYNC') {
+        const list = incomingOrders || cloudEvent.orders;
+        if (Array.isArray(list) && list.length > 0) {
+          setOrders((prev) => {
+            const merged = mergeOrders(prev, list);
+            try {
+              localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
+            } catch (_) {}
+            window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+            return merged;
+          });
+        }
+        return;
+      }
+
       if (type === 'NEW_ORDER' && newOrder) {
         if (isMockOrder(newOrder)) return;
         setOrders((prev) => {

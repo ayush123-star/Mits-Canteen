@@ -83,17 +83,18 @@ export const LiveTokenDisplay = () => {
         } = res.data.data;
 
         // Authoritative server sync: Only display tokens that the server reports as active
-        if (Array.isArray(preparing) && Array.isArray(ready) && Array.isArray(completed)) {
-          const prepList = preparing.filter((o) => {
-            const tok = String(o.tokenNumber || '').replace('#', '').trim();
-            return o.status === 'Preparing' && tok !== 'TK-114' && tok !== '114';
-          });
-          const readyList = ready.filter((o) => {
-            const tok = String(o.tokenNumber || '').replace('#', '').trim();
-            return o.status === 'Ready for Pickup' && tok !== 'TK-114' && tok !== '114';
-          });
-          const completedList = completed.slice(0, 10);
+        const prepList = preparing.filter((o) => {
+          const tok = String(o.tokenNumber || '').replace('#', '').trim();
+          return o.status === 'Preparing' && tok !== 'TK-114' && tok !== '114';
+        });
+        const readyList = ready.filter((o) => {
+          const tok = String(o.tokenNumber || '').replace('#', '').trim();
+          return o.status === 'Ready for Pickup' && tok !== 'TK-114' && tok !== '114';
+        });
+        const completedList = completed.slice(0, 10);
 
+        // Only override if the backend returned active records or if local orders is empty
+        if (prepList.length > 0 || readyList.length > 0 || (orders && orders.length === 0)) {
           setPreparingTokens(prepList);
           setReadyTokens(readyList);
           setRecentlyCompleted(completedList);
@@ -111,7 +112,7 @@ export const LiveTokenDisplay = () => {
     } catch (_) {
       // Backend request fallback to DataContext reactive state
     }
-  }, []);
+  }, [orders]);
 
   // Subscribe to real-time events from centralized database & Socket.IO
   useEffect(() => {

@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "mqtt": "^5.16.1"
   }
 }

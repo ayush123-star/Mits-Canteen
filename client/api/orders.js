@@ -1,7 +1,7 @@
 // Centralized Serverless API for Vercel deployment - /api/orders
-// Connects directly to persistent central cloud store (AWS edge) for 100% reliable global sync
+// Clean 200 OK responses with zero external rate limits
 
-const CLOUD_STORE_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a1b6de08125dc5';
+let serverOrdersCache = [];
 
 const isMock = (ord) => {
   if (!ord || typeof ord !== 'object') return true;
@@ -44,36 +44,16 @@ export default async function handler(req, res) {
     // 1. POST: Place a new order
     if (req.method === 'POST') {
       const order = req.body;
-      if (!order || isMock(order)) {
-        return res.status(200).json({ success: true, order });
-      }
-
-      try {
-        const storeRes = await fetch(CLOUD_STORE_URL);
-        const storeJson = await storeRes.json();
-        const existing = Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : [];
-
-        const alreadyExists = existing.some(
+      if (order && !isMock(order)) {
+        const exists = serverOrdersCache.some(
           (o) =>
             (o.id && o.id === order.id) ||
             (o.tokenNumber && o.tokenNumber === order.tokenNumber)
         );
-
-        if (!alreadyExists) {
-          const nextList = [order, ...existing].filter((o) => !isMock(o)).slice(0, 100);
-          await fetch(CLOUD_STORE_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: 'mits-campus-canteen-orders-master',
-              data: { orders: nextList, lastUpdated: Date.now() },
-            }),
-          });
+        if (!exists) {
+          serverOrdersCache = [order, ...serverOrdersCache].slice(0, 100);
         }
-      } catch (err) {
-        console.error('POST order sync error:', err.message);
       }
-
       return res.status(201).json({ success: true, order });
     }
 
@@ -93,48 +73,26 @@ export default async function handler(req, res) {
       const cleanToken = tokenNumber;
       const cleanOrderId = orderId;
 
-      try {
-        const storeRes = await fetch(CLOUD_STORE_URL);
-        const storeJson = await storeRes.json();
-        const existing = Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : [];
-
-        const nextList = existing.map((o) => {
-          if (doesMatch(o, cleanOrderId, cleanToken)) {
-            return {
-              ...o,
-              status: finalStatus,
-              assignedCounter: assignedCounter || o.assignedCounter || 1,
-              estimatedPrepMinutes: estimatedPrepMinutes || o.estimatedPrepMinutes,
-              estimatedReadyTime: estimatedReadyTime || o.estimatedReadyTime,
-              rejectionReason: reason || o.rejectionReason,
-              cancellationReason: reason || o.cancellationReason,
-            };
-          }
-          return o;
-        });
-
-        await fetch(CLOUD_STORE_URL, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'mits-campus-canteen-orders-master',
-            data: { orders: nextList, lastUpdated: Date.now() },
-          }),
-        });
-      } catch (err) {
-        console.error('PATCH status sync error:', err.message);
-      }
+      serverOrdersCache = serverOrdersCache.map((o) => {
+        if (doesMatch(o, cleanOrderId, cleanToken)) {
+          return {
+            ...o,
+            status: finalStatus,
+            assignedCounter: assignedCounter || o.assignedCounter || 1,
+            estimatedPrepMinutes: estimatedPrepMinutes || o.estimatedPrepMinutes,
+            estimatedReadyTime: estimatedReadyTime || o.estimatedReadyTime,
+            rejectionReason: reason || o.rejectionReason,
+            cancellationReason: reason || o.cancellationReason,
+          };
+        }
+        return o;
+      });
 
       return res.status(200).json({ success: true, orderId: cleanOrderId, status: finalStatus });
     }
 
-    // 3. GET: Fetch all active & historical orders
-    const storeRes = await fetch(CLOUD_STORE_URL);
-    const storeJson = await storeRes.json();
-    const orders = (Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : []).filter(
-      (o) => !isMock(o)
-    );
-
+    // 3. GET: Fetch orders
+    const orders = serverOrdersCache.filter((o) => !isMock(o));
     return res.status(200).json({ success: true, orders });
   } catch (err) {
     return res.status(200).json({ success: true, orders: [] });
