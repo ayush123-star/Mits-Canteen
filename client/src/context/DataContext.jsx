@@ -149,6 +149,85 @@ export const DataProvider = ({ children }) => {
 
   const [simulatedWhatsAppAlert, setSimulatedWhatsAppAlert] = useState(null);
 
+  // Helper to normalize and ensure consistent order objects across backend and frontend
+  const normalizeOrder = (ord) => {
+    if (!ord) return null;
+    const backendId = ord._id || ord.id || `ord-${ord.tokenNumber}`;
+    return {
+      ...ord,
+      id: backendId,
+      _id: backendId,
+      tokenNumber: ord.tokenNumber || 'TK-101',
+      orderNumber: ord.orderNumber || (ord.tokenNumber ? `ORD-${ord.tokenNumber}` : 'ORD-101'),
+      studentName: ord.user?.name || ord.studentName || 'Campus Student',
+      studentRoll: ord.user?.studentId || ord.studentRoll || 'STU-101',
+      studentPhone: ord.user?.phone || ord.studentPhone || '+91 98765 43210',
+      items: (ord.items || []).map((it) => ({
+        ...it,
+        foodId: it.foodItem?._id || it.foodItem || it.foodId || it.id,
+        name: it.name || it.foodItem?.name || 'Campus Item',
+        price: it.price || it.foodItem?.price || 50,
+        quantity: Number(it.quantity) || 1,
+      })),
+      totalAmount: Number(ord.totalAmount) || 0,
+      finalAmount: Number(ord.finalAmount) || Number(ord.totalAmount) || 0,
+      status: ord.status || 'Placed',
+      paymentMethod: ord.paymentMethod || 'UPI',
+      paymentStatus: ord.paymentStatus || 'Pending',
+      assignedCounter: ord.assignedCounter || 1,
+      estimatedPrepMinutes: ord.estimatedPrepMinutes || 10,
+      estimatedReadyTime: ord.estimatedReadyTime,
+      createdAt: ord.createdAt
+        ? (typeof ord.createdAt === 'string' && ord.createdAt.includes('T')
+            ? new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : ord.createdAt)
+        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
+  // Robust function to fetch live orders from backend database
+  const fetchBackendOrders = async () => {
+    try {
+      let liveList = [];
+      // 1. Try admin endpoint for complete order catalog
+      const allRes = await axios.get('/api/orders/all?limit=100').catch(() => null);
+      if (allRes?.data?.success && Array.isArray(allRes.data.data) && allRes.data.data.length > 0) {
+        liveList = allRes.data.data;
+      } else {
+        // 2. Fallback to public live-tokens endpoint
+        const liveRes = await axios.get('/api/orders/live-tokens').catch(() => null);
+        if (liveRes?.data?.success && liveRes.data.data) {
+          const { preparing = [], ready = [], recentlyCompleted = [] } = liveRes.data.data;
+          liveList = [...ready, ...preparing, ...recentlyCompleted];
+        }
+      }
+
+      if (liveList.length > 0) {
+        setOrders((prev) => {
+          const normalizedServerList = liveList.map(normalizeOrder).filter(Boolean);
+          const serverIds = new Set(normalizedServerList.map((o) => String(o.id)));
+          const serverTokens = new Set(normalizedServerList.map((o) => String(o.tokenNumber)));
+
+          // Check for any newly placed order that wasn't in state
+          const prevTokens = new Set(prev.map((o) => String(o.tokenNumber)));
+          const brandNewOrders = normalizedServerList.filter((o) => !prevTokens.has(String(o.tokenNumber)));
+          if (brandNewOrders.length > 0) {
+            playNotificationSound('new_order');
+          }
+
+          // Preserve any local orders that haven't synchronized to backend yet
+          const unsyncedLocals = prev.filter(
+            (o) => !serverIds.has(String(o.id)) && !serverTokens.has(String(o.tokenNumber))
+          );
+
+          return [...brandNewOrders, ...unsyncedLocals, ...normalizedServerList.filter((s) => !brandNewOrders.some(b => b.tokenNumber === s.tokenNumber))];
+        });
+      }
+    } catch (err) {
+      console.debug('fetchBackendOrders note:', err.message);
+    }
+  };
+
   // Live Backend Database Synchronization (when Node.js server & MongoDB are online)
   useEffect(() => {
     const syncBackendData = async () => {
@@ -200,10 +279,118 @@ export const DataProvider = ({ children }) => {
     };
 
     syncBackendData();
+    fetchBackendOrders();
+
+    // Background live synchronization timer (every 3 seconds) ensuring 100% sync even across disconnections
+    const syncInterval = setInterval(() => {
+      fetchBackendOrders();
+    }, 3000);
+
+    return () => clearInterval(syncInterval);
   }, []);
 
-  // Real-time Automated WhatsApp & Status Update listener from Socket.IO
+  // Real-time Event Listeners from Socket.IO
   useEffect(() => {
+    // 1. New incoming order broadcast
+    const handleOrderNew = (e) => {
+      const rawOrd = e.detail;
+      if (!rawOrd) return;
+      const normalized = normalizeOrder(rawOrd);
+
+      setOrders((prev) => {
+        const exists = prev.some(
+          (o) => String(o.id) === String(normalized.id) || String(o.tokenNumber) === String(normalized.tokenNumber)
+        );
+        if (exists) {
+          return prev.map((o) =>
+            String(o.id) === String(normalized.id) || String(o.tokenNumber) === String(normalized.tokenNumber)
+              ? normalized
+              : o
+          );
+        }
+        return [normalized, ...prev];
+      });
+
+      playNotificationSound('new_order');
+      logActivity(
+        normalized.studentName || 'Student',
+        'ORDER_RECEIVED',
+        'ORDERS',
+        `Live real-time order received: #${normalized.tokenNumber} (₹${normalized.finalAmount})`
+      );
+    };
+
+    // 2. Order status update broadcast
+    const handleOrderStatusUpdated = (e) => {
+      const data = e.detail;
+      if (!data) return;
+
+      setOrders((prev) =>
+        prev.map((ord) => {
+          const isMatch =
+            String(ord.id) === String(data.orderId) ||
+            String(ord._id) === String(data.orderId) ||
+            String(ord.tokenNumber) === String(data.tokenNumber);
+
+          if (isMatch) {
+            return {
+              ...ord,
+              status: data.status,
+              assignedCounter: data.assignedCounter || ord.assignedCounter,
+              estimatedPrepMinutes: data.estimatedPrepMinutes || ord.estimatedPrepMinutes,
+              estimatedReadyTime: data.estimatedReadyTime || ord.estimatedReadyTime,
+            };
+          }
+          return ord;
+        })
+      );
+    };
+
+    // 3. Token ready for pickup broadcast
+    const handleTokenReady = (e) => {
+      const data = e.detail;
+      if (!data?.tokenNumber) return;
+
+      setOrders((prev) =>
+        prev.map((ord) => {
+          if (String(ord.tokenNumber) === String(data.tokenNumber)) {
+            return {
+              ...ord,
+              status: 'Ready for Pickup',
+              assignedCounter: data.counter || ord.assignedCounter,
+            };
+          }
+          return ord;
+        })
+      );
+      playNotificationSound('ready');
+    };
+
+    // 4. Token completed / collected broadcast
+    const handleTokenCompleted = (e) => {
+      const data = e.detail;
+      if (!data?.tokenNumber) return;
+
+      setOrders((prev) =>
+        prev.map((ord) => {
+          if (String(ord.tokenNumber) === String(data.tokenNumber) || String(ord.id) === String(data.orderId)) {
+            return {
+              ...ord,
+              status: 'Completed',
+              paymentStatus: ord.paymentMethod === 'CASH_AT_COUNTER' ? 'PAID' : ord.paymentStatus,
+            };
+          }
+          return ord;
+        })
+      );
+    };
+
+    // 5. General refresh & reconnect
+    const handleRefresh = () => {
+      fetchBackendOrders();
+    };
+
+    // 6. WhatsApp alert popup
     const handleWhatsAppAlert = (e) => {
       const data = e.detail;
       if (data) {
@@ -223,32 +410,22 @@ export const DataProvider = ({ children }) => {
       }
     };
 
-    const handleOrderStatusUpdated = (e) => {
-      const data = e.detail;
-      if (data && data.orderId) {
-        setOrders((prev) =>
-          prev.map((ord) => {
-            if (ord.id === data.orderId || ord._id === data.orderId) {
-              return {
-                ...ord,
-                status: data.status,
-                assignedCounter: data.assignedCounter || ord.assignedCounter,
-                estimatedPrepMinutes: data.estimatedPrepMinutes || ord.estimatedPrepMinutes,
-                estimatedReadyTime: data.estimatedReadyTime || ord.estimatedReadyTime,
-              };
-            }
-            return ord;
-          })
-        );
-      }
-    };
-
-    window.addEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
+    window.addEventListener('smartcanteen:order_new', handleOrderNew);
     window.addEventListener('smartcanteen:order_status_updated', handleOrderStatusUpdated);
+    window.addEventListener('smartcanteen:token_ready', handleTokenReady);
+    window.addEventListener('smartcanteen:token_completed', handleTokenCompleted);
+    window.addEventListener('smartcanteen:tokens_refresh', handleRefresh);
+    window.addEventListener('smartcanteen:socket_connected', handleRefresh);
+    window.addEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
 
     return () => {
-      window.removeEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
+      window.removeEventListener('smartcanteen:order_new', handleOrderNew);
       window.removeEventListener('smartcanteen:order_status_updated', handleOrderStatusUpdated);
+      window.removeEventListener('smartcanteen:token_ready', handleTokenReady);
+      window.removeEventListener('smartcanteen:token_completed', handleTokenCompleted);
+      window.removeEventListener('smartcanteen:tokens_refresh', handleRefresh);
+      window.removeEventListener('smartcanteen:socket_connected', handleRefresh);
+      window.removeEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
     };
   }, []);
 
@@ -311,7 +488,7 @@ export const DataProvider = ({ children }) => {
   // ==========================================
   // ORDER ACTIONS & AUTO-RECIPE DEDUCTION
   // ==========================================
-  const placeOrder = (orderData) => {
+  const placeOrder = async (orderData) => {
     const count = orders.length + 105;
     const tokenNumber = `TK-${count}`;
     const orderNumber = `ORD-2026-${String(count).padStart(3, '0')}`;
@@ -342,6 +519,7 @@ export const DataProvider = ({ children }) => {
       stockDeducted: false,
     };
 
+    // Immediate optimistic local update
     setOrders((prev) => [newOrder, ...prev]);
     playNotificationSound('new_order');
     logActivity(newOrder.studentName, 'ORDER_PLACED', 'ORDERS', `Placed order #${tokenNumber} for ₹${newOrder.finalAmount}`);
@@ -365,29 +543,50 @@ export const DataProvider = ({ children }) => {
       setTimeout(() => setSimulatedWhatsAppAlert(null), 12000);
     }
 
-    // Asynchronously dispatch to real backend if online
-    axios.post('/api/orders', {
-      items: orderData.items.map((i) => ({
-        foodItemId: i.foodId || i._id,
-        name: i.name,
-        quantity: i.quantity,
-        specialInstructions: i.specialInstructions || '',
-      })),
-      paymentMethod: orderData.paymentMethod || 'UPI',
-      scheduledPickupTime: orderData.scheduledPickupTime,
-      couponCode: orderData.couponCode,
-      orderNotes: orderData.orderNotes,
-      whatsappOptIn: true,
-    }).catch((e) => console.debug('Backend order sync:', e.message));
+    // Real backend database dispatch & socket broadcast across all devices
+    try {
+      const res = await axios.post('/api/orders', {
+        items: (orderData.items || []).map((i) => ({
+          foodItemId: i.foodId || i._id || i.id,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          specialInstructions: i.specialInstructions || '',
+        })),
+        paymentMethod: orderData.paymentMethod || 'UPI',
+        scheduledPickupTime: orderData.scheduledPickupTime,
+        couponCode: orderData.couponCode,
+        orderNotes: orderData.orderNotes,
+        studentName: newOrder.studentName,
+        studentRoll: newOrder.studentRoll,
+        studentPhone: newOrder.studentPhone,
+        studentEmail: orderData.studentEmail,
+        studentDepartment: newOrder.studentDepartment,
+        whatsappOptIn: newOrder.whatsappOptIn,
+      });
+
+      if (res.data?.success && res.data.data) {
+        const serverOrder = normalizeOrder(res.data.data);
+        setOrders((prev) =>
+          prev.map((o) => (o.id === newOrder.id ? serverOrder : o))
+        );
+        return serverOrder;
+      }
+    } catch (e) {
+      console.warn('Backend order sync note:', e.message);
+    }
 
     return newOrder;
   };
 
   const updateOrderStatus = (orderId, newStatus, actorName = 'Kitchen Supervisor', extraOptions = {}) => {
+    let targetToken = null;
+
     setOrders((prevOrders) =>
       prevOrders.map((ord) => {
-        if (ord.id !== orderId) return ord;
+        if (ord.id !== orderId && ord._id !== orderId && ord.tokenNumber !== orderId) return ord;
 
+        targetToken = ord.tokenNumber;
         const updated = { ...ord, status: newStatus };
 
         // 1. AUTO-DEDUCT RAW MATERIALS FROM RECIPE when moving to 'Preparing'
@@ -519,14 +718,17 @@ export const DataProvider = ({ children }) => {
       })
     );
 
-    // Sync status & notify backend
+    // Sync status & notify backend via REST API (which saves to MongoDB and broadcasts Socket.IO events to all screens)
+    const backendParam = String(orderId).startsWith('ord-') && targetToken ? targetToken : orderId;
     axios
-      .patch(`/api/orders/${orderId}/status`, {
+      .patch(`/api/orders/${backendParam}/status`, {
         status: newStatus,
         note: extraOptions.note,
         estimatedPrepMinutes: extraOptions.estimatedMinutes,
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.debug('Backend status sync note:', err.message);
+      });
   };
 
   // Recipe deduction engine: automatically calculates ingredient requirements & updates inventory

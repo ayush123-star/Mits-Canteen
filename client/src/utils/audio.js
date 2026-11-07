@@ -180,18 +180,37 @@ export const playNotificationSound = (type = 'success') => {
 };
 
 // Natural Voice Announcement using SpeechSynthesis
-export const speakAnnouncement = (text) => {
+export const speakAnnouncement = (text, onEndCallback = null) => {
   try {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (onEndCallback) setTimeout(onEndCallback, 3000);
+      return;
+    }
     window.speechSynthesis.cancel();
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
+    utterance.rate = 0.92;
     utterance.pitch = 1.05;
     utterance.volume = 1.0;
+
+    let callbackCalled = false;
+    const triggerDone = () => {
+      if (!callbackCalled) {
+        callbackCalled = true;
+        if (typeof onEndCallback === 'function') {
+          onEndCallback();
+        }
+      }
+    };
+
+    utterance.onend = triggerDone;
+    utterance.onerror = triggerDone;
+
+    // Safety timeout fallback (e.g. if browser cancels or onend does not fire)
+    setTimeout(triggerDone, 6500);
 
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(
@@ -211,22 +230,35 @@ export const speakAnnouncement = (text) => {
     window.speechSynthesis.speak(utterance);
   } catch (err) {
     console.debug('Speech announcement error:', err);
+    if (typeof onEndCallback === 'function') {
+      onEndCallback();
+    }
   }
 };
 
-// Complete Canteen Token Calling: Chime + Voice Broadcast
-export const announceTokenCall = (tokenNumber, counter = 'Counter') => {
+// Complete Canteen Token Calling: Chime + Voice Broadcast with callback
+export const announceTokenCall = (tokenNumber, counter = 'Counter', onEndCallback = null) => {
   // Ensure audio context is ready
   unlockAudio();
 
-  // 1. Play Ding-Dong calling chime
+  // 1. Play melodic Ding-Dong calling chime
   playNotificationSound('calling');
 
-  // 2. Announce token clearly after chime completes
-  setTimeout(() => {
+  // 2. Announce token clearly after chime completes (650ms delay)
+  const timer = setTimeout(() => {
     const raw = String(tokenNumber).replace('#', '').trim();
-    // Pronounce letters/hyphens cleanly: e.g. "T 101" or "101"
+    // Pronounce letters/hyphens cleanly: e.g. "TK 114" or "114"
     const formattedToken = raw.replace('-', ' ');
-    speakAnnouncement(`Attention please. Token number ${formattedToken}, your order is ready at the ${counter}!`);
-  }, 700);
+    speakAnnouncement(
+      `Attention please! Token number ${formattedToken} is ready for pickup. Please collect your order from the ${counter}.`,
+      onEndCallback
+    );
+  }, 650);
+
+  return () => {
+    clearTimeout(timer);
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  };
 };

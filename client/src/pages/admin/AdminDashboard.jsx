@@ -40,6 +40,32 @@ export const AdminDashboard = () => {
   const [acceptModalOrder, setAcceptModalOrder] = useState(null);
   const [customPrepMinutes, setCustomPrepMinutes] = useState(15);
   const [verifiedTokenModal, setVerifiedTokenModal] = useState(null);
+  const [newOrderToast, setNewOrderToast] = useState(null);
+
+  // Listen for real-time incoming orders broadcast from Socket.IO / REST sync
+  useEffect(() => {
+    const handleNewOrder = (e) => {
+      const order = e.detail;
+      if (order) {
+        setNewOrderToast({
+          tokenNumber: order.tokenNumber || 'TK-101',
+          studentName: order.studentName || 'Campus Student',
+          finalAmount: order.finalAmount || order.totalAmount || 0,
+          itemCount: order.items?.length || 1,
+        });
+      }
+    };
+
+    window.addEventListener('smartcanteen:order_new', handleNewOrder);
+    return () => window.removeEventListener('smartcanteen:order_new', handleNewOrder);
+  }, []);
+
+  useEffect(() => {
+    if (newOrderToast) {
+      const timer = setTimeout(() => setNewOrderToast(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [newOrderToast]);
 
   // Active kitchen orders
   const activeOrders = orders.filter((o) =>
@@ -142,6 +168,34 @@ export const AdminDashboard = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn text-white">
+      {/* Real-time New Order Incoming Alert Toast */}
+      {newOrderToast && (
+        <div className="fixed top-20 right-6 z-50 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-5 py-3.5 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center gap-3.5 animate-bounce backdrop-blur-xl">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <BellRing className="w-5 h-5 text-white animate-spin" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-white/25 px-2 py-0.5 rounded-full text-white">
+                Live Order Arrived
+              </span>
+              <span className="text-xs font-mono font-black text-amber-200">
+                Token #{newOrderToast.tokenNumber}
+              </span>
+            </div>
+            <p className="text-xs font-bold text-white mt-0.5">
+              {newOrderToast.studentName} &bull; ₹{newOrderToast.finalAmount} ({newOrderToast.itemCount} items)
+            </p>
+          </div>
+          <button
+            onClick={() => setNewOrderToast(null)}
+            className="text-white/70 hover:text-white text-base font-bold ml-2 focus:outline-none"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* 1. Header Toolbar (Mobile-Adaptive Layout) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div>
