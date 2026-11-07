@@ -25,12 +25,11 @@ import {
   UserCheck,
   AlertTriangle,
   Sparkles,
-  UserPlus,
-  ChefHat
+  UserPlus
 } from 'lucide-react';
 
 export const LoginPage = () => {
-  const { user, isAuthenticated, loginWithGoogle, login, loginAsDemoAdmin, logout } = useAuth();
+  const { user, isAuthenticated, loginWithGoogle, login } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,14 +37,14 @@ export const LoginPage = () => {
 
   const destination = location.state?.from?.pathname || '/';
 
-  // If already authenticated as canteen owner or super admin, redirect to their console
+  // If already authenticated, redirect to destination or dashboard
   useEffect(() => {
     if (isAuthenticated) {
       if (user?.role === 'super_admin') {
         navigate('/super-admin/dashboard', { replace: true });
       } else if (user?.role === 'canteen_admin' || user?.role === 'admin') {
-        navigate('/canteen-owner/dashboard', { replace: true });
-      } else if (destination && destination !== '/' && destination !== '/login') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
         navigate(destination, { replace: true });
       }
     }
@@ -64,16 +63,6 @@ export const LoginPage = () => {
   const [ownerPin, setOwnerPin] = useState('');
   const [ownerError, setOwnerError] = useState('');
   const [ownerLoading, setOwnerLoading] = useState(false);
-
-  // Auto-open Canteen Owner PIN modal if ?mode=owner in URL
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('mode') === 'owner') {
-      setOwnerPin('');
-      setOwnerError('');
-      setIsOwnerModalOpen(true);
-    }
-  }, [location.search]);
 
   // Smooth scroll to Developer section
   const scrollToDeveloper = () => {
@@ -134,39 +123,20 @@ export const LoginPage = () => {
     triggerGoogleLogin();
   };
 
-  // Canteen Owner Master PIN Verification (PIN: 1957 or 1234)
+  // Canteen Owner Master PIN Verification (PIN: 1957)
   const verifyOwnerPin = async (pinValue) => {
     const pinToTest = (pinValue !== undefined ? pinValue : ownerPin).trim();
     setOwnerError('');
 
-    if (pinToTest === '1957' || pinToTest === '1234') {
+    if (pinToTest === '1957') {
       setOwnerLoading(true);
       try {
-        let authSuccess = false;
-        try {
-          const res = await login('admin@campus.edu', 'admin123');
-          if (res?.success) authSuccess = true;
-        } catch (apiErr) {
-          console.debug('Login API failed, trying demo elevation:', apiErr);
-        }
-
-        if (!authSuccess && typeof loginAsDemoAdmin === 'function') {
-          const demoRes = await loginAsDemoAdmin();
-          if (demoRes?.success) authSuccess = true;
-        }
-
-        if (authSuccess) {
+        const res = await login('admin@campus.edu', 'admin123');
+        if (res.success) {
           setIsOwnerModalOpen(false);
-          navigate('/canteen-owner/dashboard');
+          navigate('/admin/dashboard');
         } else {
-          // Even if backend fails, grant fallback owner access
-          if (typeof loginAsDemoAdmin === 'function') {
-            await loginAsDemoAdmin();
-            setIsOwnerModalOpen(false);
-            navigate('/canteen-owner/dashboard');
-          } else {
-            setOwnerError('Owner authentication failed. Please retry.');
-          }
+          setOwnerError(res.message || 'Owner authentication failed');
         }
       } catch (err) {
         setOwnerError(err.message || 'Error authenticating owner');
@@ -198,25 +168,6 @@ export const LoginPage = () => {
     setOwnerPin((prev) => prev.slice(0, -1));
     setOwnerError('');
   };
-
-  // Keyboard navigation support for PIN entry (typing on physical keyboard)
-  useEffect(() => {
-    if (!isOwnerModalOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key >= '0' && e.key <= '9') {
-        handleNumpadPress(e.key);
-      } else if (e.key === 'Backspace') {
-        handleNumpadBackspace();
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        verifyOwnerPin(ownerPin);
-      } else if (e.key === 'Escape') {
-        setIsOwnerModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOwnerModalOpen, ownerPin, ownerLoading]);
 
   return (
     <div className="min-h-screen bg-[#0A0F1D] text-white flex flex-col justify-between selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -302,23 +253,6 @@ export const LoginPage = () => {
         {/* 3. Center Glassmorphism Login Card (Clean, well-spaced, zero clipping) */}
         <div className="w-full bg-[#0D1527]/95 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl shadow-black/80 space-y-4">
           
-          {/* Active Student Sign-in Notification */}
-          {isAuthenticated && user?.role === 'student' && (
-            <div className="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-between text-xs">
-              <div className="min-w-0 pr-2">
-                <p className="text-[10px] text-purple-300 uppercase font-black">Logged in as Student</p>
-                <p className="font-bold text-white truncate">{user?.name} ({user?.studentId || 'BTET25O1039'})</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="px-2.5 py-1 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 text-[11px] font-bold transition-all shrink-0 cursor-pointer"
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
-
           {/* Lock Icon in Circular Badge */}
           <div className="w-11 h-11 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
             <Lock className="w-5 h-5 stroke-[2.2]" />
@@ -469,8 +403,8 @@ export const LoginPage = () => {
             </div>
           )}
 
-          {/* Canteen Owner Portal (Security PIN Protected) */}
-          <div className="pt-3 text-center border-t border-slate-800/80 space-y-1.5">
+          {/* Restricted Canteen Staff Access */}
+          <div className="pt-2 text-center border-t border-slate-800/80">
             <button
               type="button"
               onClick={() => {
@@ -478,14 +412,11 @@ export const LoginPage = () => {
                 setOwnerError('');
                 setIsOwnerModalOpen(true);
               }}
-              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-amber-500/15 hover:from-amber-500/25 hover:to-orange-500/30 border-2 border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 active:scale-[0.99]"
+              className="w-full py-2.5 px-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 border border-amber-500/30 hover:border-amber-500/50 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-[0.99]"
             >
-              <ChefHat className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Canteen Owner Portal &bull; Enter PIN</span>
+              <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="truncate">Canteen Staff & Owner Restricted Portal</span>
             </button>
-            <p className="text-[10px] text-slate-400">
-              Canteen Operator Access &bull; Default Security PIN: <strong className="text-amber-400 font-mono">1957</strong>
-            </p>
           </div>
         </div>
       </main>
@@ -609,13 +540,13 @@ export const LoginPage = () => {
 
             <div className="text-center space-y-1">
               <div className="w-11 h-11 rounded-2xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center mx-auto shadow-md">
-                <ChefHat className="w-5 h-5" />
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                Canteen Owner Authorization Gate
+                Canteen Owner Gate
               </h3>
               <p className="text-[11px] text-slate-300">
-                Enter 4-digit Owner PIN (Default: <strong className="text-amber-400 font-mono">1957</strong>)
+                Restricted access for MITS canteen operators
               </p>
             </div>
 

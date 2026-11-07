@@ -166,7 +166,7 @@ export const CanteenSettingsPage = () => {
           </div>
         </div>
         <Link
-          to="/canteen-owner/homepage-manager"
+          to="/admin/homepage-manager"
           className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-black text-xs flex items-center gap-2 transition-all shrink-0 shadow-lg shadow-purple-500/30"
         >
           <SlidersHorizontal className="w-4 h-4 text-white" />

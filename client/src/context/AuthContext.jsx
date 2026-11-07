@@ -2,12 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { INITIAL_USERS } from '../mock/mockData';
 
-// Set default auth header immediately at module load time if token is already in localStorage
-const initialToken = typeof window !== 'undefined' ? localStorage.getItem('smart_canteen_token') : null;
-if (initialToken) {
-  axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
-}
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {

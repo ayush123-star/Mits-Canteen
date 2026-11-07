@@ -145,7 +145,7 @@ export const PaymentsManagementPage = () => {
         </div>
 
         <Link
-          to="/canteen-owner/settings"
+          to="/admin/settings"
           className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-md shadow-purple-500/30 flex items-center gap-1.5 self-start sm:self-auto transition-all"
         >
           <QrCode className="w-4 h-4" />
@@ -175,7 +175,7 @@ export const PaymentsManagementPage = () => {
           </div>
         </div>
         <Link
-          to="/canteen-owner/settings"
+          to="/admin/settings"
           className="text-xs font-bold text-purple-300 hover:text-white flex items-center gap-1 shrink-0"
         >
           Change QR Code & UPI Details &rarr;

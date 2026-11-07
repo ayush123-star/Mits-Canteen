@@ -46,41 +46,32 @@ import { BusinessReportsPage } from './pages/superAdmin/BusinessReportsPage';
 import { SystemAuditLogsPage } from './pages/superAdmin/SystemAuditLogsPage';
 import { SuperAdminSettingsPage } from './pages/superAdmin/SuperAdminSettingsPage';
 
-// Protected Route Guard with Role Isolation & Owner PIN Gate
+// Protected Route Guard with Role Isolation (Mandatory Login)
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
-    const isOwnerRoute =
-      location.pathname.startsWith('/canteen-owner') || location.pathname.startsWith('/admin');
-    return (
-      <Navigate
-        to={isOwnerRoute ? '/login?mode=owner' : '/login'}
-        state={{ from: location }}
-        replace
-      />
-    );
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
-    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/canteen-owner/dashboard" replace />;
-    // If student tries to directly access canteen owner portal, send to login to enter owner PIN
-    return <Navigate to="/login?mode=owner" state={{ from: location }} replace />;
+    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
 };
 
-// Public Auth Route Guard (Redirects active admins to their consoles, while allowing students to visit login to switch/enter owner PIN)
+// Public Auth Route Guard (Prevents logged-in users from seeing the login/register screen again)
 const PublicAuthRoute = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
-    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/canteen-owner/dashboard" replace />;
-    // Normal students are permitted to view /login to access Canteen Owner Gate or switch account
+    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -140,33 +131,11 @@ export function App() {
                   <Route path="/student/profile" element={<StudentProfilePage />} />
                 </Route>
 
-                {/* 3. CANTEEN OWNER PORTAL */}
-                <Route
-                  path="/canteen-owner"
-                  element={
-                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin', 'super_admin']}>
-                      <AdminLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="dashboard" element={<AdminDashboard />} />
-                  <Route path="menu" element={<MenuManagementPage />} />
-                  <Route path="inventory" element={<InventoryPage />} />
-                  <Route path="recipes" element={<RecipeManagementPage />} />
-                  <Route path="stock-history" element={<StockHistoryPage />} />
-                  <Route path="payments" element={<PaymentsManagementPage />} />
-                  <Route path="reports" element={<AdminReportsPage />} />
-                  <Route path="settings" element={<CanteenSettingsPage />} />
-                  <Route path="homepage-manager" element={<HomepageManagerPage />} />
-                  <Route path="feedback" element={<AdminFeedbackPage />} />
-                </Route>
-
-                {/* Legacy /admin alias routing to Canteen Owner Portal */}
+                {/* 3. CANTEEN ADMIN / OWNER PORTAL */}
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin', 'super_admin']}>
+                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin']}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }

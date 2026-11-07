@@ -99,7 +99,7 @@ export const InventoryPage = () => {
       Number(adjustForm.quantity),
       adjustForm.reason,
       adjustForm.notes,
-      user?.name || 'Canteen Owner'
+      user?.name || 'Inventory Admin'
     );
     setIsAdjustModalOpen(false);
   };
