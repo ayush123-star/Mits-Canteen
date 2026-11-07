@@ -979,7 +979,6 @@ export const DataProvider = ({ children }) => {
       orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
       newStatus,
       updatedOrder: targetUpdatedOrder,
-      orders: nextOrders,
     });
 
     // Sync status & notify backend

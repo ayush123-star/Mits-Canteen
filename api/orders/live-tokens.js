@@ -26,15 +26,27 @@ export default async function handler(req, res) {
       if (!line) continue;
       try {
         const item = JSON.parse(line);
+        let parsed = null;
         if (item.message) {
-          const parsed = JSON.parse(item.message);
+          try {
+            parsed = JSON.parse(item.message);
+          } catch (_) {}
+        }
+        if (!parsed && item.attachment && item.attachment.url) {
+          try {
+            const attRes = await fetch(item.attachment.url);
+            parsed = await attRes.json();
+          } catch (_) {}
+        }
+
+        if (parsed) {
           if (parsed.type === 'NEW_ORDER' && parsed.newOrder) {
             const key = parsed.newOrder.tokenNumber || parsed.newOrder.id || parsed.newOrder._id;
             ordersMap.set(key, parsed.newOrder);
           } else if (parsed.type === 'STATUS_UPDATED') {
             const token = parsed.tokenNumber || parsed.updatedOrder?.tokenNumber;
             const id = parsed.orderId || parsed.updatedOrder?.id || parsed.updatedOrder?._id;
-            const nextStatus = parsed.newStatus || parsed.updatedOrder?.status;
+            const nextStatus = parsed.newStatus || parsed.status || parsed.updatedOrder?.status;
 
             for (const [k, v] of ordersMap.entries()) {
               if (

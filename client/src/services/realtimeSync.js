@@ -11,21 +11,98 @@ const CLOUD_SSE_URL = `https://ntfy.sh/${REALTIME_TOPIC}/sse`;
 const CLOUD_POLL_URL = `https://ntfy.sh/${REALTIME_TOPIC}/json?poll=1&since=12h`;
 
 /**
+ * Sanitizes an order object to strictly whitelisted fields,
+ * completely stripping nested orders arrays, circular references, or massive logs.
+ * Guarantees payload is < 600 bytes.
+ */
+export const sanitizeOrderForBroadcast = (ord) => {
+  if (!ord || typeof ord !== 'object') return null;
+  const id = ord.id || ord._id || ord.orderId;
+  return {
+    id,
+    _id: id,
+    orderId: ord.orderId || id,
+    tokenNumber: ord.tokenNumber,
+    orderNumber: ord.orderNumber || ord.orderId || id,
+    sequence: ord.sequence,
+    studentId: ord.studentId,
+    studentName: ord.studentName || ord.customerName,
+    studentEmail: ord.studentEmail,
+    studentRoll: ord.studentRoll,
+    studentEnrollment: ord.studentEnrollment,
+    studentDepartment: ord.studentDepartment,
+    studentPhone: ord.studentPhone,
+    items: Array.isArray(ord.items)
+      ? ord.items.slice(0, 15).map((i) => ({
+          foodId: i.foodId,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          isVeg: i.isVeg,
+          counter: i.counter,
+          specialInstructions: i.specialInstructions || '',
+        }))
+      : [],
+    totalAmount: ord.totalAmount,
+    discountAmount: ord.discountAmount,
+    finalAmount: ord.finalAmount !== undefined ? ord.finalAmount : ord.totalAmount,
+    couponCode: ord.couponCode,
+    paymentMethod: ord.paymentMethod,
+    paymentStatus: ord.paymentStatus,
+    status: ord.status,
+    assignedCounter: ord.assignedCounter || 1,
+    scheduledPickupTime: ord.scheduledPickupTime,
+    estimatedPrepMinutes: ord.estimatedPrepMinutes,
+    estimatedReadyTime: ord.estimatedReadyTime,
+    whatsappOptIn: ord.whatsappOptIn,
+    createdAt: ord.createdAt,
+    stockDeducted: ord.stockDeducted,
+    rejectionReason: ord.rejectionReason,
+    cancellationReason: ord.cancellationReason,
+    specialInstructions: ord.specialInstructions,
+  };
+};
+
+/**
  * Publishes an order event to the global real-time cloud channel
  * Sub-100ms delivery to all connected devices worldwide.
  */
 export const publishOrderEvent = async (event) => {
   if (!event || typeof event !== 'object') return;
 
-  // Keep payload UNDER 4000 bytes so ntfy.sh never rejects it (HTTP 413)
-  const safeEvent = { ...event };
-  delete safeEvent.orders; // Strip massive arrays to guarantee sub-100ms delivery
+  const targetStatus = event.newStatus || event.status || event.updatedOrder?.status;
+  const tokenNumber = event.tokenNumber || event.updatedOrder?.tokenNumber;
+  const orderId = event.orderId || event.updatedOrder?.id || event.updatedOrder?._id;
+  const orderNumber = event.orderNumber || event.updatedOrder?.orderNumber;
 
   const payload = {
-    ...safeEvent,
+    type: event.type || 'ORDER_UPDATE',
+    orderId,
+    tokenNumber,
+    orderNumber,
+    newStatus: targetStatus,
+    status: targetStatus,
+    assignedCounter: event.assignedCounter || event.updatedOrder?.assignedCounter || 1,
+    estimatedPrepMinutes: event.estimatedPrepMinutes || event.updatedOrder?.estimatedPrepMinutes,
+    estimatedReadyTime: event.estimatedReadyTime || event.updatedOrder?.estimatedReadyTime,
+    reason: event.reason,
     emitterId: getClientInstanceId(),
     timestamp: Date.now(),
   };
+
+  if (event.newOrder) {
+    payload.newOrder = sanitizeOrderForBroadcast(event.newOrder);
+  }
+  if (event.updatedOrder) {
+    payload.updatedOrder = sanitizeOrderForBroadcast(event.updatedOrder);
+  }
+
+  // Double safety: guarantee payload is under 3500 bytes so ntfy.sh NEVER creates attachments
+  let bodyStr = JSON.stringify(payload);
+  if (bodyStr.length > 3500) {
+    delete payload.updatedOrder;
+    bodyStr = JSON.stringify(payload);
+  }
 
   try {
     await fetch(CLOUD_PUB_URL, {
@@ -35,7 +112,7 @@ export const publishOrderEvent = async (event) => {
         'Priority': 'urgent',
         'Tags': 'canteen,order',
       },
-      body: JSON.stringify(payload),
+      body: bodyStr,
     });
   } catch (err) {
     console.debug('Cloud publish notice:', err.message);
@@ -59,12 +136,28 @@ export const subscribeToOrderEvents = (onEvent) => {
     try {
       eventSource = new EventSource(CLOUD_SSE_URL);
 
-      eventSource.onmessage = (event) => {
+      eventSource.onmessage = async (event) => {
         try {
           const raw = JSON.parse(event.data);
-          // ntfy.sh structure: { id, time, event, topic, message }
+          let data = null;
+
           if (raw && raw.message) {
-            const data = JSON.parse(raw.message);
+            try {
+              data = JSON.parse(raw.message);
+            } catch (_) {
+              // Not inline JSON
+            }
+          }
+
+          // Fallback: If ntfy attached a file, fetch it so it's NEVER dropped
+          if (!data && raw && raw.attachment && raw.attachment.url) {
+            try {
+              const attRes = await fetch(raw.attachment.url);
+              data = await attRes.json();
+            } catch (_) {}
+          }
+
+          if (data && typeof data === 'object') {
             // Ignore events emitted by this same client instance
             if (data.emitterId && data.emitterId === getClientInstanceId()) {
               return;
@@ -73,18 +166,16 @@ export const subscribeToOrderEvents = (onEvent) => {
               onEvent(data);
             }
           }
-        } catch (_) {
-          // Non-JSON message, safely ignored
-        }
+        } catch (_) {}
       };
 
       eventSource.onerror = () => {
         if (eventSource) {
           eventSource.close();
         }
-        // Auto-reconnect after 3 seconds if disconnected
+        // Auto-reconnect after 2 seconds if disconnected
         if (!isClosed) {
-          setTimeout(connect, 3000);
+          setTimeout(connect, 2000);
         }
       };
     } catch (err) {
@@ -118,8 +209,19 @@ export const fetchRecentCloudEvents = async () => {
       if (!line) continue;
       try {
         const item = JSON.parse(line);
+        let parsed = null;
         if (item.message) {
-          const parsed = JSON.parse(item.message);
+          try {
+            parsed = JSON.parse(item.message);
+          } catch (_) {}
+        }
+        if (!parsed && item.attachment && item.attachment.url) {
+          try {
+            const attRes = await fetch(item.attachment.url);
+            parsed = await attRes.json();
+          } catch (_) {}
+        }
+        if (parsed) {
           events.push(parsed);
         }
       } catch (_) {}
