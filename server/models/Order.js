@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
   foodItem: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed,
     ref: 'FoodItem',
-    required: true,
+    required: false,
   },
   name: {
     type: String,
@@ -39,9 +39,9 @@ const orderSchema = new mongoose.Schema({
     index: true,
   },
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed,
     ref: 'User',
-    required: true,
+    required: false,
   },
   items: [orderItemSchema],
   totalAmount: {

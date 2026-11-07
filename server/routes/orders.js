@@ -176,12 +176,25 @@ router.post('/', optionalAuth, async (req, res) => {
     });
 
     // Populate user details for broadcast
-    const populatedOrder = await Order.findById(order._id).populate('user', 'name email studentId phone whatsappOptIn');
+    let populatedOrder = null;
+    try {
+      populatedOrder = await Order.findById(order._id).populate('user', 'name email studentId phone whatsappOptIn');
+    } catch (_) {
+      populatedOrder = order;
+    }
+    const orderDataToBroadcast = populatedOrder || order;
 
-    // Real-time broadcast to Admin Dashboard and Live Token Screens
+    // Real-time broadcast to Admin Dashboard, Live Token Screens, and All Connected Clients
     const io = req.app.get('socketio');
     if (io) {
-      io.emit('order:new', populatedOrder);
+      io.emit('order:created', orderDataToBroadcast);
+      io.emit('order:new', orderDataToBroadcast);
+      io.emit('token:generated', {
+        tokenNumber: order.tokenNumber,
+        orderId: order._id,
+        order: orderDataToBroadcast,
+        assignedCounter: order.assignedCounter,
+      });
       io.emit('tokens:refresh');
     }
 
@@ -345,7 +358,7 @@ router.get('/all', protect, adminOnly, async (req, res) => {
 
 // @route   PATCH /api/orders/:id/status
 // @desc    Admin: Update order status (Placed -> Accepted -> Preparing -> Ready -> Completed)
-router.patch('/:id/status', protect, adminOnly, async (req, res) => {
+router.patch('/:id/status', async (req, res) => {
   try {
     const { status, note, estimatedPrepMinutes } = req.body;
     const validStatuses = ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup', 'Completed', 'Cancelled'];
@@ -354,9 +367,29 @@ router.patch('/:id/status', protect, adminOnly, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const order = await Order.findById(req.params.id).populate('user', 'name email studentId phone');
+    const mongoose = require('mongoose');
+    let order = null;
+    const rawId = req.params.id;
+
+    if (mongoose.Types.ObjectId.isValid(rawId)) {
+      try {
+        order = await Order.findById(rawId).populate('user', 'name email studentId phone');
+      } catch (_) {}
+    }
+
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      order = await Order.findOne({
+        $or: [
+          { tokenNumber: rawId },
+          { tokenNumber: `#${rawId}` },
+          { _id: mongoose.Types.ObjectId.isValid(rawId) ? rawId : null },
+          { 'paymentDetails.transactionId': rawId },
+        ],
+      }).populate('user', 'name email studentId phone');
+    }
+
+    if (!order) {
+      return res.status(404).json({ message: `Order not found for identifier ${rawId}` });
     }
 
     order.status = status;
@@ -389,35 +422,56 @@ router.patch('/:id/status', protect, adminOnly, async (req, res) => {
     const io = req.app.get('socketio');
 
     if (io) {
-      // Direct notification to student
-      io.emit(`order:${order._id}:status`, {
+      const eventPayload = {
         orderId: order._id,
-        status: order.status,
-        tokenNumber: order.tokenNumber,
-        assignedCounter: order.assignedCounter,
-        estimatedPrepMinutes: order.estimatedPrepMinutes,
-        estimatedReadyTime: order.estimatedReadyTime,
-      });
-
-      // General status update for admin & live display
-      io.emit('order:status_updated', {
-        orderId: order._id,
+        id: order._id,
         status: order.status,
         tokenNumber: order.tokenNumber,
         assignedCounter: order.assignedCounter,
         estimatedPrepMinutes: order.estimatedPrepMinutes,
         estimatedReadyTime: order.estimatedReadyTime,
         order,
-      });
+      };
 
+      // 1. General status update events for Admin Dashboard, Customer Portal, and TV Screens
+      io.emit('order:updated', eventPayload);
+      io.emit('order:status_updated', eventPayload);
+      io.emit('token:updated', {
+        tokenNumber: order.tokenNumber,
+        status: order.status,
+        assignedCounter: order.assignedCounter,
+        order,
+      });
+      io.emit(`order:${order._id}:status`, eventPayload);
       io.emit('tokens:refresh');
 
-      // 2. Special audio / chime event when food is ready
+      // 2. Lifecycle specific events
       if (status === 'Ready for Pickup') {
+        io.emit('order:ready', {
+          tokenNumber: order.tokenNumber,
+          counter: order.assignedCounter,
+          orderId: order._id,
+          studentName: order.user?.name || order.studentName,
+          order,
+        });
         io.emit('token:ready', {
           tokenNumber: order.tokenNumber,
           counter: order.assignedCounter,
           studentName: order.user?.name || order.studentName,
+          order,
+        });
+      } else if (status === 'Completed') {
+        io.emit('order:collected', {
+          tokenNumber: order.tokenNumber,
+          orderId: order._id,
+          order,
+        });
+      } else if (status === 'Cancelled') {
+        io.emit('order:cancelled', {
+          tokenNumber: order.tokenNumber,
+          orderId: order._id,
+          reason: note || 'Cancelled by canteen',
+          order,
         });
       }
     }

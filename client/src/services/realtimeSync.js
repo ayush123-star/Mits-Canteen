@@ -183,6 +183,24 @@ export const generateUniqueToken = (currentOrders = []) => {
 };
 
 /**
+ * Normalizes an order record so it has consistent id, _id, finalAmount, and items
+ */
+export const normalizeOrder = (ord) => {
+  if (!ord || typeof ord !== 'object') return null;
+  const id = ord.id || ord._id || (ord.tokenNumber ? `ord-${ord.tokenNumber}` : `ord-${Date.now()}`);
+  return {
+    ...ord,
+    id,
+    _id: ord._id || id,
+    finalAmount: ord.finalAmount !== undefined ? ord.finalAmount : (ord.totalAmount || 0),
+    items: Array.isArray(ord.items) ? ord.items : [],
+    status: ord.status || 'Placed',
+    tokenNumber: ord.tokenNumber || 'TK-100',
+    assignedCounter: ord.assignedCounter || 1,
+  };
+};
+
+/**
  * Conflict-Free Order Merger
  * Merges orders from cloud, server, and local storage preserving latest lifecycle status.
  */
@@ -199,16 +217,18 @@ export const mergeOrders = (localOrders = [], incomingOrders = []) => {
   };
 
   // Populate local orders first
-  (localOrders || []).forEach((ord) => {
+  (localOrders || []).forEach((rawOrd) => {
+    const ord = normalizeOrder(rawOrd);
     if (!ord) return;
-    const key = ord.id || ord.tokenNumber;
+    const key = ord.tokenNumber || ord.id || ord._id;
     if (key) map.set(key, ord);
   });
 
   // Merge incoming
-  (incomingOrders || []).forEach((inc) => {
+  (incomingOrders || []).forEach((rawInc) => {
+    const inc = normalizeOrder(rawInc);
     if (!inc) return;
-    const key = inc.id || inc.tokenNumber;
+    const key = inc.tokenNumber || inc.id || inc._id;
     if (!key) return;
 
     if (!map.has(key)) {
@@ -227,8 +247,8 @@ export const mergeOrders = (localOrders = [], incomingOrders = []) => {
 
   // Return sorted descending (newest first)
   return Array.from(map.values()).sort((a, b) => {
-    const timeA = a.id?.startsWith('ord-') ? parseInt(a.id.replace('ord-', ''), 10) : 0;
-    const timeB = b.id?.startsWith('ord-') ? parseInt(b.id.replace('ord-', ''), 10) : 0;
+    const timeA = a.id?.startsWith('ord-') ? parseInt(a.id.replace('ord-', ''), 10) : (new Date(a.createdAt || 0).getTime());
+    const timeB = b.id?.startsWith('ord-') ? parseInt(b.id.replace('ord-', ''), 10) : (new Date(b.createdAt || 0).getTime());
     return timeB - timeA;
   });
 };

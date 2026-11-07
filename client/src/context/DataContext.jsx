@@ -19,6 +19,7 @@ import {
   fetchRecentCloudEvents,
   generateUniqueToken,
   mergeOrders,
+  normalizeOrder,
 } from '../services/realtimeSync';
 
 export const DEFAULT_HOMEPAGE_CONFIG = {
@@ -460,7 +461,7 @@ export const DataProvider = ({ children }) => {
 
     // E. Socket.IO Events
     const handleSocketOrderNew = (e) => {
-      const incoming = e.detail;
+      const incoming = normalizeOrder(e.detail);
       if (!incoming) return;
       setOrders((prev) => {
         const exists = prev.some(
@@ -477,7 +478,7 @@ export const DataProvider = ({ children }) => {
     };
 
     const handleSocketStatusUpdated = (e) => {
-      const updated = e.detail;
+      const updated = normalizeOrder(e.detail);
       if (!updated) return;
       setOrders((prev) => {
         const nextList = prev.map((o) =>
@@ -622,19 +623,43 @@ export const DataProvider = ({ children }) => {
     }
 
     // Asynchronously dispatch to real backend if online
-    axios.post('/api/orders', {
-      items: orderData.items.map((i) => ({
-        foodItemId: i.foodId || i._id,
-        name: i.name,
-        quantity: i.quantity,
-        specialInstructions: i.specialInstructions || '',
-      })),
-      paymentMethod: orderData.paymentMethod || 'UPI',
-      scheduledPickupTime: orderData.scheduledPickupTime,
-      couponCode: orderData.couponCode,
-      orderNotes: orderData.orderNotes,
-      whatsappOptIn: true,
-    }).catch((e) => console.debug('Backend order sync:', e.message));
+    axios
+      .post('/api/orders', {
+        studentId: orderData.studentId,
+        studentName: orderData.studentName,
+        studentPhone: orderData.studentPhone,
+        studentRoll: orderData.studentRoll || orderData.studentEnrollment,
+        studentDepartment: orderData.studentDepartment,
+        items: (orderData.items || []).map((i) => ({
+          foodItemId: i.foodId || i._id || i.foodItem,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          isVeg: i.isVeg,
+          counter: i.counter || 1,
+          specialInstructions: i.specialInstructions || '',
+        })),
+        totalAmount: orderData.totalAmount,
+        discountAmount: orderData.discountAmount || 0,
+        finalAmount: orderData.finalAmount,
+        paymentMethod: orderData.paymentMethod || 'UPI',
+        scheduledPickupTime: orderData.scheduledPickupTime,
+        pickupOption: orderData.pickupOption || 'ASAP',
+        couponCode: orderData.couponCode,
+        orderNotes: orderData.orderNotes,
+        whatsappOptIn: true,
+      })
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          const backendOrder = normalizeOrder(res.data.data);
+          setOrders((prev) => {
+            return prev.map((o) =>
+              o.tokenNumber === tokenNumber || o.id === newOrder.id ? { ...o, ...backendOrder } : o
+            );
+          });
+        }
+      })
+      .catch((e) => console.debug('Backend order sync:', e.message));
 
     return newOrder;
   };

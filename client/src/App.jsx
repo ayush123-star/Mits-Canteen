@@ -81,10 +81,10 @@ export function App() {
   return (
     <Router>
       <ThemeProvider>
-        <DataProvider>
-          <AuthProvider>
-            <CartProvider>
-              <SocketProvider>
+        <SocketProvider>
+          <DataProvider>
+            <AuthProvider>
+              <CartProvider>
                 {/* Mandatory First-Login Password Change Modal */}
                 <ChangePasswordModal />
 
@@ -174,10 +174,10 @@ export function App() {
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </SocketProvider>
-          </CartProvider>
-        </AuthProvider>
-      </DataProvider>
+            </CartProvider>
+          </AuthProvider>
+        </DataProvider>
+      </SocketProvider>
       </ThemeProvider>
     </Router>
   );

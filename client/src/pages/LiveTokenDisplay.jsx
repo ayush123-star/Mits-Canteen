@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { useData } from '../context/DataContext';
+import { useSocket } from '../context/SocketContext';
 import { MitsCampusBackground } from '../components/common/MitsCampusBackground';
 import {
   Tv,
@@ -25,26 +27,127 @@ import {
 
 export const LiveTokenDisplay = () => {
   const { orders } = useData();
+  const { socket, isConnected } = useSocket();
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [audioToast, setAudioToast] = useState(null);
   const [lastCalledToken, setLastCalledToken] = useState(null);
 
-  const preparingTokens = (orders || []).filter((o) => o.status === 'Preparing');
-  const readyTokens = (orders || []).filter((o) => o.status === 'Ready for Pickup');
-  const recentlyCompleted = (orders || []).filter((o) => o.status === 'Completed').slice(0, 8);
+  // Centralized Database-driven Token States (Consistent across Mobile, Laptop & TV)
+  const [preparingTokens, setPreparingTokens] = useState([]);
+  const [readyTokens, setReadyTokens] = useState([]);
+  const [recentlyCompleted, setRecentlyCompleted] = useState([]);
+  const [stats, setStats] = useState({ totalActive: 0, avgWaitMinutes: 8, countersActive: 1 });
+  const [isKitchenSynced, setIsKitchenSynced] = useState(true);
 
-  const totalActiveCount = preparingTokens.length + readyTokens.length;
-  const stats = {
-    totalActive: totalActiveCount,
-    avgWaitMinutes:
-      preparingTokens.length > 0
-        ? Math.round(
-            preparingTokens.reduce((acc, o) => acc + (o.estimatedPrepMinutes || 10), 0) /
-              preparingTokens.length
-          )
-        : 8,
-  };
+  // Fetch live tokens directly from the centralized database
+  const fetchLiveTokensFromDB = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/orders/live-tokens', { timeout: 3500 });
+      if (res.data?.success && res.data?.data) {
+        const {
+          preparing = [],
+          ready = [],
+          recentlyCompleted: completed = [],
+          stats: serverStats = {},
+        } = res.data.data;
+
+        setPreparingTokens(preparing);
+        setReadyTokens(ready);
+        setRecentlyCompleted(completed);
+        setStats({
+          totalActive: serverStats.totalActive !== undefined ? serverStats.totalActive : (preparing.length + ready.length),
+          avgWaitMinutes: serverStats.avgWaitMinutes || 8,
+          countersActive: 1,
+        });
+        setIsKitchenSynced(true);
+        return;
+      }
+    } catch (err) {
+      // Backend request fallback to DataContext
+    }
+
+    // Fallback: derive from orders in memory if backend endpoint is unavailable
+    if (orders && orders.length > 0) {
+      const prep = orders.filter((o) => ['Accepted', 'Preparing'].includes(o.status));
+      const rdy = orders.filter((o) => o.status === 'Ready for Pickup');
+      const comp = orders.filter((o) => o.status === 'Completed').slice(0, 8);
+      setPreparingTokens(prep);
+      setReadyTokens(rdy);
+      setRecentlyCompleted(comp);
+      setStats({
+        totalActive: prep.length + rdy.length,
+        avgWaitMinutes: prep.length > 0
+          ? Math.round(prep.reduce((acc, o) => acc + (o.estimatedPrepMinutes || 10), 0) / prep.length)
+          : 8,
+        countersActive: 1,
+      });
+    }
+  }, [orders]);
+
+  // Subscribe to real-time events from centralized database & Socket.IO
+  useEffect(() => {
+    fetchLiveTokensFromDB();
+
+    const handleRealtimeRefresh = () => {
+      fetchLiveTokensFromDB();
+    };
+
+    // Socket.IO real-time event listeners from backend
+    if (socket) {
+      socket.on('tokens:refresh', handleRealtimeRefresh);
+      socket.on('token:ready', handleRealtimeRefresh);
+      socket.on('order:ready', handleRealtimeRefresh);
+      socket.on('order:collected', handleRealtimeRefresh);
+      socket.on('order:created', handleRealtimeRefresh);
+      socket.on('order:new', handleRealtimeRefresh);
+      socket.on('order:updated', handleRealtimeRefresh);
+      socket.on('order:status_updated', handleRealtimeRefresh);
+      socket.on('order:cancelled', handleRealtimeRefresh);
+      socket.on('token:generated', handleRealtimeRefresh);
+      socket.on('token:updated', handleRealtimeRefresh);
+    }
+
+    // Standard cross-device & cross-tab events
+    window.addEventListener('smartcanteen:tokens_refresh', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:token_ready', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:order_new', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:order_status_updated', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:order_collected', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:orders_sync', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:socket_connected', handleRealtimeRefresh);
+    window.addEventListener('smartcanteen:socket_reconnected', handleRealtimeRefresh);
+    window.addEventListener('online', handleRealtimeRefresh);
+
+    // Guaranteed polling interval (2.5 seconds) ensuring all devices remain 100% in sync
+    const pollInterval = setInterval(fetchLiveTokensFromDB, 2500);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (socket) {
+        socket.off('tokens:refresh', handleRealtimeRefresh);
+        socket.off('token:ready', handleRealtimeRefresh);
+        socket.off('order:ready', handleRealtimeRefresh);
+        socket.off('order:collected', handleRealtimeRefresh);
+        socket.off('order:created', handleRealtimeRefresh);
+        socket.off('order:new', handleRealtimeRefresh);
+        socket.off('order:updated', handleRealtimeRefresh);
+        socket.off('order:status_updated', handleRealtimeRefresh);
+        socket.off('order:cancelled', handleRealtimeRefresh);
+        socket.off('token:generated', handleRealtimeRefresh);
+        socket.off('token:updated', handleRealtimeRefresh);
+      }
+      window.removeEventListener('smartcanteen:tokens_refresh', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:token_ready', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:order_new', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:order_status_updated', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:order_collected', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:orders_sync', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:socket_connected', handleRealtimeRefresh);
+      window.removeEventListener('smartcanteen:socket_reconnected', handleRealtimeRefresh);
+      window.removeEventListener('online', handleRealtimeRefresh);
+    };
+  }, [socket, fetchLiveTokensFromDB]);
 
   // Clock ticker
   useEffect(() => {

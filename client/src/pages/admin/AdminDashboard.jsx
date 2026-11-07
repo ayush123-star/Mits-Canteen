@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { useSocket } from '../../context/SocketContext';
 import { playNotificationSound } from '../../utils/audio';
 import {
   Clock,
@@ -32,6 +33,7 @@ import {
 export const AdminDashboard = () => {
   const { user } = useAuth();
   const { orders, updateOrderStatus, cancelOrder, feedbackList } = useData();
+  const { socket, isConnected } = useSocket();
 
   const [searchToken, setSearchToken] = useState('');
   const [selectedCounter, setSelectedCounter] = useState('ALL');
@@ -44,32 +46,61 @@ export const AdminDashboard = () => {
   const [newOrderAlert, setNewOrderAlert] = useState(null);
   const prevCountRef = useRef(orders.length);
 
-  // Instant notification when a new order arrives
+  // Instant notification when a new order arrives via state changes
   useEffect(() => {
     if (orders.length > prevCountRef.current) {
       const latest = orders[0];
       if (latest && latest.status === 'Placed') {
         setNewOrderAlert(latest);
         playNotificationSound('new_order');
-        setTimeout(() => setNewOrderAlert(null), 8000);
+        setTimeout(() => setNewOrderAlert(null), 10000);
       }
     }
     prevCountRef.current = orders.length;
   }, [orders]);
 
-  // Listen to cross-tab orders update event
+  // Real-time order listeners via Socket.IO, cross-tab events & cloud sync
   useEffect(() => {
+    const handleIncomingOrder = (rawOrder) => {
+      const ord = rawOrder?.order || rawOrder;
+      if (!ord) return;
+      setNewOrderAlert(ord);
+      playNotificationSound('new_order');
+      setTimeout(() => setNewOrderAlert(null), 10000);
+    };
+
+    // Socket.IO backend event subscription
+    if (socket) {
+      socket.on('order:created', handleIncomingOrder);
+      socket.on('order:new', handleIncomingOrder);
+    }
+
+    // Window events from BroadcastChannel, cloud SSE & local tabs
     const handleSync = (e) => {
       const { type, newOrder } = e.detail || {};
-      if (type === 'NEW_ORDER' && newOrder) {
-        setNewOrderAlert(newOrder);
-        playNotificationSound('new_order');
-        setTimeout(() => setNewOrderAlert(null), 8000);
+      if ((type === 'NEW_ORDER' || type === 'ORDER_PLACED') && newOrder) {
+        handleIncomingOrder(newOrder);
       }
     };
+
+    const handleDirectEvent = (e) => {
+      if (e.detail) {
+        handleIncomingOrder(e.detail);
+      }
+    };
+
     window.addEventListener('smartcanteen:orders_sync', handleSync);
-    return () => window.removeEventListener('smartcanteen:orders_sync', handleSync);
-  }, []);
+    window.addEventListener('smartcanteen:order_new', handleDirectEvent);
+
+    return () => {
+      if (socket) {
+        socket.off('order:created', handleIncomingOrder);
+        socket.off('order:new', handleIncomingOrder);
+      }
+      window.removeEventListener('smartcanteen:orders_sync', handleSync);
+      window.removeEventListener('smartcanteen:order_new', handleDirectEvent);
+    };
+  }, [socket]);
 
   // Active kitchen orders
   const activeOrders = orders.filter((o) =>
@@ -174,18 +205,44 @@ export const AdminDashboard = () => {
     <div className="space-y-6 sm:space-y-8 animate-fadeIn text-white">
       {/* Real-time New Incoming Order Alert Banner */}
       {newOrderAlert && (
-        <div className="fixed top-16 right-4 z-50 max-w-sm p-4 rounded-2xl bg-gradient-to-r from-red-600 to-purple-600 text-white shadow-2xl border-2 border-white/20 animate-bounce flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl animate-spin">🔔</span>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider">New Order Received!</p>
-              <p className="text-sm font-black font-mono">Token #{newOrderAlert.tokenNumber} • ₹{newOrderAlert.finalAmount}</p>
-              <p className="text-[10px] text-purple-200">{newOrderAlert.studentName || 'Student'} ({newOrderAlert.items?.length || 1} items)</p>
+        <div className="fixed top-16 right-4 z-50 max-w-md p-4 rounded-2xl bg-gradient-to-r from-red-600 via-purple-700 to-indigo-800 text-white shadow-2xl border-2 border-white/30 animate-bounce flex items-start justify-between gap-3 backdrop-blur-xl">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 text-xl border border-white/30 animate-pulse">
+              <Bell className="w-5 h-5 text-amber-300" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white text-purple-900">
+                  New Order Received
+                </span>
+                <span className="text-[10px] font-mono text-purple-200">
+                  #{newOrderAlert.tokenNumber}
+                </span>
+              </div>
+              <p className="text-sm font-black text-white">
+                {newOrderAlert.studentName || 'Student Diner'} • <span className="font-mono text-emerald-300">₹{newOrderAlert.finalAmount || newOrderAlert.totalAmount || 0}</span>
+              </p>
+              <p className="text-[11px] text-purple-100 line-clamp-2">
+                {(newOrderAlert.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ') || '1x Campus Food Item'}
+              </p>
+              <div className="flex items-center gap-2 pt-1 text-[10px]">
+                <span className={`px-2 py-0.5 rounded-md font-bold ${
+                  newOrderAlert.paymentStatus === 'PAID' || newOrderAlert.paymentStatus === 'Completed' || newOrderAlert.paymentMethod === 'UPI'
+                    ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-500/40'
+                    : 'bg-amber-500/30 text-amber-200 border border-amber-500/40'
+                }`}>
+                  {newOrderAlert.paymentMethod === 'UPI' ? 'Paid via UPI' : 'Cash at Counter'}
+                </span>
+                <span className="text-purple-300">
+                  Counter #{newOrderAlert.assignedCounter || 1}
+                </span>
+              </div>
             </div>
           </div>
           <button
             onClick={() => setNewOrderAlert(null)}
-            className="p-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-bold"
+            className="p-1.5 rounded-xl bg-white/20 hover:bg-white/40 text-white text-xs font-bold transition-all cursor-pointer"
+            title="Dismiss notification"
           >
             ✕
           </button>
