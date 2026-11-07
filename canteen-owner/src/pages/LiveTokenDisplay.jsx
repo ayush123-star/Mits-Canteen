@@ -43,8 +43,11 @@ export const LiveTokenDisplay = () => {
   // 1. Reactive immediate derivation from DataContext orders (Single Source of Truth)
   useEffect(() => {
     if (orders && Array.isArray(orders)) {
-      const prep = orders.filter((o) => ['Accepted', 'Preparing'].includes(o.status));
+      // PREPARING: ONLY show orders that are actively cooking (status === 'Preparing')
+      const prep = orders.filter((o) => o.status === 'Preparing');
+      // READY FOR PICKUP: ONLY show orders that are ready (status === 'Ready for Pickup')
       const rdy = orders.filter((o) => o.status === 'Ready for Pickup');
+      // RECENTLY COLLECTED: Only show completed/collected orders
       const comp = orders.filter((o) => ['Completed', 'Collected'].includes(o.status)).slice(0, 10);
 
       setPreparingTokens(prep);
@@ -73,12 +76,12 @@ export const LiveTokenDisplay = () => {
           stats: serverStats = {},
         } = res.data.data;
 
-        // Merge server live tokens with client orders
+        // Merge server live tokens with client orders: strictly Preparing and Ready
         if (ready.length > 0 || preparing.length > 0 || completed.length > 0) {
           setPreparingTokens((prev) => {
             const map = new Map();
             [...prev, ...preparing].forEach((o) => map.set(o.tokenNumber || o.id, o));
-            return Array.from(map.values()).filter((o) => ['Accepted', 'Preparing'].includes(o.status));
+            return Array.from(map.values()).filter((o) => o.status === 'Preparing');
           });
           setReadyTokens((prev) => {
             const map = new Map();

@@ -5,6 +5,7 @@ import { useData } from '../../context/DataContext';
 import { useSocket } from '../../context/SocketContext';
 import { playNotificationSound } from '../../utils/audio';
 import { sendBrowserNotification } from '../../utils/browserNotifications';
+import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import {
   Clock,
   CheckCircle2,
@@ -431,7 +432,7 @@ export const AdminDashboard = () => {
             }`}
           >
             {newOrdersCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>}
-            New Orders ({newOrdersCount})
+            1. Order Placed ({newOrdersCount})
           </button>
           <button
             onClick={() => setStatusFilter('ACCEPTED')}
@@ -441,7 +442,7 @@ export const AdminDashboard = () => {
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Accepted Orders ({acceptedOrdersCount})
+            2. Accepted ({acceptedOrdersCount})
           </button>
           <button
             onClick={() => setStatusFilter('PREPARING')}
@@ -451,7 +452,7 @@ export const AdminDashboard = () => {
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Preparing Orders ({preparingCount})
+            3. Preparing ({preparingCount})
           </button>
           <button
             onClick={() => setStatusFilter('READY')}
@@ -462,7 +463,7 @@ export const AdminDashboard = () => {
             }`}
           >
             {readyCount > 0 && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>}
-            Ready for Pickup ({readyCount})
+            4. Ready for Pickup ({readyCount})
           </button>
           <button
             onClick={() => setStatusFilter('COMPLETED')}
@@ -472,7 +473,7 @@ export const AdminDashboard = () => {
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Completed Orders ({completedCount})
+            5. Collected ({completedCount})
           </button>
           <button
             onClick={() => setStatusFilter('REJECTED')}
@@ -599,6 +600,11 @@ export const AdminDashboard = () => {
                     </div>
                   </div>
 
+                  {/* Real-time Order Progress Stepper (Same 5 Steps as Student My Orders) */}
+                  <div className="py-1 px-2 my-2.5 rounded-xl bg-[#151C30]/60 border border-purple-500/20">
+                    <OrderStatusStepper currentStatus={order.status} />
+                  </div>
+
                   {/* Items list */}
                   <div className="py-2.5 sm:py-3 space-y-1.5 border-b border-purple-500/20">
                     {order.items.map((item, idx) => (
@@ -685,7 +691,7 @@ export const AdminDashboard = () => {
                         className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all active:scale-95 cursor-pointer"
                       >
                         <ChefHat className="w-4 h-4 shrink-0" />
-                        <span>START PREPARING</span>
+                        <span>PREPARE ORDER</span>
                       </button>
                     </div>
                   )}
@@ -695,7 +701,7 @@ export const AdminDashboard = () => {
                       <div className="flex items-center justify-between text-[10px] text-blue-200 font-bold px-1">
                         <span className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-                          Step 3: Food In Preparation
+                          Step 3: Food Preparing
                         </span>
                         <span className="text-amber-300 font-mono">~{order.estimatedPrepMinutes || 8}m prep</span>
                       </div>
@@ -704,7 +710,7 @@ export const AdminDashboard = () => {
                         className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer"
                       >
                         <Bell className="w-4 h-4 shrink-0" />
-                        <span>ORDER READY (Send to Live TV & Call)</span>
+                        <span>READY FOR PICKUP</span>
                       </button>
                     </div>
                   )}
@@ -723,7 +729,7 @@ export const AdminDashboard = () => {
                         className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all active:scale-95 cursor-pointer"
                       >
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>MARK AS COLLECTED (Order Recive Ho Gaya)</span>
+                        <span>COLLECTED</span>
                       </button>
                     </div>
                   )}
@@ -731,7 +737,7 @@ export const AdminDashboard = () => {
                   {isCompleted && (
                     <div className="w-full py-2 text-center text-xs font-black text-emerald-400 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Order Collected & Completed
+                      Collected & Completed
                     </div>
                   )}
 

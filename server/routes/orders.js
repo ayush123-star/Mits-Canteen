@@ -301,7 +301,7 @@ router.get('/active', protect, async (req, res) => {
 router.get('/live-tokens', async (req, res) => {
   try {
     const preparing = await Order.find({
-      status: { $in: ['Accepted', 'Preparing'] },
+      status: 'Preparing',
     })
       .select('tokenNumber estimatedPrepMinutes estimatedReadyTime assignedCounter status createdAt')
       .sort({ createdAt: 1 })
