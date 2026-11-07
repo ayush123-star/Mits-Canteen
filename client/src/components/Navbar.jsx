@@ -50,16 +50,6 @@ export const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  // Seamless Canteen Owner navigation
-  const handleOpenCanteenOwner = async () => {
-    if (!isAdmin) {
-      if (typeof loginAsDemoAdmin === 'function') {
-        await loginAsDemoAdmin();
-      }
-    }
-    navigate('/canteen-owner/dashboard');
-  };
-
   // Active orders count for badge
   const userActiveOrders = isAuthenticated
     ? orders.filter(
@@ -200,20 +190,21 @@ export const Navbar = () => {
                 </Link>
               )}
 
-              {/* Canteen Owner Section Direct Launcher */}
-              <button
-                type="button"
-                onClick={handleOpenCanteenOwner}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ml-1 cursor-pointer ${
-                  isActive('/canteen-owner') || isActive('/canteen-owner/dashboard') || isActive('/admin')
-                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
-                    : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30'
-                }`}
-                title="Open Canteen Owner Console"
-              >
-                <ChefHat className="w-3.5 h-3.5 text-purple-300" />
-                <span>Canteen Owner</span>
-              </button>
+              {/* Canteen Owner Section (Visible only when authenticated as Canteen Owner) */}
+              {isAdmin && !isSuperAdmin && (
+                <Link
+                  to="/canteen-owner/dashboard"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ml-1 ${
+                    isActive('/canteen-owner') || isActive('/canteen-owner/dashboard') || isActive('/admin')
+                      ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                      : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30'
+                  }`}
+                  title="Open Canteen Owner Console"
+                >
+                  <ChefHat className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Canteen Owner</span>
+                </Link>
+              )}
 
               {isSuperAdmin && (
                 <Link
@@ -397,17 +388,25 @@ export const Navbar = () => {
                             </>
                           )}
                           {/* Canteen Owner Section Option */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUserDropdownOpen(false);
-                              handleOpenCanteenOwner();
-                            }}
-                            className="w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] transition-colors cursor-pointer"
-                          >
-                            <ChefHat className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>Canteen Owner Section</span>
-                          </button>
+                          {isAdmin && !isSuperAdmin ? (
+                            <Link
+                              to="/canteen-owner/dashboard"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] transition-colors"
+                            >
+                              <ChefHat className="w-4 h-4 text-purple-400 shrink-0" />
+                              <span>Canteen Owner Section</span>
+                            </Link>
+                          ) : (
+                            <Link
+                              to="/login?mode=owner"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30] transition-colors"
+                            >
+                              <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span>Canteen Owner Login (PIN)</span>
+                            </Link>
+                          )}
                           {isSuperAdmin && (
                             <Link
                               to="/super-admin"
@@ -608,17 +607,25 @@ export const Navbar = () => {
               </Link>
 
               {/* Canteen Owner Section Option */}
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  handleOpenCanteenOwner();
-                }}
-                className="w-full text-left flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] cursor-pointer"
-              >
-                <ChefHat className="w-4 h-4 text-purple-400 shrink-0" />
-                <span>Canteen Owner Section</span>
-              </button>
+              {isAdmin && !isSuperAdmin ? (
+                <Link
+                  to="/canteen-owner/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30]"
+                >
+                  <ChefHat className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Canteen Owner Section</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/login?mode=owner"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30]"
+                >
+                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Canteen Owner Login (PIN)</span>
+                </Link>
+              )}
 
               {isSuperAdmin && (
                 <Link

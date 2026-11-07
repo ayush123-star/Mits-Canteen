@@ -46,45 +46,41 @@ import { BusinessReportsPage } from './pages/superAdmin/BusinessReportsPage';
 import { SystemAuditLogsPage } from './pages/superAdmin/SystemAuditLogsPage';
 import { SuperAdminSettingsPage } from './pages/superAdmin/SuperAdminSettingsPage';
 
-// Protected Route Guard with Role Isolation & Seamless Canteen Owner Access
+// Protected Route Guard with Role Isolation & Owner PIN Gate
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, isAuthenticated, loginAsDemoAdmin } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  const isCanteenOwnerRoute =
-    location.pathname.startsWith('/canteen-owner') || location.pathname.startsWith('/admin');
-
-  // If user is trying to access Canteen Owner section, ensure they are authorized or auto-elevate
-  if (isCanteenOwnerRoute) {
-    if (!user || (user.role !== 'canteen_admin' && user.role !== 'admin' && user.role !== 'super_admin')) {
-      if (typeof loginAsDemoAdmin === 'function') {
-        loginAsDemoAdmin();
-      }
-    }
-    return children;
-  }
-
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const isOwnerRoute =
+      location.pathname.startsWith('/canteen-owner') || location.pathname.startsWith('/admin');
+    return (
+      <Navigate
+        to={isOwnerRoute ? '/login?mode=owner' : '/login'}
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
     if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/canteen-owner/dashboard" replace />;
-    return <Navigate to="/" replace />;
+    // If student tries to directly access canteen owner portal, send to login to enter owner PIN
+    return <Navigate to="/login?mode=owner" state={{ from: location }} replace />;
   }
 
   return children;
 };
 
-// Public Auth Route Guard (Prevents logged-in users from seeing the login/register screen again)
+// Public Auth Route Guard (Redirects active admins to their consoles, while allowing students to visit login to switch/enter owner PIN)
 const PublicAuthRoute = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
     if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/canteen-owner/dashboard" replace />;
-    return <Navigate to="/" replace />;
+    // Normal students are permitted to view /login to access Canteen Owner Gate or switch account
   }
 
   return children;
