@@ -876,10 +876,9 @@ export const DataProvider = ({ children }) => {
           setTimeout(() => setSimulatedWhatsAppAlert(null), 12000);
         }
 
-        // 4. DISPATCH VOICE ANNOUNCEMENT & WHATSAPP ALERT when moving to 'Ready for Pickup'
+        // 4. WHATSAPP ALERT when moving to 'Ready for Pickup' (Calling audio broadcasts to student/customer/TV screens)
         if (newStatus === 'Ready for Pickup') {
-          // Play Melodic Calling Chime + Natural Spoken Voice Announcement immediately
-          announceTokenCall(ord.tokenNumber, ord.assignedCounter ? `Counter ${ord.assignedCounter}` : 'Counter 1');
+          playNotificationSound('success');
 
           if (ord.whatsappOptIn !== false) {
             const alertMsg = `🔔 *MITS Canteen — Order Ready for Pickup!*\n\nHello *${ord.studentName || 'Student'}*!\nYour order is ready! Please collect it from the canteen.\n\n🎫 *Token Number:* #${ord.tokenNumber}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nPlease show your QR Pass for contactless collection! 😋`;

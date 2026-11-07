@@ -1,15 +1,30 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import { announceTokenCall, unlockAudio } from '../../utils/audio';
 import { Volume2, Bell, CheckCircle2, X } from 'lucide-react';
 
 export const GlobalVoiceCallingAnnouncer = () => {
   const { socket } = useSocket();
+  const { user } = useAuth();
   const [activeCallToast, setActiveCallToast] = useState(null);
   const lastCalledRef = useRef({ token: '', time: 0 });
 
+  // Exclude Canteen Owner / Admin sections:
+  // "canteen owner ko chodh ke us time kisi bhe section mai udhar aajaye"
+  const isOwnerSection =
+    user?.role === 'canteen_admin' ||
+    user?.role === 'admin' ||
+    user?.role === 'super_admin' ||
+    (typeof window !== 'undefined' &&
+      (window.location.pathname.startsWith('/admin') ||
+        window.location.pathname.startsWith('/super-admin')));
+
   useEffect(() => {
-    // 1. Auto-unlock audio and speech engine on any user gesture across any section of the website
+    // 1. If currently in owner section, do not attach audio triggers
+    if (isOwnerSection) return;
+
+    // 2. Auto-unlock audio and speech engine on any user gesture across the website
     const handleUserGesture = () => {
       unlockAudio();
     };
@@ -17,7 +32,7 @@ export const GlobalVoiceCallingAnnouncer = () => {
     window.addEventListener('touchstart', handleUserGesture);
     window.addEventListener('keydown', handleUserGesture);
 
-    // 2. Core audio calling handler
+    // 3. Core audio calling handler for customer / student / guest sections
     const triggerVoiceCalling = (data) => {
       if (!data) return;
       const rawToken =
@@ -29,7 +44,7 @@ export const GlobalVoiceCallingAnnouncer = () => {
       if (!rawToken) return;
 
       const cleanToken = String(rawToken).replace('#', '').trim();
-      // Ignore completed or non-ready tokens
+      // Ignore completed or stale tokens
       if (cleanToken === 'TK-114' || cleanToken === '114') return;
 
       const counter =
@@ -68,18 +83,18 @@ export const GlobalVoiceCallingAnnouncer = () => {
       }, 9000);
     };
 
-    // 3. Socket.IO Listeners
+    // 4. Socket.IO Listeners
     if (socket) {
       socket.on('order:ready', triggerVoiceCalling);
       socket.on('token:ready', triggerVoiceCalling);
     }
 
-    // 4. Custom DOM Event Listeners
+    // 5. Custom DOM Event Listeners
     const handleDOMTokenReady = (e) => triggerVoiceCalling(e.detail);
     window.addEventListener('smartcanteen:token_ready', handleDOMTokenReady);
     window.addEventListener('smartcanteen:order_ready', handleDOMTokenReady);
 
-    // 5. Status updated event listener (fires when owner advances to 'Ready for Pickup')
+    // 6. Status updated event listener (fires when owner advances to 'Ready for Pickup')
     const handleStatusUpdated = (e) => {
       const data = e.detail;
       const status = data?.newStatus || data?.status || data?.updatedOrder?.status;
@@ -101,9 +116,9 @@ export const GlobalVoiceCallingAnnouncer = () => {
       window.removeEventListener('smartcanteen:order_ready', handleDOMTokenReady);
       window.removeEventListener('smartcanteen:order_status_updated', handleStatusUpdated);
     };
-  }, [socket]);
+  }, [socket, isOwnerSection]);
 
-  if (!activeCallToast) return null;
+  if (isOwnerSection || !activeCallToast) return null;
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[92%] sm:w-auto animate-bounce pointer-events-auto shadow-2xl">
