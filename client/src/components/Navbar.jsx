@@ -188,26 +188,6 @@ export const Navbar = () => {
                   Dashboard
                 </Link>
               )}
-
-              {isAdmin && !isSuperAdmin && (
-                <Link
-                  to="/admin"
-                  className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 transition-all flex items-center gap-1.5 ml-1"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 text-purple-400" />
-                  Admin
-                </Link>
-              )}
-
-              {isSuperAdmin && (
-                <Link
-                  to="/super-admin"
-                  className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-all flex items-center gap-1.5 ml-1"
-                >
-                  <Crown className="w-3.5 h-3.5 text-amber-400" />
-                  Super Admin
-                </Link>
-              )}
             </nav>
 
             {/* 3. Right Action Area: Developer Button + Light/Dark Mode Toggle + Cart + User */}
@@ -588,26 +568,6 @@ export const Navbar = () => {
                 <Tv className="w-3.5 h-3.5 text-purple-400" />
                 <span>Live TV Tokens</span>
               </Link>
-
-              {isAdmin && !isSuperAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30]"
-                >
-                  ⚡ Canteen Admin Console
-                </Link>
-              )}
-
-              {isSuperAdmin && (
-                <Link
-                  to="/super-admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-amber-300 hover:bg-[#151C30]"
-                >
-                  👑 Super Admin Console
-                </Link>
-              )}
             </div>
 
             {/* 3. DEDICATED LEAD DEVELOPER SECTION (Inside the 3 lines menu on mobile) */}
