@@ -51,7 +51,15 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
-    const allOrders = Array.from(ordersMap.values());
+    const allOrders = Array.from(ordersMap.values()).filter((ord) => {
+      const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
+      const mockNames = ['Aryan Sharma', 'Priya Patel'];
+      const name = String(ord?.studentName || ord?.customerName || '');
+      const id = String(ord?.id || ord?._id || '');
+      if (mockIds.includes(id)) return false;
+      if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return false;
+      return true;
+    });
     const preparing = allOrders.filter((o) => ['Accepted', 'Preparing'].includes(o.status));
     const ready = allOrders.filter((o) => o.status === 'Ready for Pickup');
     const recentlyCompleted = allOrders.filter((o) => ['Completed', 'Collected'].includes(o.status)).slice(0, 10);

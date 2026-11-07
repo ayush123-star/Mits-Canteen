@@ -20,6 +20,7 @@ import {
   generateUniqueToken,
   mergeOrders,
   normalizeOrder,
+  isMockOrder,
 } from '../services/realtimeSync';
 
 export const DEFAULT_HOMEPAGE_CONFIG = {
@@ -115,24 +116,33 @@ export const DataProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((ord) => {
-            const tok = String(ord.tokenNumber || '').replace('#', '').trim();
-            if (tok === 'TK-114' || tok === '114') {
-              return { ...ord, status: 'Completed', updatedAt: new Date().toISOString() };
-            }
-            return ord;
-          });
+          return parsed
+            .filter((ord) => !isMockOrder(ord))
+            .map((ord) => {
+              const tok = String(ord.tokenNumber || '').replace('#', '').trim();
+              if (tok === 'TK-114' || tok === '114') {
+                return { ...ord, status: 'Completed', updatedAt: new Date().toISOString() };
+              }
+              return ord;
+            });
         }
       } catch (_) {}
     }
-    return INITIAL_ORDERS;
+    return [];
   });
 
-  // Proactively purge any stale TK-114 tokens from local & cloud state
+  // Proactively purge any mock dummy orders and stale TK-114 tokens from local & cloud state
   useEffect(() => {
     setOrders((prev) => {
       let changed = false;
-      const next = prev.map((ord) => {
+      const filtered = prev.filter((ord) => {
+        if (isMockOrder(ord)) {
+          changed = true;
+          return false;
+        }
+        return true;
+      });
+      const next = filtered.map((ord) => {
         const tok = String(ord.tokenNumber || '').replace('#', '').trim();
         if (tok === 'TK-114' || tok === '114') {
           if (ord.status !== 'Completed') {
@@ -468,7 +478,20 @@ export const DataProvider = ({ children }) => {
     const unsubscribeCloud = subscribeToOrderEvents((cloudEvent) => {
       const { type, orders: incomingOrders, newOrder, orderId, newStatus, updatedOrder } = cloudEvent || {};
 
+      if (type === 'PURGE_MOCK_ORDERS') {
+        setOrders((prev) => {
+          const cleaned = prev.filter((ord) => !isMockOrder(ord));
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(cleaned));
+          } catch (_) {}
+          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+          return cleaned;
+        });
+        return;
+      }
+
       if (type === 'NEW_ORDER' && newOrder) {
+        if (isMockOrder(newOrder)) return;
         setOrders((prev) => {
           const exists = prev.some(
             (o) =>

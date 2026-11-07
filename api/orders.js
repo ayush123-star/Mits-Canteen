@@ -90,7 +90,17 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
-    return res.status(200).json({ success: true, orders: Array.from(ordersMap.values()) });
+    const allOrders = Array.from(ordersMap.values()).filter((ord) => {
+      const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
+      const mockNames = ['Aryan Sharma', 'Priya Patel'];
+      const name = String(ord?.studentName || ord?.customerName || '');
+      const id = String(ord?.id || ord?._id || '');
+      if (mockIds.includes(id)) return false;
+      if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return false;
+      return true;
+    });
+
+    return res.status(200).json({ success: true, orders: allOrders });
   } catch (err) {
     return res.status(200).json({ success: true, orders: [] });
   }

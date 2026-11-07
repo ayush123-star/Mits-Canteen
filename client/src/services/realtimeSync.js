@@ -187,10 +187,36 @@ export const generateUniqueToken = (currentOrders = []) => {
 };
 
 /**
+ * Detects dummy mock/seed orders (e.g. initial demo orders for Aryan Sharma / Priya Patel).
+ * Ensures they are never displayed in production.
+ */
+export const isMockOrder = (ord) => {
+  if (!ord || typeof ord !== 'object') return true;
+  const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
+  const mockNames = ['Aryan Sharma', 'Priya Patel'];
+  const mockRolls = ['STU-2024-CS042', 'STU-2024-IT018'];
+  const mockTokens = ['TK-100', 'TK-101', 'TK-102', 'TK-103', 'TK-104'];
+
+  const id = String(ord.id || ord._id || '');
+  const name = String(ord.studentName || ord.customerName || '');
+  const roll = String(ord.studentRoll || '');
+  const email = String(ord.studentEmail || '');
+  const token = String(ord.tokenNumber || '').replace('#', '').trim();
+
+  if (mockIds.includes(id)) return true;
+  if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return true;
+  if (mockRolls.includes(roll)) return true;
+  if (mockTokens.includes(token) && (email.includes('mitsgwl.ac.in') || roll.startsWith('STU-') || id.startsWith('ord-10'))) return true;
+  if (email === 'student@mitsgwl.ac.in' && mockTokens.includes(token)) return true;
+
+  return false;
+};
+
+/**
  * Normalizes an order record so it has consistent id, _id, finalAmount, and items
  */
 export const normalizeOrder = (ord) => {
-  if (!ord || typeof ord !== 'object') return null;
+  if (!ord || typeof ord !== 'object' || isMockOrder(ord)) return null;
   const id = ord.id || ord._id || (ord.tokenNumber ? `ord-${ord.tokenNumber}` : `ord-${Date.now()}`);
   return {
     ...ord,
