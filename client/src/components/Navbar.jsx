@@ -30,11 +30,12 @@ import {
   Briefcase,
   Award,
   ExternalLink,
-  Phone
+  Phone,
+  ChefHat
 } from 'lucide-react';
 
 export const Navbar = () => {
-  const { user, isAuthenticated, isAdmin, isSuperAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isSuperAdmin, logout, loginAsDemoAdmin } = useAuth();
   const { totalItemCount, setIsCartOpen } = useCart();
   const { canteens, orders } = useData();
   const { theme, toggleTheme, isDark } = useTheme();
@@ -48,6 +49,16 @@ export const Navbar = () => {
   const navigate = useNavigate();
 
   const isActive = (path) => location.pathname === path;
+
+  // Seamless Canteen Owner navigation
+  const handleOpenCanteenOwner = async () => {
+    if (!isAdmin) {
+      if (typeof loginAsDemoAdmin === 'function') {
+        await loginAsDemoAdmin();
+      }
+    }
+    navigate('/canteen-owner/dashboard');
+  };
 
   // Active orders count for badge
   const userActiveOrders = isAuthenticated
@@ -189,15 +200,20 @@ export const Navbar = () => {
                 </Link>
               )}
 
-              {isAdmin && !isSuperAdmin && (
-                <Link
-                  to="/admin"
-                  className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 transition-all flex items-center gap-1.5 ml-1"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 text-purple-400" />
-                  Admin
-                </Link>
-              )}
+              {/* Canteen Owner Section Direct Launcher */}
+              <button
+                type="button"
+                onClick={handleOpenCanteenOwner}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ml-1 cursor-pointer ${
+                  isActive('/canteen-owner') || isActive('/canteen-owner/dashboard') || isActive('/admin')
+                    ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                    : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30'
+                }`}
+                title="Open Canteen Owner Console"
+              >
+                <ChefHat className="w-3.5 h-3.5 text-purple-300" />
+                <span>Canteen Owner</span>
+              </button>
 
               {isSuperAdmin && (
                 <Link
@@ -380,16 +396,18 @@ export const Navbar = () => {
                               </Link>
                             </>
                           )}
-                          {isAdmin && !isSuperAdmin && (
-                            <Link
-                              to="/admin"
-                              onClick={() => setUserDropdownOpen(false)}
-                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] transition-colors"
-                            >
-                              <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0" />
-                              <span>Canteen Admin Panel</span>
-                            </Link>
-                          )}
+                          {/* Canteen Owner Section Option */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserDropdownOpen(false);
+                              handleOpenCanteenOwner();
+                            }}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] transition-colors cursor-pointer"
+                          >
+                            <ChefHat className="w-4 h-4 text-purple-400 shrink-0" />
+                            <span>Canteen Owner Section</span>
+                          </button>
                           {isSuperAdmin && (
                             <Link
                               to="/super-admin"
@@ -589,15 +607,18 @@ export const Navbar = () => {
                 <span>Live TV Tokens</span>
               </Link>
 
-              {isAdmin && !isSuperAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30]"
-                >
-                  ⚡ Canteen Admin Console
-                </Link>
-              )}
+              {/* Canteen Owner Section Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleOpenCanteenOwner();
+                }}
+                className="w-full text-left flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-300 hover:bg-[#151C30] cursor-pointer"
+              >
+                <ChefHat className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>Canteen Owner Section</span>
+              </button>
 
               {isSuperAdmin && (
                 <Link

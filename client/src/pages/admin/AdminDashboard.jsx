@@ -233,7 +233,7 @@ export const AdminDashboard = () => {
 
           {/* Quick Shortcut to Customer Feedback */}
           <Link
-            to="/admin/feedback"
+            to="/canteen-owner/feedback"
             className="px-3 py-2.5 rounded-xl sm:rounded-2xl bg-[#1C263A] hover:bg-[#25334d] border border-purple-500/30 text-purple-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs shrink-0"
             title="View Student Reviews & Feedback"
           >

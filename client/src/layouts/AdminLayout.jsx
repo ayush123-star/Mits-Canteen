@@ -60,19 +60,22 @@ export const AdminLayout = () => {
   const pendingOrdersCount = orders.filter((o) => ['Placed', 'Accepted', 'Preparing'].includes(o.status)).length;
   const lowStockCount = inventoryItems.filter((i) => i.currentQuantity <= i.minimumStockLevel).length;
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    location.pathname === path ||
+    location.pathname === path.replace('/canteen-owner', '/admin') ||
+    location.pathname === path.replace('/admin', '/canteen-owner');
 
   const navItems = [
-    { label: 'Live Orders Queue', path: '/admin/dashboard', icon: Clock, badge: pendingOrdersCount },
-    { label: 'Menu Catalog', path: '/admin/menu', icon: Layers },
-    { label: 'Raw Materials & Stock', path: '/admin/inventory', icon: BookOpen, badge: lowStockCount, badgeColor: 'bg-purple-600' },
-    { label: 'Recipe Studio', path: '/admin/recipes', icon: UtensilsCrossed },
-    { label: 'Stock History Ledger', path: '/admin/stock-history', icon: History },
-    { label: 'Cravings & Day Offers', path: '/admin/homepage-manager', icon: Flame, badge: 'Home', badgeColor: 'bg-gradient-to-r from-[#7955E8] to-[#526DFF]' },
-    { label: 'Customer Feedback', path: '/admin/feedback', icon: MessageSquare, badge: feedbackList?.length || 0, badgeColor: 'bg-emerald-600' },
-    { label: 'Cash & Online Payments', path: '/admin/payments', icon: DollarSign },
-    { label: 'Sales Reports & Analytics', path: '/admin/reports', icon: BarChart3 },
-    { label: 'Payment QR & Settings', path: '/admin/settings', icon: QrCode },
+    { label: 'Live Orders Queue', path: '/canteen-owner/dashboard', icon: Clock, badge: pendingOrdersCount },
+    { label: 'Menu Catalog', path: '/canteen-owner/menu', icon: Layers },
+    { label: 'Raw Materials & Stock', path: '/canteen-owner/inventory', icon: BookOpen, badge: lowStockCount, badgeColor: 'bg-purple-600' },
+    { label: 'Recipe Studio', path: '/canteen-owner/recipes', icon: UtensilsCrossed },
+    { label: 'Stock History Ledger', path: '/canteen-owner/stock-history', icon: History },
+    { label: 'Cravings & Day Offers', path: '/canteen-owner/homepage-manager', icon: Flame, badge: 'Home', badgeColor: 'bg-gradient-to-r from-[#7955E8] to-[#526DFF]' },
+    { label: 'Customer Feedback', path: '/canteen-owner/feedback', icon: MessageSquare, badge: feedbackList?.length || 0, badgeColor: 'bg-emerald-600' },
+    { label: 'Cash & Online Payments', path: '/canteen-owner/payments', icon: DollarSign },
+    { label: 'Sales Reports & Analytics', path: '/canteen-owner/reports', icon: BarChart3 },
+    { label: 'Payment QR & Settings', path: '/canteen-owner/settings', icon: QrCode },
   ];
 
   return (
@@ -105,7 +108,7 @@ export const AdminLayout = () => {
               <div>
                 <h2 className="font-extrabold text-sm tracking-tight text-white">MITS CANTEEN</h2>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">
-                  Manager &bull; Counter
+                  Canteen Owner &bull; Counter
                 </span>
               </div>
             </div>
@@ -192,7 +195,7 @@ export const AdminLayout = () => {
                 {user?.avatar ? (
                   <img
                     src={user.avatar}
-                    alt={user?.name || 'Admin'}
+                    alt={user?.name || 'Canteen Owner'}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.target.src = '/assets/campus/ayush_pandey.jpg';
@@ -206,7 +209,7 @@ export const AdminLayout = () => {
               </div>
               <div className="truncate max-w-[130px]">
                 <p className="text-xs font-bold text-white truncate">{user?.name || 'Canteen Manager'}</p>
-                <p className="text-[10px] text-[#AAB3C5]">Canteen Admin</p>
+                <p className="text-[10px] text-[#AAB3C5]">Canteen Owner</p>
               </div>
             </div>
 
@@ -244,7 +247,7 @@ export const AdminLayout = () => {
                 </h1>
                 <span className={`w-2 h-2 rounded-full shrink-0 ${currentCanteen.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
               </div>
-              <p className="text-[9px] sm:text-[11px] text-[#AAB3C5] truncate">Kitchen Operations Console</p>
+              <p className="text-[9px] sm:text-[11px] text-[#AAB3C5] truncate">Canteen Owner Console</p>
             </div>
           </div>
 
@@ -330,9 +333,9 @@ export const AdminLayout = () => {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0B1020]/95 backdrop-blur-2xl border-t border-purple-500/30 px-2 py-1.5 shadow-2xl safe-area-bottom">
         <div className="grid grid-cols-5 gap-1 text-center">
           <Link
-            to="/admin/dashboard"
+            to="/canteen-owner/dashboard"
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
-              isActive('/admin/dashboard') || isActive('/admin')
+              isActive('/canteen-owner/dashboard') || isActive('/canteen-owner')
                 ? 'text-white bg-purple-600/30 font-black shadow-inner border border-purple-500/30'
                 : 'text-[#AAB3C5] hover:text-white font-semibold'
             }`}
@@ -349,9 +352,9 @@ export const AdminLayout = () => {
           </Link>
 
           <Link
-            to="/admin/menu"
+            to="/canteen-owner/menu"
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
-              isActive('/admin/menu')
+              isActive('/canteen-owner/menu')
                 ? 'text-white bg-purple-600/30 font-black shadow-inner border border-purple-500/30'
                 : 'text-[#AAB3C5] hover:text-white font-semibold'
             }`}
@@ -361,9 +364,9 @@ export const AdminLayout = () => {
           </Link>
 
           <Link
-            to="/admin/inventory"
+            to="/canteen-owner/inventory"
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
-              isActive('/admin/inventory')
+              isActive('/canteen-owner/inventory')
                 ? 'text-white bg-purple-600/30 font-black shadow-inner border border-purple-500/30'
                 : 'text-[#AAB3C5] hover:text-white font-semibold'
             }`}
@@ -378,9 +381,9 @@ export const AdminLayout = () => {
           </Link>
 
           <Link
-            to="/admin/payments"
+            to="/canteen-owner/payments"
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
-              isActive('/admin/payments')
+              isActive('/canteen-owner/payments')
                 ? 'text-white bg-purple-600/30 font-black shadow-inner border border-purple-500/30'
                 : 'text-[#AAB3C5] hover:text-white font-semibold'
             }`}

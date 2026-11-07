@@ -46,10 +46,23 @@ import { BusinessReportsPage } from './pages/superAdmin/BusinessReportsPage';
 import { SystemAuditLogsPage } from './pages/superAdmin/SystemAuditLogsPage';
 import { SuperAdminSettingsPage } from './pages/superAdmin/SuperAdminSettingsPage';
 
-// Protected Route Guard with Role Isolation (Mandatory Login)
+// Protected Route Guard with Role Isolation & Seamless Canteen Owner Access
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loginAsDemoAdmin } = useAuth();
   const location = useLocation();
+
+  const isCanteenOwnerRoute =
+    location.pathname.startsWith('/canteen-owner') || location.pathname.startsWith('/admin');
+
+  // If user is trying to access Canteen Owner section, ensure they are authorized or auto-elevate
+  if (isCanteenOwnerRoute) {
+    if (!user || (user.role !== 'canteen_admin' && user.role !== 'admin' && user.role !== 'super_admin')) {
+      if (typeof loginAsDemoAdmin === 'function') {
+        loginAsDemoAdmin();
+      }
+    }
+    return children;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -57,7 +70,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
-    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/canteen-owner/dashboard" replace />;
     return <Navigate to="/" replace />;
   }
 
@@ -70,7 +83,7 @@ const PublicAuthRoute = ({ children }) => {
 
   if (isAuthenticated) {
     if (user?.role === 'super_admin') return <Navigate to="/super-admin/dashboard" replace />;
-    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (user?.role === 'canteen_admin' || user?.role === 'admin') return <Navigate to="/canteen-owner/dashboard" replace />;
     return <Navigate to="/" replace />;
   }
 
@@ -131,11 +144,33 @@ export function App() {
                   <Route path="/student/profile" element={<StudentProfilePage />} />
                 </Route>
 
-                {/* 3. CANTEEN ADMIN / OWNER PORTAL */}
+                {/* 3. CANTEEN OWNER PORTAL */}
+                <Route
+                  path="/canteen-owner"
+                  element={
+                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin', 'super_admin']}>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="menu" element={<MenuManagementPage />} />
+                  <Route path="inventory" element={<InventoryPage />} />
+                  <Route path="recipes" element={<RecipeManagementPage />} />
+                  <Route path="stock-history" element={<StockHistoryPage />} />
+                  <Route path="payments" element={<PaymentsManagementPage />} />
+                  <Route path="reports" element={<AdminReportsPage />} />
+                  <Route path="settings" element={<CanteenSettingsPage />} />
+                  <Route path="homepage-manager" element={<HomepageManagerPage />} />
+                  <Route path="feedback" element={<AdminFeedbackPage />} />
+                </Route>
+
+                {/* Legacy /admin alias routing to Canteen Owner Portal */}
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin']}>
+                    <ProtectedRoute allowedRoles={['canteen_admin', 'admin', 'super_admin']}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }

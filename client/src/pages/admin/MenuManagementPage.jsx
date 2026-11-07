@@ -96,9 +96,9 @@ export const MenuManagementPage = () => {
     };
 
     if (editingFood) {
-      updateFoodItem(editingFood.id || editingFood._id, payload, user?.name || 'Admin');
+      updateFoodItem(editingFood.id || editingFood._id, payload, user?.name || 'Canteen Owner');
     } else {
-      addFoodItem(payload, user?.name || 'Admin');
+      addFoodItem(payload, user?.name || 'Canteen Owner');
     }
 
     setIsAddModalOpen(false);
@@ -106,7 +106,7 @@ export const MenuManagementPage = () => {
 
   const handleDelete = (food) => {
     if (window.confirm(`Are you sure you want to remove "${food.name}" from the menu catalog?`)) {
-      deleteFoodItem(food.id || food._id, user?.name || 'Admin');
+      deleteFoodItem(food.id || food._id, user?.name || 'Canteen Owner');
     }
   };
 
@@ -241,7 +241,7 @@ export const MenuManagementPage = () => {
                     {/* In Stock Toggle Switch */}
                     <td className="py-3.5 px-4">
                       <button
-                        onClick={() => toggleFoodStock(foodId, user?.name || 'Admin')}
+                        onClick={() => toggleFoodStock(foodId, user?.name || 'Canteen Owner')}
                         className={`px-3 py-1 rounded-full text-[11px] font-black flex items-center gap-1.5 transition-all ${
                           food.isAvailable
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
