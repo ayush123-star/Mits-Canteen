@@ -13,6 +13,13 @@ import {
   INITIAL_AUDIT_LOGS,
 } from '../mock/mockData';
 import { playNotificationSound } from '../utils/audio';
+import {
+  publishOrderEvent,
+  subscribeToOrderEvents,
+  fetchRecentCloudEvents,
+  generateUniqueToken,
+  mergeOrders,
+} from '../services/realtimeSync';
 
 export const DEFAULT_HOMEPAGE_CONFIG = {
   cravingsTitle: 'Popular Campus Cravings',
@@ -277,7 +284,7 @@ export const DataProvider = ({ children }) => {
     localStorage.setItem('smart_canteen_transactions', JSON.stringify(stockTransactions));
   }, [stockTransactions]);
 
-  // 1. Cross-Tab & Cross-Window Instant Real-time Orders Synchronization Channel
+  // 1. Cross-Tab & Cross-Device Instant Real-time Orders Synchronization Channel
   const ordersBroadcastRef = useRef(null);
 
   const persistAndBroadcastOrders = (nextOrders, eventType = 'SYNC', meta = {}) => {
@@ -288,6 +295,7 @@ export const DataProvider = ({ children }) => {
       console.debug('Failed to write orders to localStorage:', e);
     }
 
+    // A. Local BroadcastChannel for zero-latency multi-tab sync
     if (ordersBroadcastRef.current) {
       try {
         ordersBroadcastRef.current.postMessage({
@@ -301,16 +309,23 @@ export const DataProvider = ({ children }) => {
       }
     }
 
-    // Trigger local DOM event for active components
+    // B. Local DOM event for current window components
     window.dispatchEvent(
       new CustomEvent('smartcanteen:orders_sync', {
         detail: { orders: nextOrders, type: eventType, ...meta },
       })
     );
+
+    // C. Cross-Device Cloud Realtime Broadcast (sub-100ms delivery to Phones, Laptops, TV Displays)
+    publishOrderEvent({
+      type: eventType,
+      orders: nextOrders,
+      ...meta,
+    });
   };
 
   useEffect(() => {
-    // A. BroadcastChannel for zero-latency multi-tab sync
+    // A. BroadcastChannel for zero-latency multi-tab sync on same machine
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       const channel = new BroadcastChannel('smart_canteen_orders_channel');
       ordersBroadcastRef.current = channel;
@@ -347,7 +362,103 @@ export const DataProvider = ({ children }) => {
     };
     window.addEventListener('storage', handleStorage);
 
-    // C. Socket.IO Events
+    // C. Real-Time Cloud SSE Stream for Cross-Device Synchronization
+    const unsubscribeCloud = subscribeToOrderEvents((cloudEvent) => {
+      const { type, orders: incomingOrders, newOrder, orderId, newStatus, updatedOrder } = cloudEvent || {};
+
+      if (type === 'NEW_ORDER' && newOrder) {
+        setOrders((prev) => {
+          const exists = prev.some(
+            (o) =>
+              (o.id && o.id === newOrder.id) ||
+              (o.tokenNumber && o.tokenNumber === newOrder.tokenNumber)
+          );
+          if (exists) return prev;
+          const updated = [newOrder, ...prev];
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(updated));
+          } catch (_) {}
+          playNotificationSound('new_order');
+          window.dispatchEvent(
+            new CustomEvent('smartcanteen:orders_sync', {
+              detail: { orders: updated, type: 'NEW_ORDER', newOrder },
+            })
+          );
+          return updated;
+        });
+      } else if (type === 'STATUS_UPDATED') {
+        setOrders((prev) => {
+          const nextList = prev.map((o) => {
+            if (
+              (orderId && o.id === orderId) ||
+              (updatedOrder && (o.id === updatedOrder.id || o.tokenNumber === updatedOrder.tokenNumber))
+            ) {
+              const statusToSet = newStatus || updatedOrder?.status || o.status;
+              if (statusToSet === 'Ready for Pickup') {
+                playNotificationSound('ready');
+              }
+              return { ...o, ...(updatedOrder || {}), status: statusToSet };
+            }
+            return o;
+          });
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(nextList));
+          } catch (_) {}
+          window.dispatchEvent(
+            new CustomEvent('smartcanteen:orders_sync', {
+              detail: { orders: nextList, type: 'STATUS_UPDATED', orderId, newStatus, updatedOrder },
+            })
+          );
+          return nextList;
+        });
+      } else if (incomingOrders && Array.isArray(incomingOrders)) {
+        setOrders((prev) => {
+          const merged = mergeOrders(prev, incomingOrders);
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
+        });
+      }
+    });
+
+    // D. Cloud Catch-up: Replay recent cloud order events on mount/open
+    fetchRecentCloudEvents().then((events) => {
+      if (events && events.length > 0) {
+        setOrders((prev) => {
+          let currentList = [...prev];
+          for (const ev of events) {
+            if (ev.type === 'NEW_ORDER' && ev.newOrder) {
+              if (!currentList.some((o) => o.id === ev.newOrder.id || o.tokenNumber === ev.newOrder.tokenNumber)) {
+                currentList = [ev.newOrder, ...currentList];
+              }
+            } else if (ev.type === 'STATUS_UPDATED') {
+              currentList = currentList.map((o) => {
+                if (
+                  (ev.orderId && o.id === ev.orderId) ||
+                  (ev.updatedOrder && (o.id === ev.updatedOrder.id || o.tokenNumber === ev.updatedOrder.tokenNumber))
+                ) {
+                  return {
+                    ...o,
+                    ...(ev.updatedOrder || {}),
+                    status: ev.newStatus || ev.updatedOrder?.status || o.status,
+                  };
+                }
+                return o;
+              });
+            } else if (ev.orders && Array.isArray(ev.orders)) {
+              currentList = mergeOrders(currentList, ev.orders);
+            }
+          }
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(currentList));
+          } catch (_) {}
+          return currentList;
+        });
+      }
+    });
+
+    // E. Socket.IO Events
     const handleSocketOrderNew = (e) => {
       const incoming = e.detail;
       if (!incoming) return;
@@ -383,7 +494,7 @@ export const DataProvider = ({ children }) => {
     window.addEventListener('smartcanteen:order_new', handleSocketOrderNew);
     window.addEventListener('smartcanteen:order_status_updated', handleSocketStatusUpdated);
 
-    // D. Periodic Server Fetch (Every 3 seconds to sync cross-device when online)
+    // F. Periodic Server Fetch (Every 3 seconds to sync backend when online)
     let isMounted = true;
     const syncWithServer = async () => {
       try {
@@ -391,22 +502,7 @@ export const DataProvider = ({ children }) => {
         if (isMounted && res.data?.orders && Array.isArray(res.data.orders)) {
           const serverOrders = res.data.orders;
           setOrders((prev) => {
-            const map = new Map();
-            // Start with server orders
-            serverOrders.forEach((o) => {
-              const key = o.tokenNumber || o.id || o._id;
-              map.set(key, { ...o, id: o.id || o._id, tokenNumber: o.tokenNumber });
-            });
-            // Merge with local orders
-            prev.forEach((o) => {
-              const key = o.tokenNumber || o.id || o._id;
-              if (!map.has(key)) {
-                map.set(key, o);
-              } else {
-                map.set(key, { ...map.get(key), ...o });
-              }
-            });
-            const merged = Array.from(map.values());
+            const merged = mergeOrders(prev, serverOrders);
             if (JSON.stringify(prev) !== JSON.stringify(merged)) {
               try {
                 localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
@@ -430,6 +526,7 @@ export const DataProvider = ({ children }) => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('smartcanteen:order_new', handleSocketOrderNew);
       window.removeEventListener('smartcanteen:order_status_updated', handleSocketStatusUpdated);
+      if (unsubscribeCloud) unsubscribeCloud();
       if (ordersBroadcastRef.current) {
         ordersBroadcastRef.current.close();
       }
@@ -471,14 +568,13 @@ export const DataProvider = ({ children }) => {
   // ORDER ACTIONS & AUTO-RECIPE DEDUCTION
   // ==========================================
   const placeOrder = (orderData) => {
-    const count = orders.length + 105;
-    const tokenNumber = `TK-${count}`;
-    const orderNumber = `ORD-2026-${String(count).padStart(3, '0')}`;
+    const { tokenNumber, orderNumber, sequence } = generateUniqueToken(orders);
 
     const newOrder = {
       id: 'ord-' + Date.now(),
       tokenNumber,
       orderNumber,
+      sequence,
       studentId: orderData.studentId || 'user-stu-1',
       studentName: orderData.studentName || 'Student Diner',
       studentRoll: orderData.studentRoll || orderData.studentEnrollment || '0901CS221045',

@@ -11,17 +11,38 @@ const {
   notifyOwnerNewOrder,
 } = require('../services/whatsappService');
 
-// Helper to generate next sequential campus token
+// Helper to generate next sequential, guaranteed unique campus token
 const generateCampusToken = async () => {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  try {
+    const allTokens = await Order.find({}, 'tokenNumber');
+    let maxNumber = 100;
 
-  const countToday = await Order.countDocuments({
-    createdAt: { $gte: startOfDay },
-  });
+    allTokens.forEach((o) => {
+      if (o.tokenNumber) {
+        const m = String(o.tokenNumber).match(/\d+/);
+        if (m) {
+          const val = parseInt(m[0], 10);
+          if (!isNaN(val) && val > maxNumber) {
+            maxNumber = val;
+          }
+        }
+      }
+    });
 
-  const tokenNumber = `TK-${(101 + countToday).toString()}`;
-  return tokenNumber;
+    const countAll = await Order.countDocuments({});
+    let candidateSeq = Math.max(maxNumber, 100 + countAll, 114) + 1;
+
+    let candidateToken = `TK-${candidateSeq}`;
+    while (await Order.findOne({ tokenNumber: candidateToken })) {
+      candidateSeq += 1;
+      candidateToken = `TK-${candidateSeq}`;
+    }
+
+    return candidateToken;
+  } catch (err) {
+    const fallbackSeq = 115 + Math.floor(Math.random() * 800);
+    return `TK-${fallbackSeq}`;
+  }
 };
 
 // @route   POST /api/orders

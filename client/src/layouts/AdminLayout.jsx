@@ -56,7 +56,9 @@ export const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const currentCanteen = canteens[0] || { id: 'canteen-1', name: 'Main Campus Food Court', isOpen: true };
+  const currentCanteen =
+    canteens.find((c) => c.id === 'canteen-1') ||
+    canteens[0] || { id: 'canteen-1', name: 'MITS Main Canteen', isOpen: true };
   const pendingOrdersCount = orders.filter((o) => ['Placed', 'Accepted', 'Preparing'].includes(o.status)).length;
   const lowStockCount = inventoryItems.filter((i) => i.currentQuantity <= i.minimumStockLevel).length;
 
@@ -131,9 +133,10 @@ export const AdminLayout = () => {
               </span>
               <button
                 onClick={() => toggleCanteenStatus(currentCanteen.id)}
-                className="text-[10px] font-bold text-purple-300 hover:text-white hover:underline"
+                className="text-[10px] font-bold text-purple-300 hover:text-white hover:underline cursor-pointer"
+                title={currentCanteen.isOpen ? 'Pause Canteen Kitchen' : 'Resume Canteen Kitchen'}
               >
-                Switch
+                {currentCanteen.isOpen ? 'Pause' : 'Resume'}
               </button>
             </div>
           </div>
