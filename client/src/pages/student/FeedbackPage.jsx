@@ -29,7 +29,7 @@ const POPULAR_TAGS = [
 
 export const FeedbackPage = () => {
   const { user } = useAuth();
-  const { menuItems, feedbackList, submitFeedback } = useData();
+  const { menuItems, submitFeedback } = useData();
 
   const [selectedFoodId, setSelectedFoodId] = useState(menuItems[0]?.id || 'food-1');
   const [rating, setRating] = useState(5);
@@ -95,214 +95,157 @@ export const FeedbackPage = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn text-white">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8 animate-fadeIn text-white">
       {/* 1. Header Banner */}
-      <div className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl border border-purple-500/20">
+      <div className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl border border-purple-500/20 text-center md:text-left">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7955E8] to-[#526DFF] p-0.5 shadow-lg shadow-purple-500/20 flex items-center justify-center">
+          <div className="flex items-center justify-center md:justify-start gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7955E8] to-[#526DFF] p-0.5 shadow-lg shadow-purple-500/20 flex items-center justify-center shrink-0">
               <Star className="w-5 h-5 text-white fill-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Dish Reviews & Campus Feedback
+            <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+              Rate Dishes & Student Feedback
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-[#AAB3C5] mt-2">
-            Help the canteen chefs refine flavors and portion sizes by rating the food you enjoyed today.
+          <p className="text-xs sm:text-sm text-[#AAB3C5] mt-2 max-w-xl">
+            Help the canteen chefs refine flavors, portion sizes, and prep speed by sharing your dining experience.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#151C30] px-4 py-2.5 rounded-2xl border border-purple-500/20 shadow-md">
-          <Award className="w-5 h-5 text-purple-400" />
-          <div className="text-xs">
-            <p className="text-[#AAB3C5] font-medium">Campus Food Rating</p>
-            <p className="font-black text-white text-sm">4.8 / 5.0 (850+ ratings)</p>
+        <div className="flex items-center justify-center gap-2 bg-[#151C30] px-4 py-2.5 rounded-2xl border border-purple-500/20 shadow-md shrink-0">
+          <Award className="w-5 h-5 text-purple-400 shrink-0" />
+          <div className="text-xs text-left">
+            <p className="text-[#AAB3C5] font-medium text-[11px]">Campus Food Rating</p>
+            <p className="font-black text-white text-sm">4.8 / 5.0 (Campus Kitchen)</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* 2. Review Form */}
-        <div className="lg:col-span-6 bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl p-6 sm:p-8 space-y-5">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-purple-400" />
-            <h2 className="text-base font-extrabold text-white">Write Your Feedback</h2>
+      {/* 2. Write Your Feedback Form (Focused Centered Section) */}
+      <div className="max-w-2xl mx-auto bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-2xl p-6 sm:p-10 space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-purple-500/15">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold shadow-md shadow-purple-500/30 shrink-0">
+            <MessageSquare className="w-5 h-5 text-white" />
           </div>
+          <div>
+            <h2 className="text-lg font-black text-white tracking-tight">Write Your Feedback</h2>
+            <p className="text-xs text-[#AAB3C5]">Submit your dish review directly to the Canteen Owner console.</p>
+          </div>
+        </div>
 
-          {submittedSuccess && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              Thank you! Your feedback has been shared with the canteen owner and kitchen team!
-            </div>
-          )}
+        {submittedSuccess && (
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2.5 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Thank you! Your feedback has been received and sent to the Canteen Owner section.</span>
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Food Selector */}
-            <div>
-              <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
-                Select Dish You Ordered
-              </label>
-              <select
-                value={selectedFoodId}
-                onChange={(e) => setSelectedFoodId(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl bg-[#151C30] border border-purple-500/20 text-xs font-bold text-white focus:outline-none focus:border-[#7955E8]"
-              >
-                {menuItems.map((food) => (
-                  <option key={food.id || food._id} value={food.id || food._id} className="bg-[#151C30] text-white">
-                    {food.name} (₹{food.price})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Star Rating */}
-            <div>
-              <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
-                Your Star Rating
-              </label>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    onClick={() => setRating(star)}
-                    className="p-1 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
-                  >
-                    <Star
-                      className={`w-7 h-7 ${
-                        (hoverRating || rating) >= star
-                          ? 'text-amber-400 fill-amber-400'
-                          : 'text-slate-600'
-                      }`}
-                    />
-                  </button>
-                ))}
-                <span className="ml-2 text-xs font-black text-amber-400">
-                  {rating === 5
-                    ? 'Exceptional! 🌟'
-                    : rating === 4
-                    ? 'Very Good! 👍'
-                    : rating === 3
-                    ? 'Average / Decent 🙂'
-                    : 'Needs Improvement ⚠️'}
-                </span>
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
-                What Stood Out? (Select all that apply)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {POPULAR_TAGS.map((tag) => {
-                  const isSelected = selectedTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/20'
-                          : 'bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/20'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Comment */}
-            <div>
-              <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
-                Review Comments
-              </label>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={4}
-                placeholder="Share your experience: How was the temperature, freshness, crunch, spice level?"
-                className="w-full px-4 py-3 rounded-2xl bg-[#151C30] border border-purple-500/20 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-[#7955E8] focus:ring-1 focus:ring-[#7955E8] transition-all"
-                required
-              ></textarea>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-98"
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Food Selector */}
+          <div>
+            <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
+              Select Dish You Ordered
+            </label>
+            <select
+              value={selectedFoodId}
+              onChange={(e) => setSelectedFoodId(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl bg-[#151C30] border border-purple-500/25 text-xs font-bold text-white focus:outline-none focus:border-[#7955E8] shadow-xs"
             >
-              <Send className="w-4 h-4" />
-              <span>Submit Feedback</span>
-            </button>
-          </form>
-        </div>
-
-        {/* 3. Community Feedback Stream */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              Recent Student Reviews
-            </h2>
-            <span className="text-xs text-[#AAB3C5]">
-              {feedbackList.length} reviews posted
-            </span>
+              {menuItems.map((food) => (
+                <option key={food.id || food._id} value={food.id || food._id} className="bg-[#151C30] text-white">
+                  {food.name} (₹{food.price})
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-            {feedbackList.map((item) => (
-              <div
-                key={item.id || item._id}
-                className="p-5 rounded-3xl bg-[#1C263A]/90 backdrop-blur-xl border border-purple-500/20 shadow-xl space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-bold text-xs shadow-md">
-                      {item.studentName?.charAt(0) || 'S'}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-white">{item.studentName}</h4>
-                      <p className="text-[10px] text-[#AAB3C5]">{item.createdAt || item.date}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                    <span className="text-xs font-black text-amber-300">{item.rating}.0</span>
-                  </div>
-                </div>
-
-                <div className="bg-[#151C30] p-2.5 rounded-xl flex items-center gap-2 text-xs border border-purple-500/10">
-                  <Utensils className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="font-extrabold text-white">{item.foodName}</span>
-                </div>
-
-                <p className="text-xs text-[#AAB3C5] leading-relaxed italic">
-                  "{item.comment}"
-                </p>
-
-                {item.tags && item.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {item.tags.map((t, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#151C30] border border-purple-500/20 text-purple-300"
-                      >
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+          {/* Star Rating */}
+          <div>
+            <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
+              Your Star Rating
+            </label>
+            <div className="flex items-center gap-2 pt-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  onClick={() => setRating(star)}
+                  className="p-1 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                  title={`${star} Star${star > 1 ? 's' : ''}`}
+                >
+                  <Star
+                    className={`w-8 h-8 ${
+                      (hoverRating || rating) >= star
+                        ? 'text-amber-400 fill-amber-400'
+                        : 'text-slate-600'
+                    }`}
+                  />
+                </button>
+              ))}
+              <span className="ml-3 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs font-black text-amber-400">
+                {rating === 5
+                  ? 'Exceptional! 🌟'
+                  : rating === 4
+                  ? 'Very Good! 👍'
+                  : rating === 3
+                  ? 'Average / Decent 🙂'
+                  : 'Needs Improvement ⚠️'}
+              </span>
+            </div>
           </div>
-        </div>
+
+          {/* Stand-Out Tags */}
+          <div>
+            <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
+              What Stood Out? (Select all that apply)
+            </label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {POPULAR_TAGS.map((tag) => {
+                const isSelected = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/20'
+                        : 'bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/20'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Review Comment */}
+          <div>
+            <label className="text-xs font-bold text-[#AAB3C5] block mb-1.5 uppercase tracking-wider">
+              Review Comments
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={4}
+              placeholder="Share your experience: How was the temperature, freshness, crunch, spice level, or portion size?"
+              className="w-full px-4 py-3 rounded-2xl bg-[#151C30] border border-purple-500/25 text-xs font-medium text-white placeholder-slate-400 focus:outline-none focus:border-[#7955E8] focus:ring-1 focus:ring-[#7955E8] transition-all"
+              required
+            ></textarea>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-extrabold text-sm shadow-xl shadow-purple-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-98"
+          >
+            <Send className="w-4 h-4" />
+            <span>Submit Feedback</span>
+          </button>
+        </form>
       </div>
 
       {/* 4. Feedback Submission Success Pop-up Modal with Sound & Confetti */}
