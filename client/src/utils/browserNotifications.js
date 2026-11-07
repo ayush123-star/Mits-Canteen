@@ -21,7 +21,7 @@ export const requestNotificationPermission = async () => {
   }
 };
 
-export const sendBrowserNotification = (title, body, options = {}) => {
+export const sendBrowserNotification = (title, bodyOrOptions, options = {}) => {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return null;
   }
@@ -30,20 +30,23 @@ export const sendBrowserNotification = (title, body, options = {}) => {
   }
 
   try {
+    const text = typeof bodyOrOptions === 'string' ? bodyOrOptions : bodyOrOptions?.body || '';
+    const extraOpts = typeof bodyOrOptions === 'object' ? { ...bodyOrOptions, ...options } : options;
+
     const notification = new Notification(title, {
-      body,
-      icon: '/images/mits/mits-logo.png',
-      badge: '/images/mits/mits-logo.png',
-      tag: options.tag || 'mits-canteen-order',
+      body: String(text || ''),
+      icon: extraOpts.icon || '/images/mits/mits-logo.png',
+      badge: extraOpts.badge || '/images/mits/mits-logo.png',
+      tag: extraOpts.tag || 'mits-canteen-order',
       renotify: true,
       silent: false,
-      ...options,
+      ...extraOpts,
     });
 
     notification.onclick = () => {
       window.focus();
-      if (options.url) {
-        window.location.href = options.url;
+      if (extraOpts.url) {
+        window.location.href = extraOpts.url;
       }
       notification.close();
     };

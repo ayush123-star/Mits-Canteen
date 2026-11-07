@@ -350,12 +350,11 @@ export const DataProvider = ({ children }) => {
       }
     };
 
+    // WhatsApp notification handler
     window.addEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
-    window.addEventListener('smartcanteen:order_status_updated', handleOrderStatusUpdated);
 
     return () => {
       window.removeEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
-      window.removeEventListener('smartcanteen:order_status_updated', handleOrderStatusUpdated);
     };
   }, []);
 
@@ -493,14 +492,10 @@ export const DataProvider = ({ children }) => {
       if (type === 'SNAPSHOT_SYNC') {
         const list = incomingOrders || cloudEvent.orders;
         if (Array.isArray(list) && list.length > 0) {
-          setOrders((prev) => {
-            const merged = mergeOrders(prev, list);
-            try {
-              localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
-            } catch (_) {}
+          setOrders((prev) => mergeOrders(prev, list));
+          setTimeout(() => {
             window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
-            return merged;
-          });
+          }, 0);
         }
         return;
       }
@@ -514,19 +509,17 @@ export const DataProvider = ({ children }) => {
               (o.tokenNumber && o.tokenNumber === newOrder.tokenNumber)
           );
           if (exists) return prev;
-          const updated = [newOrder, ...prev];
-          try {
-            localStorage.setItem('smart_canteen_orders', JSON.stringify(updated));
-          } catch (_) {}
+          return [newOrder, ...prev];
+        });
+        setTimeout(() => {
           playNotificationSound('new_order');
           window.dispatchEvent(
             new CustomEvent('smartcanteen:orders_sync', {
-              detail: { orders: updated, type: 'NEW_ORDER', newOrder },
+              detail: { type: 'NEW_ORDER', newOrder },
             })
           );
           window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
-          return updated;
-        });
+        }, 0);
       } else if (type === 'STATUS_UPDATED') {
         const targetStatus = newStatus || updatedOrder?.status;
         if (!targetStatus) return;
@@ -536,9 +529,6 @@ export const DataProvider = ({ children }) => {
           let nextList = prev.map((o) => {
             if (doesOrderMatch(o, cloudEvent)) {
               found = true;
-              if (targetStatus === 'Ready for Pickup') {
-                playNotificationSound('ready');
-              }
               return {
                 ...o,
                 ...(updatedOrder || {}),
@@ -562,40 +552,37 @@ export const DataProvider = ({ children }) => {
             nextList = mergeOrders(nextList, incomingOrders);
           }
 
-          try {
-            localStorage.setItem('smart_canteen_orders', JSON.stringify(nextList));
-          } catch (_) {}
+          return nextList;
+        });
 
-          window.dispatchEvent(
-            new CustomEvent('smartcanteen:orders_sync', {
-              detail: { orders: nextList, type: 'STATUS_UPDATED', orderId, newStatus: targetStatus, updatedOrder },
-            })
-          );
-          window.dispatchEvent(
-            new CustomEvent('smartcanteen:order_status_updated', {
-              detail: { orders: nextList, orderId, newStatus: targetStatus, status: targetStatus, updatedOrder, tokenNumber: cloudEvent.tokenNumber },
-            })
-          );
-          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
-
+        // Safely trigger audio and UI notifications outside active render cycle
+        setTimeout(() => {
           if (targetStatus === 'Ready for Pickup' || updatedOrder?.status === 'Ready for Pickup') {
+            playNotificationSound('ready');
             window.dispatchEvent(
               new CustomEvent('smartcanteen:token_ready', {
                 detail: { tokenNumber: updatedOrder?.tokenNumber || cloudEvent.tokenNumber, orderId, order: updatedOrder },
               })
             );
           }
-          return nextList;
-        });
-      } else if (incomingOrders && Array.isArray(incomingOrders)) {
-        setOrders((prev) => {
-          const merged = mergeOrders(prev, incomingOrders);
-          try {
-            localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
-          } catch (_) {}
+
+          window.dispatchEvent(
+            new CustomEvent('smartcanteen:orders_sync', {
+              detail: { type: 'STATUS_UPDATED', orderId, newStatus: targetStatus, updatedOrder },
+            })
+          );
+          window.dispatchEvent(
+            new CustomEvent('smartcanteen:order_status_updated', {
+              detail: { orderId, newStatus: targetStatus, status: targetStatus, updatedOrder, tokenNumber: cloudEvent.tokenNumber },
+            })
+          );
           window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
-          return merged;
-        });
+        }, 0);
+      } else if (incomingOrders && Array.isArray(incomingOrders)) {
+        setOrders((prev) => mergeOrders(prev, incomingOrders));
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+        }, 0);
       }
     });
 
@@ -627,51 +614,12 @@ export const DataProvider = ({ children }) => {
               currentList = mergeOrders(currentList, ev.orders);
             }
           }
-          try {
-            localStorage.setItem('smart_canteen_orders', JSON.stringify(currentList));
-          } catch (_) {}
           return currentList;
         });
       }
     });
 
-    // E. Socket.IO Events
-    const handleSocketOrderNew = (e) => {
-      const incoming = normalizeOrder(e.detail);
-      if (!incoming) return;
-      setOrders((prev) => {
-        const exists = prev.some(
-          (o) =>
-            (o.id && o.id === incoming.id) ||
-            (o.tokenNumber && o.tokenNumber === incoming.tokenNumber)
-        );
-        if (exists) return prev;
-        const updated = [incoming, ...prev];
-        persistAndBroadcastOrders(updated, 'NEW_ORDER', { newOrder: incoming });
-        return updated;
-      });
-      playNotificationSound('new_order');
-    };
-
-    const handleSocketStatusUpdated = (e) => {
-      const updated = normalizeOrder(e.detail);
-      if (!updated) return;
-      setOrders((prev) => {
-        const nextList = prev.map((o) =>
-          (o.id && o.id === updated.id) ||
-          (o.tokenNumber && o.tokenNumber === updated.tokenNumber)
-            ? { ...o, ...updated }
-            : o
-        );
-        persistAndBroadcastOrders(nextList, 'STATUS_UPDATED', { updatedOrder: updated });
-        return nextList;
-      });
-    };
-
-    window.addEventListener('smartcanteen:order_new', handleSocketOrderNew);
-    window.addEventListener('smartcanteen:order_status_updated', handleSocketStatusUpdated);
-
-    // F. Periodic Server Fetch (Every 3 seconds to sync backend when online)
+    // E. Periodic Server Fetch (Every 3 seconds to sync backend when online)
     let isMounted = true;
     const syncWithServer = async () => {
       try {
@@ -681,9 +629,6 @@ export const DataProvider = ({ children }) => {
           setOrders((prev) => {
             const merged = mergeOrders(prev, serverOrders);
             if (JSON.stringify(prev) !== JSON.stringify(merged)) {
-              try {
-                localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
-              } catch (e) {}
               return merged;
             }
             return prev;
@@ -701,8 +646,6 @@ export const DataProvider = ({ children }) => {
       isMounted = false;
       clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('smartcanteen:order_new', handleSocketOrderNew);
-      window.removeEventListener('smartcanteen:order_status_updated', handleSocketStatusUpdated);
       if (unsubscribeCloud) unsubscribeCloud();
       if (ordersBroadcastRef.current) {
         ordersBroadcastRef.current.close();

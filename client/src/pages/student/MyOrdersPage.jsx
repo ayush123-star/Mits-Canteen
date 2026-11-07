@@ -107,46 +107,51 @@ export const MyOrdersPage = () => {
       if (!data) return;
       const targetToken = data.tokenNumber || data.updatedOrder?.tokenNumber;
       const newStatus = data.newStatus || data.status || data.updatedOrder?.status;
+      if (!newStatus) return;
 
-      if (newStatus === 'Accepted') {
-        playNotificationSound('accepted');
-        sendBrowserNotification(`Order #${targetToken} Accepted!`, {
-          body: 'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.',
-          icon: '/images/mits/mits-logo.png',
-        });
-      } else if (newStatus === 'Preparing') {
-        playNotificationSound('preparing');
-        sendBrowserNotification(`Order #${targetToken} Preparing!`, {
-          body: 'Your order is now being freshly prepared by our kitchen.',
-          icon: '/images/mits/mits-logo.png',
-        });
-      } else if (newStatus === 'Ready for Pickup') {
-        playNotificationSound('ready');
-        sendBrowserNotification(`Order #${targetToken} is READY!`, {
-          body: 'Great news! Your MITS Canteen order is READY FOR PICKUP at the counter.',
-          icon: '/images/mits/mits-logo.png',
-        });
-      } else if (newStatus === 'Completed' || newStatus === 'Collected') {
-        playNotificationSound('completed');
-        sendBrowserNotification(`Order #${targetToken} Collected!`, {
-          body: 'Your order has been collected. Thank you for dining with MITS Canteen!',
-          icon: '/images/mits/mits-logo.png',
-        });
-      }
+      try {
+        if (newStatus === 'Accepted') {
+          playNotificationSound('accepted');
+          sendBrowserNotification(
+            `Order #${targetToken} Accepted!`,
+            'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.'
+          );
+        } else if (newStatus === 'Preparing') {
+          playNotificationSound('preparing');
+          sendBrowserNotification(
+            `Order #${targetToken} Preparing!`,
+            'Your order is now being freshly prepared by our kitchen.'
+          );
+        } else if (newStatus === 'Ready for Pickup') {
+          playNotificationSound('ready');
+          sendBrowserNotification(
+            `Order #${targetToken} is READY!`,
+            'Great news! Your MITS Canteen order is READY FOR PICKUP at the counter.'
+          );
+        } else if (newStatus === 'Completed' || newStatus === 'Collected') {
+          playNotificationSound('completed');
+          sendBrowserNotification(
+            `Order #${targetToken} Collected!`,
+            'Your order has been collected. Thank you for dining with MITS Canteen!'
+          );
+        }
+      } catch (_) {}
+    };
+
+    const handleRefreshOnly = () => {
+      setRefreshTick((t) => t + 1);
     };
 
     window.addEventListener('smartcanteen:order_status_updated', handleStatusUpdate);
-    window.addEventListener('smartcanteen:orders_sync', handleStatusUpdate);
-    window.addEventListener('smartcanteen:token_ready', handleStatusUpdate);
-    window.addEventListener('smartcanteen:tokens_refresh', handleStatusUpdate);
-    window.addEventListener('storage', handleStatusUpdate);
+    window.addEventListener('smartcanteen:orders_sync', handleRefreshOnly);
+    window.addEventListener('smartcanteen:tokens_refresh', handleRefreshOnly);
+    window.addEventListener('storage', handleRefreshOnly);
 
     return () => {
       window.removeEventListener('smartcanteen:order_status_updated', handleStatusUpdate);
-      window.removeEventListener('smartcanteen:orders_sync', handleStatusUpdate);
-      window.removeEventListener('smartcanteen:token_ready', handleStatusUpdate);
-      window.removeEventListener('smartcanteen:tokens_refresh', handleStatusUpdate);
-      window.removeEventListener('storage', handleStatusUpdate);
+      window.removeEventListener('smartcanteen:orders_sync', handleRefreshOnly);
+      window.removeEventListener('smartcanteen:tokens_refresh', handleRefreshOnly);
+      window.removeEventListener('storage', handleRefreshOnly);
     };
   }, []);
 
@@ -157,25 +162,26 @@ export const MyOrdersPage = () => {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.filter((o) => o && typeof o === 'object');
         }
       }
     } catch (_) {}
-    return orders;
+    return Array.isArray(orders) ? orders.filter((o) => o && typeof o === 'object') : [];
   }, [orders, refreshTick]);
 
   // Filter orders for current student (fallback to all student orders if demo)
   const studentOrders = currentOrders.filter((o) => {
+    if (!o) return false;
     if (!user) return true;
     return o.studentId === user.id || o.studentRoll === user.studentId || true;
   });
 
   const activeOrders = studentOrders.filter((o) =>
-    ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
+    o && ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
   );
 
   const pastOrders = studentOrders.filter((o) =>
-    ['Completed', 'Cancelled', 'Rejected'].includes(o.status)
+    o && ['Completed', 'Collected', 'Cancelled', 'Rejected'].includes(o.status)
   );
 
   const displayedOrders =
@@ -463,7 +469,7 @@ export const MyOrdersPage = () => {
                     Ordered Dishes
                   </span>
                   <div className="divide-y divide-purple-500/10">
-                    {order.items.map((item, idx) => (
+                    {(order.items || []).map((item, idx) => (
                       <div
                         key={idx}
                         className="py-2 flex items-center justify-between text-xs"
