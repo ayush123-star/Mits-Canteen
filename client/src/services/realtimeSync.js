@@ -209,10 +209,13 @@ export const mergeOrders = (localOrders = [], incomingOrders = []) => {
 
   const statusPriority = {
     'Placed': 1,
+    'Pending Acceptance': 1,
     'Accepted': 2,
     'Preparing': 3,
     'Ready for Pickup': 4,
     'Completed': 5,
+    'Collected': 5,
+    'Rejected': 6,
     'Cancelled': 6,
   };
 

@@ -12,14 +12,30 @@ const steps = [
 export const OrderStatusStepper = ({ currentStatus }) => {
   if (currentStatus === 'Cancelled') {
     return (
-      <div className="p-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 flex items-center gap-2 text-xs font-bold">
+      <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center gap-2 text-xs font-bold">
         <AlertCircle className="w-4 h-4 shrink-0" />
-        Order has been cancelled. If amount was deducted, it will be refunded.
+        Order has been cancelled.
       </div>
     );
   }
 
-  const currentIndex = steps.findIndex((s) => s.id === currentStatus);
+  if (currentStatus === 'Rejected') {
+    return (
+      <div className="p-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 flex items-center gap-2 text-xs font-bold">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        Order could not be accepted by MITS Canteen.
+      </div>
+    );
+  }
+
+  const normalizedStatus =
+    currentStatus === 'Pending Acceptance'
+      ? 'Placed'
+      : currentStatus === 'Collected'
+      ? 'Completed'
+      : currentStatus;
+
+  const currentIndex = steps.findIndex((s) => s.id === normalizedStatus);
   const activeIdx = currentIndex === -1 ? 0 : currentIndex;
 
   return (

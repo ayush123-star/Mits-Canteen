@@ -20,7 +20,6 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'POST') {
       const order = req.body;
-      // Relay to real-time cloud stream
       try {
         await fetch(CLOUD_URL, {
           method: 'POST',
@@ -32,22 +31,30 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH' || req.method === 'PUT') {
-      const { orderId, status, updatedOrder } = req.body;
+      const { orderId, tokenNumber, status, newStatus, reason, updatedOrder } = req.body || {};
+      const finalStatus = status || newStatus;
       try {
         await fetch(CLOUD_URL, {
           method: 'POST',
           headers: { 'Title': 'STATUS_UPDATED' },
-          body: JSON.stringify({ type: 'STATUS_UPDATED', orderId, newStatus: status, updatedOrder }),
+          body: JSON.stringify({
+            type: 'STATUS_UPDATED',
+            orderId,
+            tokenNumber: tokenNumber || updatedOrder?.tokenNumber,
+            newStatus: finalStatus,
+            reason,
+            updatedOrder,
+          }),
         });
       } catch (_) {}
-      return res.status(200).json({ success: true, orderId, status });
+      return res.status(200).json({ success: true, orderId, status: finalStatus });
     }
 
-    // Default GET: fetch recent events from cloud
+    // Default GET: fetch recent events from cloud and aggregate
     const cloudRes = await fetch(`${CLOUD_URL}/json?poll=1&since=12h`);
     const text = await cloudRes.text();
     const lines = text.trim().split('\n');
-    const cloudOrders = [];
+    const ordersMap = new Map();
 
     for (const line of lines) {
       if (!line) continue;
@@ -56,13 +63,34 @@ export default async function handler(req, res) {
         if (item.message) {
           const parsed = JSON.parse(item.message);
           if (parsed.type === 'NEW_ORDER' && parsed.newOrder) {
-            cloudOrders.push(parsed.newOrder);
+            const key = parsed.newOrder.tokenNumber || parsed.newOrder.id || parsed.newOrder._id;
+            ordersMap.set(key, parsed.newOrder);
+          } else if (parsed.type === 'STATUS_UPDATED') {
+            const token = parsed.tokenNumber || parsed.updatedOrder?.tokenNumber;
+            const id = parsed.orderId || parsed.updatedOrder?.id || parsed.updatedOrder?._id;
+            const nextStatus = parsed.newStatus || parsed.updatedOrder?.status;
+
+            for (const [k, v] of ordersMap.entries()) {
+              if (
+                k === token ||
+                k === id ||
+                (token && v.tokenNumber === token) ||
+                (id && (v.id === id || v._id === id))
+              ) {
+                ordersMap.set(k, {
+                  ...v,
+                  status: nextStatus,
+                  rejectionReason: parsed.reason || v.rejectionReason,
+                  cancellationReason: parsed.reason || v.cancellationReason,
+                });
+              }
+            }
           }
         }
       } catch (_) {}
     }
 
-    return res.status(200).json({ success: true, orders: cloudOrders });
+    return res.status(200).json({ success: true, orders: Array.from(ordersMap.values()) });
   } catch (err) {
     return res.status(200).json({ success: true, orders: [] });
   }

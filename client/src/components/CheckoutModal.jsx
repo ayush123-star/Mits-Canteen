@@ -61,6 +61,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       const createdOrder = placeOrder({
         studentId: user?.id || user?._id || 'user-stu-1',
         studentName: user?.name || 'Ayush Pandey',
+        studentEmail: user?.email || 'ayushpandey1603@gmail.com',
         studentRoll: user?.studentId || user?.enrollmentNumber || user?.rollNumber || 'BTET25O1039',
         studentEnrollment: user?.studentId || user?.enrollmentNumber || user?.rollNumber || 'BTET25O1039',
         studentDepartment: user?.department || 'Electronics and Telecommunication',

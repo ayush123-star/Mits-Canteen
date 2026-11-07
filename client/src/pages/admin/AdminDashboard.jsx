@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useSocket } from '../../context/SocketContext';
 import { playNotificationSound } from '../../utils/audio';
+import { sendBrowserNotification } from '../../utils/browserNotifications';
 import {
   Clock,
   CheckCircle2,
@@ -32,14 +33,14 @@ import {
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
-  const { orders, updateOrderStatus, cancelOrder, feedbackList } = useData();
+  const { orders, updateOrderStatus, rejectOrder, cancelOrder, feedbackList } = useData();
   const { socket, isConnected } = useSocket();
 
   const [searchToken, setSearchToken] = useState('');
   const [selectedCounter, setSelectedCounter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [statusFilter, setStatusFilter] = useState('NEW');
   const [rejectModalOrder, setRejectModalOrder] = useState(null);
-  const [rejectReason, setRejectReason] = useState('Ingredients temporarily unavailable');
+  const [rejectReason, setRejectReason] = useState('Item Out of Stock');
   const [acceptModalOrder, setAcceptModalOrder] = useState(null);
   const [customPrepMinutes, setCustomPrepMinutes] = useState(15);
   const [verifiedTokenModal, setVerifiedTokenModal] = useState(null);
@@ -50,10 +51,14 @@ export const AdminDashboard = () => {
   useEffect(() => {
     if (orders.length > prevCountRef.current) {
       const latest = orders[0];
-      if (latest && latest.status === 'Placed') {
+      if (latest && (latest.status === 'Placed' || latest.status === 'Pending Acceptance')) {
         setNewOrderAlert(latest);
         playNotificationSound('new_order');
-        setTimeout(() => setNewOrderAlert(null), 10000);
+        sendBrowserNotification(`New Incoming Order #${latest.tokenNumber}`, {
+          body: `${latest.studentName || 'Student'} placed an order (₹${latest.finalAmount || latest.totalAmount || 0})`,
+          icon: '/images/mits/mits-logo.png',
+        });
+        setTimeout(() => setNewOrderAlert(null), 12000);
       }
     }
     prevCountRef.current = orders.length;
@@ -66,7 +71,11 @@ export const AdminDashboard = () => {
       if (!ord) return;
       setNewOrderAlert(ord);
       playNotificationSound('new_order');
-      setTimeout(() => setNewOrderAlert(null), 10000);
+      sendBrowserNotification(`New Incoming Order #${ord.tokenNumber}`, {
+        body: `${ord.studentName || 'Student'} placed an order (₹${ord.finalAmount || ord.totalAmount || 0})`,
+        icon: '/images/mits/mits-logo.png',
+      });
+      setTimeout(() => setNewOrderAlert(null), 12000);
     };
 
     // Socket.IO backend event subscription
@@ -112,10 +121,12 @@ export const AdminDashboard = () => {
     // Search
     if (searchToken.trim()) {
       const q = searchToken.toLowerCase().trim();
-      const matchToken = ord.tokenNumber.toLowerCase().includes(q);
+      const matchToken = ord.tokenNumber?.toLowerCase().includes(q);
+      const matchId = ord.id?.toLowerCase().includes(q) || ord.orderNumber?.toLowerCase().includes(q) || ord.orderId?.toLowerCase().includes(q);
       const matchName = ord.studentName?.toLowerCase().includes(q);
       const matchPhone = ord.studentPhone?.includes(q);
-      if (!matchToken && !matchName && !matchPhone) return false;
+      const matchEmail = ord.studentEmail?.toLowerCase().includes(q);
+      if (!matchToken && !matchId && !matchName && !matchPhone && !matchEmail) return false;
     }
 
     // Counter
@@ -123,52 +134,64 @@ export const AdminDashboard = () => {
       if (String(ord.assignedCounter) !== String(selectedCounter)) return false;
     }
 
-    // Status
-    if (statusFilter === 'ACTIVE') {
-      return ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(ord.status);
-    } else if (statusFilter !== 'ALL') {
-      return ord.status === statusFilter;
+    // Status tabs
+    if (statusFilter === 'NEW') {
+      return ['Placed', 'Pending Acceptance'].includes(ord.status);
+    } else if (statusFilter === 'ACCEPTED') {
+      return ord.status === 'Accepted';
+    } else if (statusFilter === 'PREPARING') {
+      return ord.status === 'Preparing';
+    } else if (statusFilter === 'READY') {
+      return ord.status === 'Ready for Pickup';
+    } else if (statusFilter === 'COMPLETED') {
+      return ['Completed', 'Collected'].includes(ord.status);
+    } else if (statusFilter === 'REJECTED') {
+      return ['Rejected', 'Cancelled'].includes(ord.status);
     }
 
-    return true;
+    return true; // 'ALL'
   });
 
-  // Calculate quick metrics
+  // Calculate quick metrics for all 6 dedicated tabs & stats
   const totalOrdersToday = orders.length;
+  const newOrdersCount = orders.filter((o) => ['Placed', 'Pending Acceptance'].includes(o.status)).length;
+  const acceptedOrdersCount = orders.filter((o) => o.status === 'Accepted').length;
   const preparingCount = orders.filter((o) => o.status === 'Preparing').length;
   const readyCount = orders.filter((o) => o.status === 'Ready for Pickup').length;
-  const placedCount = orders.filter((o) => o.status === 'Placed').length;
+  const completedCount = orders.filter((o) => ['Completed', 'Collected'].includes(o.status)).length;
+  const rejectedCount = orders.filter((o) => ['Rejected', 'Cancelled'].includes(o.status)).length;
   const totalRevenueToday = orders
-    .filter((o) => o.status !== 'Cancelled')
-    .reduce((sum, o) => sum + (o.finalAmount || 0), 0);
+    .filter((o) => !['Cancelled', 'Rejected'].includes(o.status))
+    .reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0);
 
   // Direct 1-Click Accept with Automated WhatsApp Notification
   const handleDirectAccept = (order) => {
     const actor = user?.name || 'Canteen Owner';
     const estMins = order.estimatedPrepMinutes || 12;
-    updateOrderStatus(order.id, 'Accepted', actor, {
+    updateOrderStatus(order.id || order._id, 'Accepted', actor, {
       estimatedMinutes: estMins,
-      note: `Order accepted. Automatic WhatsApp alert sent (~${estMins}m)`,
+      note: `Order accepted. Kitchen is preparing your food (~${estMins}m)`,
     });
   };
 
   const handleAdvanceStatus = (order) => {
-    const actor = user?.name || 'Kitchen Manager';
-    if (order.status === 'Placed') {
+    const actor = user?.name || 'Canteen Owner';
+    const orderId = order.id || order._id;
+    if (order.status === 'Placed' || order.status === 'Pending Acceptance') {
       handleDirectAccept(order);
     } else if (order.status === 'Accepted') {
-      updateOrderStatus(order.id, 'Preparing', actor);
+      updateOrderStatus(orderId, 'Preparing', actor);
     } else if (order.status === 'Preparing') {
-      updateOrderStatus(order.id, 'Ready for Pickup', actor);
+      updateOrderStatus(orderId, 'Ready for Pickup', actor);
     } else if (order.status === 'Ready for Pickup') {
-      updateOrderStatus(order.id, 'Completed', actor);
+      updateOrderStatus(orderId, 'Completed', actor);
     }
   };
 
   const handleConfirmAccept = () => {
     if (!acceptModalOrder) return;
     const actor = user?.name || 'Canteen Owner';
-    updateOrderStatus(acceptModalOrder.id, 'Accepted', actor, {
+    updateOrderStatus(acceptModalOrder.id || acceptModalOrder._id, 'Accepted', actor, {
       estimatedMinutes: customPrepMinutes,
       note: `Order accepted with custom prep time: ${customPrepMinutes} mins. WhatsApp alert dispatched!`,
     });
@@ -177,7 +200,7 @@ export const AdminDashboard = () => {
 
   const handleConfirmReject = () => {
     if (!rejectModalOrder) return;
-    cancelOrder(rejectModalOrder.id, `Rejected by canteen: ${rejectReason}`);
+    rejectOrder(rejectModalOrder.id || rejectModalOrder._id, rejectReason);
     setRejectModalOrder(null);
   };
 
@@ -299,99 +322,148 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* 2. Stat Metric Cards (Phone-Responsive Grid) */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
-        <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
-          <p className="text-[10px] sm:text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">New Incoming</p>
+      {/* 2. Stat Metric Cards (6 Dedicated Cards matching exact specifications) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
+        {/* Card 1: Today's Total Orders */}
+        <div className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
+          <p className="text-[10px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">Today's Total Orders</p>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-xl sm:text-3xl font-black text-purple-300">{placedCount}</span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
-              🔔
-            </span>
-          </div>
-        </div>
-
-        <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
-          <p className="text-[10px] sm:text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">In Preparation</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xl sm:text-3xl font-black text-blue-400">{preparingCount}</span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-xs border border-blue-500/30">
-              👨‍🍳
-            </span>
-          </div>
-        </div>
-
-        <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
-          <p className="text-[10px] sm:text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">Ready at Counters</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xl sm:text-3xl font-black text-emerald-400">{readyCount}</span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
-              📦
-            </span>
-          </div>
-        </div>
-
-        <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
-          <p className="text-[10px] sm:text-[11px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">Total Orders Today</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xl sm:text-3xl font-black text-white">{totalOrdersToday}</span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-[#151C30] text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
+            <span className="text-xl sm:text-2xl font-black text-white">{totalOrdersToday}</span>
+            <span className="w-7 h-7 rounded-lg bg-[#151C30] text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
               📊
             </span>
           </div>
         </div>
 
-        <div className="col-span-2 lg:col-span-1 p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-xl shadow-purple-500/30">
-          <p className="text-[10px] sm:text-[11px] font-bold text-purple-200 uppercase tracking-wider truncate">Today's Revenue</p>
+        {/* Card 2: Pending Orders */}
+        <div
+          className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-purple-500/50 transition-all"
+          onClick={() => setStatusFilter('NEW')}
+        >
+          <p className="text-[10px] font-bold text-purple-200 uppercase tracking-wider truncate">Pending Orders</p>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-xl sm:text-3xl font-black privacy-sensitive" title="Hover to view (Protected by Privacy Shield)">₹{totalRevenueToday}</span>
-            <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-purple-200" />
+            <span className="text-xl sm:text-2xl font-black text-purple-300">{newOrdersCount}</span>
+            <span className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
+              🔔
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Preparing Orders */}
+        <div
+          className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-blue-500/50 transition-all"
+          onClick={() => setStatusFilter('PREPARING')}
+        >
+          <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider truncate">Preparing Orders</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xl sm:text-2xl font-black text-blue-400">{preparingCount + acceptedOrdersCount}</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-xs border border-blue-500/30">
+              👨‍🍳
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Ready for Pickup */}
+        <div
+          className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all"
+          onClick={() => setStatusFilter('READY')}
+        >
+          <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider truncate">Ready for Pickup</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xl sm:text-2xl font-black text-emerald-400">{readyCount}</span>
+            <span className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
+              📦
+            </span>
+          </div>
+        </div>
+
+        {/* Card 5: Completed Orders */}
+        <div
+          className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-teal-500/50 transition-all"
+          onClick={() => setStatusFilter('COMPLETED')}
+        >
+          <p className="text-[10px] font-bold text-teal-200 uppercase tracking-wider truncate">Completed Orders</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xl sm:text-2xl font-black text-teal-300">{completedCount}</span>
+            <span className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-xs border border-teal-500/30">
+              ✅
+            </span>
+          </div>
+        </div>
+
+        {/* Card 6: Today's Revenue */}
+        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-xl shadow-purple-500/30">
+          <p className="text-[10px] font-bold text-purple-200 uppercase tracking-wider truncate">Today's Revenue</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xl sm:text-2xl font-black privacy-sensitive" title="Hover to view (Protected by Privacy Shield)">₹{totalRevenueToday}</span>
+            <DollarSign className="w-5 h-5 text-purple-200" />
           </div>
         </div>
       </div>
 
-      {/* 3. Filters Bar (Horizontally scrollable with smooth finger swipe) */}
+      {/* 3. Filters Bar (6 Dedicated Sections + All History) */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#1C263A]/90 backdrop-blur-xl p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-purple-500/20 shadow-xl">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0 scroll-smooth -mx-1 px-1">
           <button
-            onClick={() => setStatusFilter('ACTIVE')}
-            className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
-              statusFilter === 'ACTIVE'
+            onClick={() => setStatusFilter('NEW')}
+            className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+              statusFilter === 'NEW'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Active ({activeOrders.length})
+            {newOrdersCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>}
+            New Orders ({newOrdersCount})
           </button>
           <button
-            onClick={() => setStatusFilter('Placed')}
+            onClick={() => setStatusFilter('ACCEPTED')}
             className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-              statusFilter === 'Placed'
+              statusFilter === 'ACCEPTED'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            New ({placedCount})
+            Accepted Orders ({acceptedOrdersCount})
           </button>
           <button
-            onClick={() => setStatusFilter('Preparing')}
+            onClick={() => setStatusFilter('PREPARING')}
             className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-              statusFilter === 'Preparing'
+              statusFilter === 'PREPARING'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Preparing ({preparingCount})
+            Preparing Orders ({preparingCount})
           </button>
           <button
-            onClick={() => setStatusFilter('Ready for Pickup')}
+            onClick={() => setStatusFilter('READY')}
             className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-              statusFilter === 'Ready for Pickup'
+              statusFilter === 'READY'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Ready ({readyCount})
+            Ready for Pickup ({readyCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('COMPLETED')}
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'COMPLETED'
+                ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            Completed Orders ({completedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('REJECTED')}
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+              statusFilter === 'REJECTED'
+                ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-md shadow-red-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            Rejected Orders ({rejectedCount})
           </button>
           <button
             onClick={() => setStatusFilter('ALL')}
@@ -401,7 +473,7 @@ export const AdminDashboard = () => {
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            All History
+            All History ({totalOrdersToday})
           </button>
         </div>
 
@@ -426,11 +498,12 @@ export const AdminDashboard = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5">
           {filteredOrders.map((order) => {
-            const isPlaced = order.status === 'Placed';
+            const isPlaced = order.status === 'Placed' || order.status === 'Pending Acceptance';
             const isAccepted = order.status === 'Accepted';
             const isPreparing = order.status === 'Preparing';
             const isReady = order.status === 'Ready for Pickup';
-            const isCompleted = order.status === 'Completed';
+            const isCompleted = order.status === 'Completed' || order.status === 'Collected';
+            const isRejected = order.status === 'Rejected';
             const isCancelled = order.status === 'Cancelled';
 
             return (
@@ -442,7 +515,9 @@ export const AdminDashboard = () => {
                     : isPreparing
                     ? 'border-blue-500'
                     : isPlaced
-                    ? 'border-purple-500 animate-pulse'
+                    ? 'border-purple-500 ring-2 ring-purple-500/30'
+                    : isRejected
+                    ? 'border-red-500/30'
                     : 'border-purple-500/20'
                 }`}
               >
@@ -455,8 +530,12 @@ export const AdminDashboard = () => {
                         <span className="text-[11px] sm:text-xs font-black text-white">{order.tokenNumber}</span>
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-xs sm:text-sm font-black text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">{order.studentName}</h4>
-                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs sm:text-sm font-black text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">{order.studentName}</h4>
+                          <span className="text-[9px] font-mono text-[#AAB3C5]">#{order.orderNumber || order.orderId || order.id}</span>
+                        </div>
+                        <p className="text-[10px] text-[#AAB3C5] truncate mt-0.5">{order.studentEmail || 'student@mitsgwl.ac.in'}</p>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-1">
                           <span className="text-[9px] sm:text-[10px] text-purple-200 font-mono font-bold bg-[#151C30] px-1.5 py-0.5 rounded border border-purple-500/30">
                             {order.studentEnrollment || order.studentRoll || 'BTET25O1039'}
                           </span>
@@ -465,6 +544,11 @@ export const AdminDashboard = () => {
                               ? order.studentDepartment
                               : 'Electronics & Telecom'}
                           </span>
+                          {order.studentPhone && (
+                            <span className="text-[9px] font-mono text-slate-300 bg-[#151C30] px-1.5 py-0.5 rounded border border-purple-500/20">
+                              {order.studentPhone}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -479,17 +563,19 @@ export const AdminDashboard = () => {
                             : isAccepted
                             ? 'bg-[#7955E8] text-white'
                             : isPlaced
-                            ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white'
-                            : isCancelled
+                            ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white animate-pulse'
+                            : isRejected
                             ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                            : 'bg-slate-700 text-slate-200'
+                            : isCancelled
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : 'bg-teal-600 text-white'
                         }`}
                       >
                         {order.status}
                       </span>
                       <p className="text-[9px] sm:text-[10px] text-[#AAB3C5] mt-1 flex items-center gap-1 justify-end">
                         <Clock className="w-3 h-3 text-purple-400" />
-                        {order.scheduledPickupTime || 'Immediate'}
+                        {order.createdAt || order.scheduledPickupTime || 'Immediate'}
                       </p>
                     </div>
                   </div>
@@ -503,13 +589,16 @@ export const AdminDashboard = () => {
                             {item.quantity}x
                           </span>
                           <span className="font-extrabold text-white truncate">{item.name}</span>
+                          {item.specialInstructions && (
+                            <span className="text-[10px] text-amber-300 italic truncate max-w-[120px]">({item.specialInstructions})</span>
+                          )}
                         </div>
                         <span className="font-bold text-[#AAB3C5] shrink-0 ml-2">₹{(item.price || 50) * item.quantity}</span>
                       </div>
                     ))}
                     {order.orderNotes && (
                       <p className="text-[10px] sm:text-[11px] text-purple-200 bg-[#151C30] p-1.5 rounded-lg italic border border-purple-500/20">
-                        Note: {order.orderNotes}
+                        Special Instructions: {order.orderNotes}
                       </p>
                     )}
                   </div>
@@ -524,7 +613,7 @@ export const AdminDashboard = () => {
                         order.paymentStatus === 'PAID' ? 'text-emerald-400' : 'text-amber-400'
                       }`}
                     >
-                      {order.paymentMethod === 'UPI' ? 'UPI (PAID)' : 'CASH (Collect ₹' + order.finalAmount + ')'}
+                      {order.paymentMethod === 'UPI' ? 'UPI (PAID)' : 'CASH (Collect ₹' + (order.finalAmount || order.totalAmount) + ')'}
                     </span>
                   </div>
                 </div>
@@ -535,11 +624,11 @@ export const AdminDashboard = () => {
                     <>
                       <button
                         onClick={() => handleDirectAccept(order)}
-                        className="flex-1 min-w-[130px] py-2 sm:py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
-                        title="1-Click: Accept order and automatically send WhatsApp preparation time notification"
+                        className="flex-1 min-w-[130px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                        title="Accept order and notify student"
                       >
                         <Check className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">Accept & WhatsApp</span>
+                        <span className="truncate">ACCEPT ORDER</span>
                       </button>
                       <button
                         type="button"
@@ -548,7 +637,7 @@ export const AdminDashboard = () => {
                           setCustomPrepMinutes(order.estimatedPrepMinutes || 15);
                         }}
                         className="p-2 sm:p-2.5 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-purple-300 font-bold text-xs transition-colors cursor-pointer border border-purple-500/30 active:scale-95"
-                        title="Set custom preparation minutes if needed"
+                        title="Custom Prep Time"
                         aria-label="Custom Prep Time"
                       >
                         <Clock className="w-3.5 h-3.5" />
@@ -556,9 +645,9 @@ export const AdminDashboard = () => {
                       <button
                         type="button"
                         onClick={() => setRejectModalOrder(order)}
-                        className="py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-xs transition-colors cursor-pointer border border-red-500/30 active:scale-95"
+                        className="py-2.5 px-3 rounded-xl bg-red-600/25 hover:bg-red-600/40 text-red-200 font-black text-xs transition-colors cursor-pointer border border-red-500/40 active:scale-95"
                       >
-                        Reject
+                        REJECT ORDER
                       </button>
                     </>
                   )}
@@ -569,7 +658,7 @@ export const AdminDashboard = () => {
                       className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all active:scale-95 cursor-pointer"
                     >
                       <ChefHat className="w-4 h-4 shrink-0" />
-                      <span>Start Preparing (Deduct Stock)</span>
+                      <span>START PREPARING</span>
                     </button>
                   )}
 
@@ -578,8 +667,8 @@ export const AdminDashboard = () => {
                       onClick={() => handleAdvanceStatus(order)}
                       className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer"
                     >
-                      <Smartphone className="w-4 h-4 shrink-0" />
-                      <span>Mark Ready (WhatsApp Alert)</span>
+                      <Bell className="w-4 h-4 shrink-0" />
+                      <span>MARK AS READY</span>
                     </button>
                   )}
 
@@ -589,19 +678,26 @@ export const AdminDashboard = () => {
                       className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all active:scale-95 cursor-pointer"
                     >
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Hand Over & Complete</span>
+                      <span>MARK AS COLLECTED</span>
                     </button>
                   )}
 
                   {isCompleted && (
-                    <div className="w-full py-2 text-center text-xs font-bold text-[#AAB3C5] bg-[#151C30] rounded-xl border border-purple-500/20">
-                      Order Picked Up & Completed
+                    <div className="w-full py-2 text-center text-xs font-black text-emerald-400 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Order Collected & Completed
+                    </div>
+                  )}
+
+                  {isRejected && (
+                    <div className="w-full py-2 text-center text-xs font-bold text-red-300 bg-red-500/15 rounded-xl border border-red-500/30">
+                      Rejected by Canteen: {order.rejectionReason || 'Item Out of Stock'}
                     </div>
                   )}
 
                   {isCancelled && (
-                    <div className="w-full py-2 text-center text-xs font-bold text-red-400 bg-red-500/15 rounded-xl border border-red-500/30">
-                      Cancelled / Rejected
+                    <div className="w-full py-2 text-center text-xs font-bold text-amber-300 bg-amber-500/15 rounded-xl border border-amber-500/30">
+                      Cancelled by Student: {order.cancellationReason || 'Student request'}
                     </div>
                   )}
                 </div>
@@ -754,8 +850,10 @@ export const AdminDashboard = () => {
               onChange={(e) => setRejectReason(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl sm:rounded-2xl bg-[#151C30] border border-purple-500/30 text-xs font-bold text-white focus:outline-none focus:border-red-500 cursor-pointer"
             >
+              <option value="Item Out of Stock">Item Out of Stock</option>
+              <option value="Kitchen Busy / Rush Hour Wait Time">Kitchen Busy / Rush Hour Wait Time</option>
+              <option value="Canteen Closing Soon">Canteen Closing Soon</option>
               <option value="Ingredients temporarily unavailable">Ingredients temporarily unavailable</option>
-              <option value="Counter closed for rush break">Counter closed for rush break</option>
               <option value="Duplicate or test order">Duplicate or test order</option>
               <option value="Kitchen deep cleaning in progress">Kitchen deep cleaning in progress</option>
             </select>

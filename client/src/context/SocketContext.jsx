@@ -80,6 +80,25 @@ export const SocketProvider = ({ children }) => {
     socketInstance.on('order:updated', handleStatusUpdated);
     socketInstance.on('order:status_updated', handleStatusUpdated);
 
+    // 2b. Specific Lifecycle Transitions
+    socketInstance.on('order:accepted', (data) => {
+      console.log('[Socket.IO] order:accepted event received:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_accepted', { detail: data }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_status_updated', { detail: data }));
+    });
+
+    socketInstance.on('order:preparing', (data) => {
+      console.log('[Socket.IO] order:preparing event received:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_preparing', { detail: data }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_status_updated', { detail: data }));
+    });
+
+    socketInstance.on('order:rejected', (data) => {
+      console.log('[Socket.IO] order:rejected event received:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_rejected', { detail: data }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:order_status_updated', { detail: data }));
+    });
+
     // 3. Ready for Pickup
     const handleReady = (data) => {
       console.log('[Socket.IO] order:ready / token:ready event received:', data);

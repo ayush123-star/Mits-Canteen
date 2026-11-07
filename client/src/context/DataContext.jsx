@@ -320,7 +320,6 @@ export const DataProvider = ({ children }) => {
     // C. Cross-Device Cloud Realtime Broadcast (sub-100ms delivery to Phones, Laptops, TV Displays)
     publishOrderEvent({
       type: eventType,
-      orders: nextOrders,
       ...meta,
     });
   };
@@ -573,11 +572,13 @@ export const DataProvider = ({ children }) => {
 
     const newOrder = {
       id: 'ord-' + Date.now(),
+      orderId: orderNumber,
       tokenNumber,
       orderNumber,
       sequence,
       studentId: orderData.studentId || 'user-stu-1',
       studentName: orderData.studentName || 'Student Diner',
+      studentEmail: orderData.studentEmail || 'ayushpandey1603@gmail.com',
       studentRoll: orderData.studentRoll || orderData.studentEnrollment || '0901CS221045',
       studentEnrollment: orderData.studentEnrollment || orderData.studentRoll || '0901CS221045',
       studentDepartment: orderData.studentDepartment || 'Computer Science & Engineering',
@@ -625,8 +626,11 @@ export const DataProvider = ({ children }) => {
     // Asynchronously dispatch to real backend if online
     axios
       .post('/api/orders', {
+        orderId: orderNumber,
+        tokenNumber,
         studentId: orderData.studentId,
         studentName: orderData.studentName,
+        studentEmail: orderData.studentEmail || 'ayushpandey1603@gmail.com',
         studentPhone: orderData.studentPhone,
         studentRoll: orderData.studentRoll || orderData.studentEnrollment,
         studentDepartment: orderData.studentDepartment,
@@ -800,14 +804,22 @@ export const DataProvider = ({ children }) => {
         return updated;
       });
 
-    persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', { orderId, newStatus, updatedOrder: targetUpdatedOrder });
+    persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
+      orderId,
+      tokenNumber: targetUpdatedOrder?.tokenNumber,
+      newStatus,
+      updatedOrder: targetUpdatedOrder,
+    });
 
     // Sync status & notify backend
     axios
       .patch(`/api/orders/${orderId}/status`, {
+        orderId,
+        tokenNumber: targetUpdatedOrder?.tokenNumber,
         status: newStatus,
         note: extraOptions.note,
         estimatedPrepMinutes: extraOptions.estimatedMinutes,
+        updatedOrder: targetUpdatedOrder,
       })
       .catch(() => {});
   };
@@ -870,15 +882,64 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const cancelOrder = (orderId, reason = 'Student requested cancellation') => {
+  const rejectOrder = (orderId, reason = 'Ingredients or kitchen capacity temporarily unavailable') => {
+    let targetUpdatedOrder = null;
     const nextOrders = orders.map((ord) => {
-      if (ord.id === orderId) {
-        logActivity(ord.studentName, 'ORDER_CANCELLED', 'ORDERS', `Cancelled order #${ord.tokenNumber}: ${reason}`);
-        return { ...ord, status: 'Cancelled', cancellationReason: reason };
+      if (ord.id === orderId || ord._id === orderId || ord.tokenNumber === orderId) {
+        logActivity('Canteen Owner', 'ORDER_REJECTED', 'ORDERS', `Rejected order #${ord.tokenNumber}: ${reason}`);
+        targetUpdatedOrder = { ...ord, status: 'Rejected', rejectionReason: reason };
+        return targetUpdatedOrder;
       }
       return ord;
     });
-    persistAndBroadcastOrders(nextOrders, 'CANCELLED', { orderId, reason });
+
+    persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
+      orderId,
+      tokenNumber: targetUpdatedOrder?.tokenNumber,
+      newStatus: 'Rejected',
+      updatedOrder: targetUpdatedOrder,
+      reason,
+    });
+
+    axios
+      .patch(`/api/orders/${orderId}/status`, {
+        orderId,
+        tokenNumber: targetUpdatedOrder?.tokenNumber,
+        status: 'Rejected',
+        reason,
+        updatedOrder: targetUpdatedOrder,
+      })
+      .catch(() => {});
+  };
+
+  const cancelOrder = (orderId, reason = 'Student requested cancellation') => {
+    let targetUpdatedOrder = null;
+    const nextOrders = orders.map((ord) => {
+      if (ord.id === orderId || ord._id === orderId || ord.tokenNumber === orderId) {
+        logActivity(ord.studentName, 'ORDER_CANCELLED', 'ORDERS', `Cancelled order #${ord.tokenNumber}: ${reason}`);
+        targetUpdatedOrder = { ...ord, status: 'Cancelled', cancellationReason: reason };
+        return targetUpdatedOrder;
+      }
+      return ord;
+    });
+
+    persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
+      orderId,
+      tokenNumber: targetUpdatedOrder?.tokenNumber,
+      newStatus: 'Cancelled',
+      updatedOrder: targetUpdatedOrder,
+      reason,
+    });
+
+    axios
+      .patch(`/api/orders/${orderId}/status`, {
+        orderId,
+        tokenNumber: targetUpdatedOrder?.tokenNumber,
+        status: 'Cancelled',
+        reason,
+        updatedOrder: targetUpdatedOrder,
+      })
+      .catch(() => {});
   };
 
   const markCashPaymentCollected = (orderId, adminName) => {
@@ -1215,6 +1276,7 @@ export const DataProvider = ({ children }) => {
         setSimulatedWhatsAppAlert,
         placeOrder,
         updateOrderStatus,
+        rejectOrder,
         cancelOrder,
         markCashPaymentCollected,
         addFoodItem,

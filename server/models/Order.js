@@ -32,6 +32,10 @@ const orderItemSchema = new mongoose.Schema({
 });
 
 const orderSchema = new mongoose.Schema({
+  orderId: {
+    type: String,
+    index: true,
+  },
   tokenNumber: {
     type: String,
     required: true,
@@ -74,6 +78,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  studentEmail: {
+    type: String,
+    default: '',
+  },
   studentRoll: {
     type: String,
     default: '',
@@ -101,9 +109,27 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup', 'Completed', 'Cancelled'],
+    enum: [
+      'Placed',
+      'Pending Acceptance',
+      'Accepted',
+      'Preparing',
+      'Ready for Pickup',
+      'Completed',
+      'Collected',
+      'Rejected',
+      'Cancelled',
+    ],
     default: 'Placed',
     index: true,
+  },
+  rejectionReason: {
+    type: String,
+    default: '',
+  },
+  cancellationReason: {
+    type: String,
+    default: '',
   },
   pickupOption: {
     type: String,

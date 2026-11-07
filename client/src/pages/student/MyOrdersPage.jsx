@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useCart } from '../../context/CartContext';
 import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import { TokenPickupPass } from '../../components/TokenPickupPass';
+import { playNotificationSound } from '../../utils/audio';
+import { sendBrowserNotification } from '../../utils/browserNotifications';
 import {
   ClipboardList,
   Clock,
@@ -19,8 +21,74 @@ import {
   ArrowRight,
   Sparkles,
   Phone,
-  MessageSquare
+  MessageSquare,
+  ChefHat,
+  Bell,
+  Check
 } from 'lucide-react';
+
+const getCustomerStatusInfo = (status, rejectionReason, cancellationReason) => {
+  switch (status) {
+    case 'Placed':
+    case 'Pending Acceptance':
+      return {
+        badge: 'Waiting for Confirmation',
+        color: 'from-amber-500/20 via-orange-500/10 to-amber-500/20 text-amber-200 border-amber-500/30',
+        icon: '⏳',
+        message: 'Your order has been successfully placed. Waiting for canteen confirmation.',
+      };
+    case 'Accepted':
+      return {
+        badge: 'Order Accepted',
+        color: 'from-purple-500/20 via-indigo-500/15 to-purple-500/20 text-purple-200 border-purple-500/30',
+        icon: '👨‍🍳',
+        message: 'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.',
+      };
+    case 'Preparing':
+      return {
+        badge: 'Freshly Preparing',
+        color: 'from-blue-500/20 via-indigo-500/15 to-cyan-500/20 text-blue-200 border-blue-500/30',
+        icon: '🔥',
+        message: 'Your order is now being freshly prepared by our kitchen.',
+      };
+    case 'Ready for Pickup':
+      return {
+        badge: 'Ready for Pickup',
+        color: 'from-emerald-500/25 via-teal-500/20 to-emerald-500/25 text-emerald-300 border-emerald-500/40 animate-pulse',
+        icon: '🔔',
+        message: 'Great news! Your MITS Canteen order is READY FOR PICKUP. Please visit your assigned counter with your token.',
+      };
+    case 'Completed':
+    case 'Collected':
+      return {
+        badge: 'Order Collected',
+        color: 'from-teal-500/20 via-emerald-500/15 to-teal-500/20 text-teal-200 border-teal-500/30',
+        icon: '✅',
+        message: 'Your order has been collected. Thank you for dining with MITS Canteen!',
+      };
+    case 'Rejected':
+      return {
+        badge: 'Order Rejected',
+        color: 'from-red-500/20 via-rose-500/15 to-red-500/20 text-red-300 border-red-500/30',
+        icon: '❌',
+        message: `Sorry! Your order could not be accepted by MITS Main Canteen.${rejectionReason ? ` (Reason: ${rejectionReason})` : ''}`,
+      };
+    case 'Cancelled':
+      return {
+        badge: 'Order Cancelled',
+        color: 'from-slate-500/20 to-gray-500/20 text-slate-300 border-slate-500/30',
+        icon: '🚫',
+        message: `Your order has been cancelled.${cancellationReason ? ` (Reason: ${cancellationReason})` : ''}`,
+      };
+    default:
+      return {
+        badge: status,
+        color: 'from-purple-500/20 to-indigo-500/20 text-purple-200 border-purple-500/30',
+        icon: '📦',
+        message: `Order status: ${status}`,
+      };
+  }
+};
 
 export const MyOrdersPage = () => {
   const { user } = useAuth();
@@ -29,6 +97,38 @@ export const MyOrdersPage = () => {
 
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL', 'ACTIVE', 'PAST'
   const [selectedPassOrder, setSelectedPassOrder] = useState(null);
+
+  // Real-time notification listener for student's orders
+  useEffect(() => {
+    const handleStatusUpdate = (e) => {
+      const data = e.detail;
+      if (!data) return;
+      const targetToken = data.tokenNumber || data.updatedOrder?.tokenNumber;
+      const newStatus = data.newStatus || data.status || data.updatedOrder?.status;
+
+      if (newStatus === 'Ready for Pickup') {
+        playNotificationSound('ready');
+        sendBrowserNotification(`Order #${targetToken} is READY!`, {
+          body: 'Great news! Your MITS Canteen order is READY FOR PICKUP at the counter.',
+          icon: '/images/mits/mits-logo.png',
+        });
+      } else if (newStatus === 'Accepted') {
+        playNotificationSound('accepted');
+        sendBrowserNotification(`Order #${targetToken} Accepted!`, {
+          body: 'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.',
+          icon: '/images/mits/mits-logo.png',
+        });
+      }
+    };
+
+    window.addEventListener('smartcanteen:order_status_updated', handleStatusUpdate);
+    window.addEventListener('smartcanteen:token_ready', handleStatusUpdate);
+
+    return () => {
+      window.removeEventListener('smartcanteen:order_status_updated', handleStatusUpdate);
+      window.removeEventListener('smartcanteen:token_ready', handleStatusUpdate);
+    };
+  }, []);
 
   // Filter orders for current student (fallback to all student orders if demo)
   const studentOrders = orders.filter((o) => {
@@ -176,15 +276,24 @@ export const MyOrdersPage = () => {
       ) : (
         <div className="space-y-6">
           {displayedOrders.map((order) => {
-            const isActive = ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(
-              order.status
+            const isActive = [
+              'Placed',
+              'Pending Acceptance',
+              'Accepted',
+              'Preparing',
+              'Ready for Pickup',
+            ].includes(order.status);
+            const canCancel = order.status === 'Placed' || order.status === 'Pending Acceptance';
+            const statusInfo = getCustomerStatusInfo(
+              order.status,
+              order.rejectionReason,
+              order.cancellationReason
             );
-            const canCancel = order.status === 'Placed';
 
             return (
               <div
                 key={order.id || order._id}
-                className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl hover:border-purple-500/40 transition-all p-5 sm:p-7 space-y-6"
+                className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl hover:border-purple-500/40 transition-all p-5 sm:p-7 space-y-5"
               >
                 {/* Order Top Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-purple-500/20">
@@ -201,7 +310,7 @@ export const MyOrdersPage = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-black text-white">
-                          Order #{order.orderNumber || order.id}
+                          Order #{order.orderNumber || order.orderId || order.id}
                         </h3>
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
@@ -211,11 +320,13 @@ export const MyOrdersPage = () => {
                               ? 'bg-blue-600 text-white'
                               : order.status === 'Accepted'
                               ? 'bg-[#7955E8] text-white'
-                              : order.status === 'Completed'
-                              ? 'bg-slate-700 text-slate-200'
+                              : order.status === 'Completed' || order.status === 'Collected'
+                              ? 'bg-teal-700 text-white'
                               : order.status === 'Cancelled'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : order.status === 'Rejected'
                               ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                              : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                              : 'bg-purple-500/20 text-purple-300 border border-purple-500/30 animate-pulse'
                           }`}
                         >
                           {order.status}
@@ -245,7 +356,7 @@ export const MyOrdersPage = () => {
                     {/* View Pickup Pass */}
                     <button
                       onClick={() => setSelectedPassOrder(order)}
-                      className="px-3.5 py-2 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-white text-xs font-bold flex items-center gap-1.5 transition-colors border border-purple-500/30"
+                      className="px-3.5 py-2 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-white text-xs font-bold flex items-center gap-1.5 transition-colors border border-purple-500/30 cursor-pointer"
                     >
                       <QrCode className="w-3.5 h-3.5 text-purple-400" />
                       View QR Pass
@@ -254,7 +365,7 @@ export const MyOrdersPage = () => {
                     {/* Reorder Button */}
                     <button
                       onClick={() => handleReorder(order)}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       Reorder
@@ -264,13 +375,35 @@ export const MyOrdersPage = () => {
                     {canCancel && (
                       <button
                         onClick={() => handleCancel(order.id || order._id, order.tokenNumber)}
-                        className="px-3 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        className="px-3 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                         title="Cancel this order before preparation begins"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         Cancel
                       </button>
                     )}
+                  </div>
+                </div>
+
+                {/* Zomato/Swiggy Live Customer Notification Card */}
+                <div
+                  className={`p-4 rounded-2xl bg-gradient-to-r ${statusInfo.color} border flex items-start sm:items-center gap-3.5 shadow-md`}
+                >
+                  <span className="text-2xl shrink-0">{statusInfo.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/10 border border-white/20">
+                        {statusInfo.badge}
+                      </span>
+                      {order.estimatedPrepMinutes && ['Accepted', 'Preparing'].includes(order.status) && (
+                        <span className="text-[11px] font-bold text-purple-200">
+                          ~{order.estimatedPrepMinutes} Mins Prep Time
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs sm:text-sm font-extrabold text-white mt-1 leading-snug">
+                      {statusInfo.message}
+                    </p>
                   </div>
                 </div>
 
@@ -287,30 +420,6 @@ export const MyOrdersPage = () => {
                       </span>
                     </div>
                     <OrderStatusStepper currentStatus={order.status} />
-
-                    {/* WhatsApp Accepted & Estimated Prep Time Banner */}
-                    {['Accepted', 'Preparing'].includes(order.status) && (
-                      <div className="mt-3.5 p-3 rounded-2xl bg-[#0B1020] border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
-                            <Clock className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-black text-white block">
-                              Order Accepted by Canteen Owner!
-                            </span>
-                            <p className="text-[11px] text-[#AAB3C5]">
-                              Estimated Preparation Time: <strong className="font-extrabold text-purple-300">~{order.estimatedPrepMinutes || 15} Minutes</strong>
-                              {order.estimatedReadyTime ? ` • Ready by ${order.estimatedReadyTime}` : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-full self-start sm:self-auto flex items-center gap-1 border border-emerald-500/30">
-                          <MessageSquare className="w-3 h-3 text-emerald-400" />
-                          <span>WhatsApp Alert Dispatched</span>
-                        </span>
-                      </div>
-                    )}
                   </div>
                 )}
 

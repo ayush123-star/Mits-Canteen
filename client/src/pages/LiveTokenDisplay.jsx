@@ -71,7 +71,7 @@ export const LiveTokenDisplay = () => {
     if (orders && orders.length > 0) {
       const prep = orders.filter((o) => ['Accepted', 'Preparing'].includes(o.status));
       const rdy = orders.filter((o) => o.status === 'Ready for Pickup');
-      const comp = orders.filter((o) => o.status === 'Completed').slice(0, 8);
+      const comp = orders.filter((o) => ['Completed', 'Collected'].includes(o.status)).slice(0, 10);
       setPreparingTokens(prep);
       setReadyTokens(rdy);
       setRecentlyCompleted(comp);

@@ -139,12 +139,14 @@ router.post('/', optionalAuth, async (req, res) => {
     const qrCodeData = await QRCode.toDataURL(qrPayload);
 
     const order = await Order.create({
+      orderId: `ORD-2026-${tokenNumber.replace('TK-', '')}`,
       tokenNumber,
       user: req.user._id,
-      studentName: req.user.name || 'Campus Student',
-      studentPhone: req.user.phone || '+91 98765 43210',
-      studentRoll: req.user.studentId || 'STU-CAMPUS',
-      studentDepartment: req.user.department || 'Campus Department',
+      studentName: req.body.studentName || req.user.name || 'Campus Student',
+      studentEmail: req.body.studentEmail || req.user.email || '',
+      studentPhone: req.body.studentPhone || req.user.phone || '+91 98765 43210',
+      studentRoll: req.body.studentRoll || req.user.studentId || 'STU-CAMPUS',
+      studentDepartment: req.body.studentDepartment || req.user.department || 'Campus Department',
       whatsappOptIn: req.body.whatsappOptIn !== undefined ? Boolean(req.body.whatsappOptIn) : (req.user.whatsappOptIn !== false),
       items: populatedItems,
       totalAmount,
@@ -170,10 +172,25 @@ router.post('/', optionalAuth, async (req, res) => {
         {
           status: 'Placed',
           timestamp: new Date(),
-          note: 'Order successfully placed by student',
+          note: 'Your order has been successfully placed. Waiting for canteen confirmation.',
         },
       ],
     });
+
+    // Create database in-app notification record
+    try {
+      await NotificationLog.create({
+        order: order._id,
+        orderStatus: 'Placed',
+        tokenNumber: order.tokenNumber,
+        studentName: order.studentName,
+        recipientPhone: order.studentPhone,
+        channel: 'IN_APP',
+        message: 'Your order has been successfully placed. Waiting for canteen confirmation.',
+        deliveryStatus: 'DELIVERED',
+        statusTimestamps: { sentAt: new Date(), deliveredAt: new Date() },
+      });
+    } catch (_) {}
 
     // Populate user details for broadcast
     let populatedOrder = null;
@@ -197,6 +214,15 @@ router.post('/', optionalAuth, async (req, res) => {
       });
       io.emit('tokens:refresh');
     }
+
+    // Cross-Device Cloud Broadcast for deployed mobile / laptop sync
+    try {
+      fetch('https://ntfy.sh/mits_campus_canteen_sync_prod_2026', {
+        method: 'POST',
+        headers: { Title: 'NEW_ORDER' },
+        body: JSON.stringify({ type: 'NEW_ORDER', newOrder: orderDataToBroadcast }),
+      }).catch(() => {});
+    } catch (_) {}
 
     // 1. Automated Meta WhatsApp Notification: Order Placed to student
     let whatsappNotification = null;
@@ -360,12 +386,26 @@ router.get('/all', protect, adminOnly, async (req, res) => {
 // @desc    Admin: Update order status (Placed -> Accepted -> Preparing -> Ready -> Completed)
 router.patch('/:id/status', async (req, res) => {
   try {
-    const { status, note, estimatedPrepMinutes } = req.body;
-    const validStatuses = ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup', 'Completed', 'Cancelled'];
+    let { status, note, reason, estimatedPrepMinutes } = req.body;
+    const validStatuses = [
+      'Placed',
+      'Pending Acceptance',
+      'Accepted',
+      'Preparing',
+      'Ready for Pickup',
+      'Completed',
+      'Collected',
+      'Rejected',
+      'Cancelled',
+    ];
 
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+      return res.status(400).json({ message: `Invalid status: ${status}` });
     }
+
+    // Normalize synonyms
+    if (status === 'Pending Acceptance') status = 'Placed';
+    if (status === 'Collected') status = 'Completed';
 
     const mongoose = require('mongoose');
     let order = null;
@@ -382,6 +422,7 @@ router.patch('/:id/status', async (req, res) => {
         $or: [
           { tokenNumber: rawId },
           { tokenNumber: `#${rawId}` },
+          { orderId: rawId },
           { _id: mongoose.Types.ObjectId.isValid(rawId) ? rawId : null },
           { 'paymentDetails.transactionId': rawId },
         ],
@@ -390,6 +431,21 @@ router.patch('/:id/status', async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ message: `Order not found for identifier ${rawId}` });
+    }
+
+    // Cancellation policy: Cannot cancel if food is already in preparation or ready
+    if (status === 'Cancelled') {
+      if (['Preparing', 'Ready for Pickup', 'Completed'].includes(order.status)) {
+        return res.status(400).json({
+          message: 'Order cannot be cancelled after kitchen preparation has already started.',
+        });
+      }
+      order.cancellationReason = reason || note || 'Cancelled by customer';
+    }
+
+    // Rejection handling
+    if (status === 'Rejected') {
+      order.rejectionReason = reason || note || 'Ingredients or kitchen capacity temporarily unavailable';
     }
 
     order.status = status;
@@ -402,14 +458,30 @@ router.patch('/:id/status', async (req, res) => {
       order.estimatedReadyTime = new Date(Date.now() + prepMins * 60 * 1000);
     }
 
+    // Customer Notification Message Mapping
+    let customerNotificationMessage = '';
+    if (status === 'Accepted') {
+      customerNotificationMessage =
+        'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.';
+    } else if (status === 'Preparing') {
+      customerNotificationMessage = 'Your order is now being freshly prepared by our kitchen.';
+    } else if (status === 'Ready for Pickup') {
+      customerNotificationMessage =
+        'Great news! Your MITS Canteen order is READY FOR PICKUP. Please visit your assigned counter with your token.';
+    } else if (status === 'Completed') {
+      customerNotificationMessage = 'Your order has been collected. Thank you for dining with MITS Canteen!';
+    } else if (status === 'Rejected') {
+      customerNotificationMessage = `Sorry! Your order could not be accepted by MITS Main Canteen. (${order.rejectionReason})`;
+    } else if (status === 'Cancelled') {
+      customerNotificationMessage = `Order cancelled. (${order.cancellationReason})`;
+    } else {
+      customerNotificationMessage = `Order status updated to ${status}.`;
+    }
+
     order.timeline.push({
       status,
       timestamp: new Date(),
-      note:
-        note ||
-        (status === 'Accepted'
-          ? `Order accepted. Estimated prep time: ~${order.estimatedPrepMinutes || 15} minutes`
-          : `Order updated to ${status} by canteen staff`),
+      note: note || customerNotificationMessage,
     });
 
     if (status === 'Completed' && order.paymentMethod === 'CASH_AT_COUNTER') {
@@ -417,6 +489,21 @@ router.patch('/:id/status', async (req, res) => {
     }
 
     await order.save();
+
+    // Create database in-app notification record
+    try {
+      await NotificationLog.create({
+        order: order._id,
+        orderStatus: status,
+        tokenNumber: order.tokenNumber,
+        studentName: order.studentName,
+        recipientPhone: order.studentPhone,
+        channel: 'IN_APP',
+        message: customerNotificationMessage,
+        deliveryStatus: 'DELIVERED',
+        statusTimestamps: { sentAt: new Date(), deliveredAt: new Date() },
+      });
+    } catch (_) {}
 
     let whatsappNotification = null;
     const io = req.app.get('socketio');
@@ -427,9 +514,13 @@ router.patch('/:id/status', async (req, res) => {
         id: order._id,
         status: order.status,
         tokenNumber: order.tokenNumber,
+        orderNumber: order.orderId || `ORD-2026-${order.tokenNumber.replace('TK-', '')}`,
         assignedCounter: order.assignedCounter,
         estimatedPrepMinutes: order.estimatedPrepMinutes,
         estimatedReadyTime: order.estimatedReadyTime,
+        rejectionReason: order.rejectionReason,
+        cancellationReason: order.cancellationReason,
+        notificationMessage: customerNotificationMessage,
         order,
       };
 
@@ -445,8 +536,12 @@ router.patch('/:id/status', async (req, res) => {
       io.emit(`order:${order._id}:status`, eventPayload);
       io.emit('tokens:refresh');
 
-      // 2. Lifecycle specific events
-      if (status === 'Ready for Pickup') {
+      // 2. Lifecycle specific events matching exact specifications
+      if (status === 'Accepted') {
+        io.emit('order:accepted', eventPayload);
+      } else if (status === 'Preparing') {
+        io.emit('order:preparing', eventPayload);
+      } else if (status === 'Ready for Pickup') {
         io.emit('order:ready', {
           tokenNumber: order.tokenNumber,
           counter: order.assignedCounter,
@@ -466,17 +561,39 @@ router.patch('/:id/status', async (req, res) => {
           orderId: order._id,
           order,
         });
+        io.emit('order:completed', eventPayload);
+      } else if (status === 'Rejected') {
+        io.emit('order:rejected', {
+          tokenNumber: order.tokenNumber,
+          orderId: order._id,
+          reason: order.rejectionReason,
+          order,
+        });
       } else if (status === 'Cancelled') {
         io.emit('order:cancelled', {
           tokenNumber: order.tokenNumber,
           orderId: order._id,
-          reason: note || 'Cancelled by canteen',
+          reason: order.cancellationReason,
           order,
         });
       }
     }
 
-    // Automated Meta WhatsApp Notification for status change:
+    // Cross-Device Cloud Broadcast for deployed mobile / laptop sync
+    try {
+      fetch('https://ntfy.sh/mits_campus_canteen_sync_prod_2026', {
+        method: 'POST',
+        headers: { Title: 'STATUS_UPDATED' },
+        body: JSON.stringify({
+          type: 'STATUS_UPDATED',
+          orderId: order._id,
+          tokenNumber: order.tokenNumber,
+          newStatus: status,
+          reason: order.rejectionReason || order.cancellationReason,
+          updatedOrder: order,
+        }),
+      }).catch(() => {});
+    } catch (_) {}
     // (Accepted, Preparing, Ready for Pickup, Completed, Cancelled)
     try {
       whatsappNotification = await sendOrderStatusNotification(
@@ -545,6 +662,19 @@ router.get('/notification-logs', protect, adminOnly, async (req, res) => {
     res.json({ success: true, count: logs.length, data: logs });
   } catch (err) {
     res.status(500).json({ message: 'Error retrieving notification logs' });
+  }
+});
+
+// @route   GET /api/orders/customer-notifications
+// @desc    Get in-app notifications for customer order tracking
+router.get('/customer-notifications', optionalAuth, async (req, res) => {
+  try {
+    const logs = await NotificationLog.find()
+      .sort({ createdAt: -1 })
+      .limit(20);
+    res.json({ success: true, count: logs.length, notifications: logs });
+  } catch (err) {
+    res.json({ success: true, count: 0, notifications: [] });
   }
 });
 
