@@ -38,7 +38,7 @@ export const AdminDashboard = () => {
 
   const [searchToken, setSearchToken] = useState('');
   const [selectedCounter, setSelectedCounter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('NEW');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [rejectModalOrder, setRejectModalOrder] = useState(null);
   const [rejectReason, setRejectReason] = useState('Item Out of Stock');
   const [acceptModalOrder, setAcceptModalOrder] = useState(null);
@@ -135,12 +135,14 @@ export const AdminDashboard = () => {
     }
 
     // Status tabs
-    if (statusFilter === 'NEW') {
+    if (statusFilter === 'ACTIVE') {
+      return ['Placed', 'Pending Acceptance', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(ord.status);
+    } else if (statusFilter === 'NEW') {
       return ['Placed', 'Pending Acceptance'].includes(ord.status);
     } else if (statusFilter === 'ACCEPTED') {
       return ord.status === 'Accepted';
     } else if (statusFilter === 'PREPARING') {
-      return ord.status === 'Preparing';
+      return ['Accepted', 'Preparing'].includes(ord.status);
     } else if (statusFilter === 'READY') {
       return ord.status === 'Ready for Pickup';
     } else if (statusFilter === 'COMPLETED') {
@@ -152,7 +154,7 @@ export const AdminDashboard = () => {
     return true; // 'ALL'
   });
 
-  // Calculate quick metrics for all 6 dedicated tabs & stats
+  // Calculate quick metrics for all dedicated tabs & stats
   const totalOrdersToday = orders.length;
   const newOrdersCount = orders.filter((o) => ['Placed', 'Pending Acceptance'].includes(o.status)).length;
   const acceptedOrdersCount = orders.filter((o) => o.status === 'Accepted').length;
@@ -168,15 +170,20 @@ export const AdminDashboard = () => {
   const handleDirectAccept = (order) => {
     const actor = user?.name || 'Canteen Owner';
     const estMins = order.estimatedPrepMinutes || 12;
-    updateOrderStatus(order.id || order._id, 'Accepted', actor, {
+    const orderId = order.id || order._id || order.orderId || order.tokenNumber;
+    updateOrderStatus(orderId, 'Accepted', actor, {
       estimatedMinutes: estMins,
       note: `Order accepted. Kitchen is preparing your food (~${estMins}m)`,
     });
+    // Smooth transition: if owner was on NEW filter, switch to ACTIVE so order remains visible with START PREPARING button!
+    if (statusFilter === 'NEW') {
+      setStatusFilter('ACTIVE');
+    }
   };
 
   const handleAdvanceStatus = (order) => {
     const actor = user?.name || 'Canteen Owner';
-    const orderId = order.id || order._id;
+    const orderId = order.id || order._id || order.orderId || order.tokenNumber;
     if (order.status === 'Placed' || order.status === 'Pending Acceptance') {
       handleDirectAccept(order);
     } else if (order.status === 'Accepted') {
@@ -405,8 +412,19 @@ export const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#1C263A]/90 backdrop-blur-xl p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-purple-500/20 shadow-xl">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0 scroll-smooth -mx-1 px-1">
           <button
+            onClick={() => setStatusFilter('ACTIVE')}
+            className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+              statusFilter === 'ACTIVE'
+                ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
+                : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
+            }`}
+          >
+            {activeOrders.length > 0 && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>}
+            Active Kitchen ({activeOrders.length})
+          </button>
+          <button
             onClick={() => setStatusFilter('NEW')}
-            className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+            className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
               statusFilter === 'NEW'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
@@ -417,7 +435,7 @@ export const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setStatusFilter('ACCEPTED')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               statusFilter === 'ACCEPTED'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
@@ -427,7 +445,7 @@ export const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setStatusFilter('PREPARING')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               statusFilter === 'PREPARING'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
@@ -437,17 +455,18 @@ export const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setStatusFilter('READY')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
               statusFilter === 'READY'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
+            {readyCount > 0 && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>}
             Ready for Pickup ({readyCount})
           </button>
           <button
             onClick={() => setStatusFilter('COMPLETED')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               statusFilter === 'COMPLETED'
                 ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
@@ -457,17 +476,17 @@ export const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setStatusFilter('REJECTED')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               statusFilter === 'REJECTED'
                 ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-md shadow-red-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            Rejected Orders ({rejectedCount})
+            Rejected ({rejectedCount})
           </button>
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               statusFilter === 'ALL'
                 ? 'bg-[#151C30] text-white border border-purple-500/30'
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
@@ -653,33 +672,60 @@ export const AdminDashboard = () => {
                   )}
 
                   {isAccepted && (
-                    <button
-                      onClick={() => handleAdvanceStatus(order)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all active:scale-95 cursor-pointer"
-                    >
-                      <ChefHat className="w-4 h-4 shrink-0" />
-                      <span>START PREPARING</span>
-                    </button>
+                    <div className="w-full flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-purple-200 font-bold px-1">
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                          Step 2: Order Accepted
+                        </span>
+                        <span className="text-[#AAB3C5]">Kitchen Ready</span>
+                      </div>
+                      <button
+                        onClick={() => handleAdvanceStatus(order)}
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <ChefHat className="w-4 h-4 shrink-0" />
+                        <span>START PREPARING</span>
+                      </button>
+                    </div>
                   )}
 
                   {isPreparing && (
-                    <button
-                      onClick={() => handleAdvanceStatus(order)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer"
-                    >
-                      <Bell className="w-4 h-4 shrink-0" />
-                      <span>MARK AS READY</span>
-                    </button>
+                    <div className="w-full flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-blue-200 font-bold px-1">
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                          Step 3: Food In Preparation
+                        </span>
+                        <span className="text-amber-300 font-mono">~{order.estimatedPrepMinutes || 8}m prep</span>
+                      </div>
+                      <button
+                        onClick={() => handleAdvanceStatus(order)}
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Bell className="w-4 h-4 shrink-0" />
+                        <span>ORDER READY (Send to Live TV & Call)</span>
+                      </button>
+                    </div>
                   )}
 
                   {isReady && (
-                    <button
-                      onClick={() => handleAdvanceStatus(order)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all active:scale-95 cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>MARK AS COLLECTED</span>
-                    </button>
+                    <div className="w-full flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-emerald-300 font-black px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                          📢 Calling on Live TV Display
+                        </span>
+                        <span className="text-emerald-200 font-mono">Token #{order.tokenNumber}</span>
+                      </div>
+                      <button
+                        onClick={() => handleAdvanceStatus(order)}
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>MARK AS COLLECTED (Order Recive Ho Gaya)</span>
+                      </button>
+                    </div>
                   )}
 
                   {isCompleted && (

@@ -40,38 +40,13 @@ export const LiveTokenDisplay = () => {
   const [stats, setStats] = useState({ totalActive: 0, avgWaitMinutes: 8, countersActive: 1 });
   const [isKitchenSynced, setIsKitchenSynced] = useState(true);
 
-  // Fetch live tokens directly from the centralized database
-  const fetchLiveTokensFromDB = useCallback(async () => {
-    try {
-      const res = await axios.get('/api/orders/live-tokens', { timeout: 3500 });
-      if (res.data?.success && res.data?.data) {
-        const {
-          preparing = [],
-          ready = [],
-          recentlyCompleted: completed = [],
-          stats: serverStats = {},
-        } = res.data.data;
-
-        setPreparingTokens(preparing);
-        setReadyTokens(ready);
-        setRecentlyCompleted(completed);
-        setStats({
-          totalActive: serverStats.totalActive !== undefined ? serverStats.totalActive : (preparing.length + ready.length),
-          avgWaitMinutes: serverStats.avgWaitMinutes || 8,
-          countersActive: 1,
-        });
-        setIsKitchenSynced(true);
-        return;
-      }
-    } catch (err) {
-      // Backend request fallback to DataContext
-    }
-
-    // Fallback: derive from orders in memory if backend endpoint is unavailable
-    if (orders && orders.length > 0) {
+  // 1. Reactive immediate derivation from DataContext orders (Single Source of Truth)
+  useEffect(() => {
+    if (orders && Array.isArray(orders)) {
       const prep = orders.filter((o) => ['Accepted', 'Preparing'].includes(o.status));
       const rdy = orders.filter((o) => o.status === 'Ready for Pickup');
       const comp = orders.filter((o) => ['Completed', 'Collected'].includes(o.status)).slice(0, 10);
+
       setPreparingTokens(prep);
       setReadyTokens(rdy);
       setRecentlyCompleted(comp);
@@ -82,8 +57,47 @@ export const LiveTokenDisplay = () => {
           : 8,
         countersActive: 1,
       });
+      setIsKitchenSynced(true);
     }
   }, [orders]);
+
+  // 2. Fetch live tokens directly from the centralized database & merge
+  const fetchLiveTokensFromDB = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/orders/live-tokens', { timeout: 2500 });
+      if (res.data?.success && res.data?.data) {
+        const {
+          preparing = [],
+          ready = [],
+          recentlyCompleted: completed = [],
+          stats: serverStats = {},
+        } = res.data.data;
+
+        // Merge server live tokens with client orders
+        if (ready.length > 0 || preparing.length > 0 || completed.length > 0) {
+          setPreparingTokens((prev) => {
+            const map = new Map();
+            [...prev, ...preparing].forEach((o) => map.set(o.tokenNumber || o.id, o));
+            return Array.from(map.values()).filter((o) => ['Accepted', 'Preparing'].includes(o.status));
+          });
+          setReadyTokens((prev) => {
+            const map = new Map();
+            [...prev, ...ready].forEach((o) => map.set(o.tokenNumber || o.id, o));
+            return Array.from(map.values()).filter((o) => o.status === 'Ready for Pickup');
+          });
+          setRecentlyCompleted((prev) => {
+            const map = new Map();
+            [...prev, ...completed].forEach((o) => map.set(o.tokenNumber || o.id, o));
+            return Array.from(map.values()).slice(0, 10);
+          });
+        }
+        setIsKitchenSynced(true);
+        return;
+      }
+    } catch (_) {
+      // Backend request fallback to DataContext reactive state
+    }
+  }, []);
 
   // Subscribe to real-time events from centralized database & Socket.IO
   useEffect(() => {

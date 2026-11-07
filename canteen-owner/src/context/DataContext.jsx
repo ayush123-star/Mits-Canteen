@@ -320,6 +320,7 @@ export const DataProvider = ({ children }) => {
     // C. Cross-Device Cloud Realtime Broadcast (sub-100ms delivery to Phones, Laptops, TV Displays)
     publishOrderEvent({
       type: eventType,
+      orders: nextOrders,
       ...meta,
     });
   };
@@ -384,15 +385,19 @@ export const DataProvider = ({ children }) => {
               detail: { orders: updated, type: 'NEW_ORDER', newOrder },
             })
           );
+          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
           return updated;
         });
       } else if (type === 'STATUS_UPDATED') {
         setOrders((prev) => {
-          const nextList = prev.map((o) => {
-            if (
-              (orderId && o.id === orderId) ||
-              (updatedOrder && (o.id === updatedOrder.id || o.tokenNumber === updatedOrder.tokenNumber))
-            ) {
+          let found = false;
+          let nextList = prev.map((o) => {
+            const isMatch =
+              (orderId && (o.id === orderId || o._id === orderId || o.orderId === orderId || o.tokenNumber === orderId)) ||
+              (updatedOrder && (o.id === updatedOrder.id || o._id === updatedOrder._id || o.tokenNumber === updatedOrder.tokenNumber));
+
+            if (isMatch) {
+              found = true;
               const statusToSet = newStatus || updatedOrder?.status || o.status;
               if (statusToSet === 'Ready for Pickup') {
                 playNotificationSound('ready');
@@ -401,14 +406,38 @@ export const DataProvider = ({ children }) => {
             }
             return o;
           });
+
+          if (!found && updatedOrder) {
+            nextList = [updatedOrder, ...nextList];
+          }
+
+          if (incomingOrders && Array.isArray(incomingOrders)) {
+            nextList = mergeOrders(nextList, incomingOrders);
+          }
+
           try {
             localStorage.setItem('smart_canteen_orders', JSON.stringify(nextList));
           } catch (_) {}
+
           window.dispatchEvent(
             new CustomEvent('smartcanteen:orders_sync', {
               detail: { orders: nextList, type: 'STATUS_UPDATED', orderId, newStatus, updatedOrder },
             })
           );
+          window.dispatchEvent(
+            new CustomEvent('smartcanteen:order_status_updated', {
+              detail: { orders: nextList, orderId, newStatus, status: newStatus, updatedOrder },
+            })
+          );
+          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+
+          if (newStatus === 'Ready for Pickup' || updatedOrder?.status === 'Ready for Pickup') {
+            window.dispatchEvent(
+              new CustomEvent('smartcanteen:token_ready', {
+                detail: { tokenNumber: updatedOrder?.tokenNumber, orderId, order: updatedOrder },
+              })
+            );
+          }
           return nextList;
         });
       } else if (incomingOrders && Array.isArray(incomingOrders)) {
@@ -417,6 +446,7 @@ export const DataProvider = ({ children }) => {
           try {
             localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
           } catch (_) {}
+          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
           return merged;
         });
       }
@@ -670,8 +700,17 @@ export const DataProvider = ({ children }) => {
 
   const updateOrderStatus = (orderId, newStatus, actorName = 'Kitchen Supervisor', extraOptions = {}) => {
     let targetUpdatedOrder = null;
+    const cleanId = String(orderId || '').trim();
     const nextOrders = orders.map((ord) => {
-        if (ord.id !== orderId) return ord;
+        const isMatch =
+          ord.id === cleanId ||
+          ord._id === cleanId ||
+          (ord.orderId && ord.orderId === cleanId) ||
+          (ord.tokenNumber && ord.tokenNumber === cleanId) ||
+          (ord.tokenNumber && ord.tokenNumber === `#${cleanId}`) ||
+          (cleanId.startsWith('#') && ord.tokenNumber === cleanId.slice(1));
+
+        if (!isMatch) return ord;
 
         const updated = { ...ord, status: newStatus };
 
@@ -809,6 +848,7 @@ export const DataProvider = ({ children }) => {
       tokenNumber: targetUpdatedOrder?.tokenNumber,
       newStatus,
       updatedOrder: targetUpdatedOrder,
+      orders: nextOrders,
     });
 
     // Sync status & notify backend

@@ -43,13 +43,13 @@ export const OrderStatusStepper = ({ currentStatus }) => {
       {/* Stepper container */}
       <div className="relative flex items-center justify-between">
         {/* Background track */}
-        <div className="absolute top-1/2 left-4 right-4 h-1 bg-slate-700/60 -translate-y-1/2 z-0"></div>
+        <div className="absolute top-1/2 left-[18px] right-[18px] h-1.5 bg-slate-700/60 rounded-full -translate-y-1/2 z-0"></div>
 
         {/* Progress track */}
         <div
-          className="absolute top-1/2 left-4 h-1 bg-gradient-to-r from-[#7955E8] to-emerald-400 -translate-y-1/2 z-0 transition-all duration-700 ease-out"
+          className="absolute top-1/2 left-[18px] h-1.5 bg-gradient-to-r from-emerald-500 via-[#7955E8] to-emerald-400 rounded-full -translate-y-1/2 z-0 transition-all duration-700 ease-out shadow-xs shadow-emerald-500/50"
           style={{
-            width: `${(activeIdx / (steps.length - 1)) * 92}%`,
+            width: `calc(${(activeIdx / (steps.length - 1)) * 100}% - 4px)`,
           }}
         ></div>
 
