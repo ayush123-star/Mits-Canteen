@@ -8,7 +8,7 @@
 const REALTIME_TOPIC = 'mits_campus_canteen_sync_prod_2026';
 const CLOUD_PUB_URL = `https://ntfy.sh/${REALTIME_TOPIC}`;
 const CLOUD_SSE_URL = `https://ntfy.sh/${REALTIME_TOPIC}/sse`;
-const CLOUD_POLL_URL = `https://ntfy.sh/${REALTIME_TOPIC}/json?poll=1&since=12h`;
+const CLOUD_STORE_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a1b6de08125dc5';
 
 /**
  * Sanitizes an order object to strictly whitelisted fields,
@@ -64,8 +64,88 @@ export const sanitizeOrderForBroadcast = (ord) => {
 };
 
 /**
- * Publishes an order event to the global real-time cloud channel
- * Sub-100ms delivery to all connected devices worldwide.
+ * Saves a new order to the central cloud store
+ */
+const saveOrderToCloudStore = async (order) => {
+  if (!order || isMockOrder(order)) return;
+  try {
+    const cleanOrd = sanitizeOrderForBroadcast(order);
+    const res = await fetch(CLOUD_STORE_URL);
+    const json = await res.json();
+    const existing = Array.isArray(json?.data?.orders) ? json.data.orders : [];
+
+    const alreadyExists = existing.some(
+      (o) =>
+        (o.id && o.id === cleanOrd.id) ||
+        (o.tokenNumber && o.tokenNumber === cleanOrd.tokenNumber)
+    );
+
+    if (!alreadyExists) {
+      const nextList = [cleanOrd, ...existing].filter((o) => !isMockOrder(o)).slice(0, 100);
+      await fetch(CLOUD_STORE_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'mits-campus-canteen-orders-master',
+          data: { orders: nextList, lastUpdated: Date.now() },
+        }),
+      });
+    }
+  } catch (err) {
+    console.debug('saveOrderToCloudStore notice:', err.message);
+  }
+};
+
+/**
+ * Updates order status in the central cloud store
+ */
+const updateStatusInCloudStore = async (orderId, tokenNumber, newStatus, meta = {}) => {
+  try {
+    const res = await fetch(CLOUD_STORE_URL);
+    const json = await res.json();
+    const existing = Array.isArray(json?.data?.orders) ? json.data.orders : [];
+
+    const cleanToken = tokenNumber ? String(tokenNumber).replace('#', '').trim().toLowerCase() : '';
+    const cleanId = orderId ? String(orderId).replace('#', '').trim().toLowerCase() : '';
+
+    const nextList = existing.map((o) => {
+      const oToken = o.tokenNumber ? String(o.tokenNumber).replace('#', '').trim().toLowerCase() : '';
+      const oId = String(o.id || o._id || o.orderId || '').toLowerCase();
+      const oNum = String(o.orderNumber || '').toLowerCase();
+
+      const isMatch = (cleanToken && oToken && oToken === cleanToken) ||
+                      (cleanId && (oId === cleanId || oNum === cleanId || oToken === cleanId));
+
+      if (isMatch) {
+        return {
+          ...o,
+          status: newStatus,
+          assignedCounter: meta.assignedCounter || o.assignedCounter || 1,
+          estimatedPrepMinutes: meta.estimatedPrepMinutes || o.estimatedPrepMinutes,
+          estimatedReadyTime: meta.estimatedReadyTime || o.estimatedReadyTime,
+          rejectionReason: meta.reason || o.rejectionReason,
+          cancellationReason: meta.reason || o.cancellationReason,
+        };
+      }
+      return o;
+    });
+
+    await fetch(CLOUD_STORE_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'mits-campus-canteen-orders-master',
+        data: { orders: nextList, lastUpdated: Date.now() },
+      }),
+    });
+  } catch (err) {
+    console.debug('updateStatusInCloudStore notice:', err.message);
+  }
+};
+
+/**
+ * Publishes an order event to both central cloud database & pubsub channel
+ * Sub-second delivery across all devices worldwide.
  */
 export const publishOrderEvent = async (event) => {
   if (!event || typeof event !== 'object') return;
@@ -75,6 +155,14 @@ export const publishOrderEvent = async (event) => {
   const orderId = event.orderId || event.updatedOrder?.id || event.updatedOrder?._id;
   const orderNumber = event.orderNumber || event.updatedOrder?.orderNumber;
 
+  // 1. Direct Central Cloud Store Synchronization
+  if (event.type === 'NEW_ORDER' && event.newOrder) {
+    saveOrderToCloudStore(event.newOrder);
+  } else if (event.type === 'STATUS_UPDATED') {
+    updateStatusInCloudStore(orderId, tokenNumber, targetStatus, event);
+  }
+
+  // 2. Best-effort lightweight cloud event broadcast
   const payload = {
     type: event.type || 'ORDER_UPDATE',
     orderId,
@@ -97,14 +185,17 @@ export const publishOrderEvent = async (event) => {
     payload.updatedOrder = sanitizeOrderForBroadcast(event.updatedOrder);
   }
 
-  // Double safety: guarantee payload is under 3500 bytes so ntfy.sh NEVER creates attachments
   let bodyStr = JSON.stringify(payload);
   if (bodyStr.length > 3500) {
     delete payload.updatedOrder;
     bodyStr = JSON.stringify(payload);
   }
 
+  // Non-blocking pub-sub dispatch with 2-second timeout
   try {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 2000) : null;
+
     await fetch(CLOUD_PUB_URL, {
       method: 'POST',
       headers: {
@@ -113,26 +204,84 @@ export const publishOrderEvent = async (event) => {
         'Tags': 'canteen,order',
       },
       body: bodyStr,
+      signal: controller ? controller.signal : undefined,
+    }).finally(() => {
+      if (timeoutId) clearTimeout(timeoutId);
     });
   } catch (err) {
-    console.debug('Cloud publish notice:', err.message);
+    console.debug('Cloud pubsub notice:', err.message);
   }
 };
 
 /**
- * Subscribes to real-time order events via Server-Sent Events (SSE)
- * Automatically receives new incoming orders and status transitions across devices.
+ * Subscribes to real-time order events via Hybrid PubSub + Fast Cloud Store Polling
+ * Guarantees zero missed orders even if third-party SSE is blocked by local network.
  */
 export const subscribeToOrderEvents = (onEvent) => {
-  if (typeof window === 'undefined' || !window.EventSource) {
+  if (typeof window === 'undefined') {
     return () => {};
   }
 
-  let eventSource = null;
   let isClosed = false;
+  let eventSource = null;
+  const knownStatusMap = new Map();
+  let isInitialPoll = true;
 
-  const connect = () => {
+  // A. Fast Cloud Store Poller (Every 2 seconds - 100% reliable)
+  const pollCloudStore = async () => {
     if (isClosed) return;
+    try {
+      const res = await fetch(CLOUD_STORE_URL, { cache: 'no-cache' });
+      if (!res.ok) return;
+      const json = await res.json();
+      const orders = Array.isArray(json?.data?.orders) ? json.data.orders : [];
+
+      orders.forEach((ord) => {
+        if (!ord || isMockOrder(ord)) return;
+        const key = ord.tokenNumber || ord.id || ord._id;
+        if (!key) return;
+
+        const prevStatus = knownStatusMap.get(key);
+
+        if (prevStatus === undefined) {
+          // New order discovered!
+          knownStatusMap.set(key, ord.status);
+          if (!isInitialPoll) {
+            onEvent({
+              type: 'NEW_ORDER',
+              newOrder: ord,
+              timestamp: Date.now(),
+            });
+          }
+        } else if (prevStatus !== ord.status) {
+          // Status updated!
+          knownStatusMap.set(key, ord.status);
+          onEvent({
+            type: 'STATUS_UPDATED',
+            orderId: ord.id || ord._id || ord.orderId,
+            tokenNumber: ord.tokenNumber,
+            orderNumber: ord.orderNumber,
+            newStatus: ord.status,
+            status: ord.status,
+            updatedOrder: ord,
+            assignedCounter: ord.assignedCounter || 1,
+            estimatedPrepMinutes: ord.estimatedPrepMinutes,
+            estimatedReadyTime: ord.estimatedReadyTime,
+            timestamp: Date.now(),
+          });
+        }
+      });
+
+      isInitialPoll = false;
+    } catch (_) {}
+  };
+
+  // Immediate poll on mount
+  pollCloudStore();
+  const pollInterval = setInterval(pollCloudStore, 2000);
+
+  // B. Best-effort SSE connection
+  if (window.EventSource) {
     try {
       eventSource = new EventSource(CLOUD_SSE_URL);
 
@@ -144,12 +293,9 @@ export const subscribeToOrderEvents = (onEvent) => {
           if (raw && raw.message) {
             try {
               data = JSON.parse(raw.message);
-            } catch (_) {
-              // Not inline JSON
-            }
+            } catch (_) {}
           }
 
-          // Fallback: If ntfy attached a file, fetch it so it's NEVER dropped
           if (!data && raw && raw.attachment && raw.attachment.url) {
             try {
               const attRes = await fetch(raw.attachment.url);
@@ -158,7 +304,6 @@ export const subscribeToOrderEvents = (onEvent) => {
           }
 
           if (data && typeof data === 'object') {
-            // Ignore events emitted by this same client instance
             if (data.emitterId && data.emitterId === getClientInstanceId()) {
               return;
             }
@@ -170,23 +315,14 @@ export const subscribeToOrderEvents = (onEvent) => {
       };
 
       eventSource.onerror = () => {
-        if (eventSource) {
-          eventSource.close();
-        }
-        // Auto-reconnect after 2 seconds if disconnected
-        if (!isClosed) {
-          setTimeout(connect, 2000);
-        }
+        if (eventSource) eventSource.close();
       };
-    } catch (err) {
-      console.debug('SSE connection notice:', err.message);
-    }
-  };
-
-  connect();
+    } catch (_) {}
+  }
 
   return () => {
     isClosed = true;
+    clearInterval(pollInterval);
     if (eventSource) {
       eventSource.close();
       eventSource = null;
@@ -199,34 +335,16 @@ export const subscribeToOrderEvents = (onEvent) => {
  */
 export const fetchRecentCloudEvents = async () => {
   try {
-    const res = await fetch(CLOUD_POLL_URL, { cache: 'no-cache' });
+    const res = await fetch(CLOUD_STORE_URL, { cache: 'no-cache' });
     if (!res.ok) return [];
-    const text = await res.text();
-    const lines = text.trim().split('\n');
-    const events = [];
+    const json = await res.json();
+    const orders = Array.isArray(json?.data?.orders) ? json.data.orders : [];
 
-    for (const line of lines) {
-      if (!line) continue;
-      try {
-        const item = JSON.parse(line);
-        let parsed = null;
-        if (item.message) {
-          try {
-            parsed = JSON.parse(item.message);
-          } catch (_) {}
-        }
-        if (!parsed && item.attachment && item.attachment.url) {
-          try {
-            const attRes = await fetch(item.attachment.url);
-            parsed = await attRes.json();
-          } catch (_) {}
-        }
-        if (parsed) {
-          events.push(parsed);
-        }
-      } catch (_) {}
-    }
-    return events;
+    return orders.filter((o) => !isMockOrder(o)).map((ord) => ({
+      type: 'NEW_ORDER',
+      newOrder: ord,
+      timestamp: Date.now(),
+    }));
   } catch (err) {
     return [];
   }

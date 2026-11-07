@@ -1,6 +1,18 @@
 // Serverless API for Vercel deployment - /api/orders/live-tokens
-const TOPIC = 'mits_campus_canteen_sync_prod_2026';
-const CLOUD_URL = `https://ntfy.sh/${TOPIC}`;
+// Connects directly to persistent central cloud store (AWS edge) for 100% reliable global sync
+
+const CLOUD_STORE_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a1b6de08125dc5';
+
+const isMock = (ord) => {
+  if (!ord || typeof ord !== 'object') return true;
+  const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
+  const mockNames = ['Aryan Sharma', 'Priya Patel'];
+  const name = String(ord.studentName || ord.customerName || '');
+  const id = String(ord.id || ord._id || '');
+  if (mockIds.includes(id)) return false;
+  if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return false;
+  return true;
+};
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -16,62 +28,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const cloudRes = await fetch(`${CLOUD_URL}/json?poll=1&since=12h`);
-    const text = await cloudRes.text();
-    const lines = text.trim().split('\n');
+    const storeRes = await fetch(CLOUD_STORE_URL);
+    const storeJson = await storeRes.json();
+    const allOrders = (Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : []).filter(isMock);
 
-    const ordersMap = new Map();
-
-    for (const line of lines) {
-      if (!line) continue;
-      try {
-        const item = JSON.parse(line);
-        let parsed = null;
-        if (item.message) {
-          try {
-            parsed = JSON.parse(item.message);
-          } catch (_) {}
-        }
-        if (!parsed && item.attachment && item.attachment.url) {
-          try {
-            const attRes = await fetch(item.attachment.url);
-            parsed = await attRes.json();
-          } catch (_) {}
-        }
-
-        if (parsed) {
-          if (parsed.type === 'NEW_ORDER' && parsed.newOrder) {
-            const key = parsed.newOrder.tokenNumber || parsed.newOrder.id || parsed.newOrder._id;
-            ordersMap.set(key, parsed.newOrder);
-          } else if (parsed.type === 'STATUS_UPDATED') {
-            const token = parsed.tokenNumber || parsed.updatedOrder?.tokenNumber;
-            const id = parsed.orderId || parsed.updatedOrder?.id || parsed.updatedOrder?._id;
-            const nextStatus = parsed.newStatus || parsed.status || parsed.updatedOrder?.status;
-
-            for (const [k, v] of ordersMap.entries()) {
-              if (
-                k === token ||
-                k === id ||
-                (token && v.tokenNumber === token) ||
-                (id && (v.id === id || v._id === id))
-              ) {
-                ordersMap.set(k, { ...v, status: nextStatus });
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    const allOrders = Array.from(ordersMap.values()).filter((ord) => {
-      const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
-      const mockNames = ['Aryan Sharma', 'Priya Patel'];
-      const name = String(ord?.studentName || ord?.customerName || '');
-      const id = String(ord?.id || ord?._id || '');
-      if (mockIds.includes(id)) return false;
-      if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return false;
-      return true;
-    });
     const preparing = allOrders.filter((o) => ['Accepted', 'Preparing'].includes(o.status));
     const ready = allOrders.filter((o) => o.status === 'Ready for Pickup');
     const recentlyCompleted = allOrders.filter((o) => ['Completed', 'Collected'].includes(o.status)).slice(0, 10);

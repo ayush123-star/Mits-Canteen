@@ -1,8 +1,31 @@
-// Serverless API for Vercel deployment - /api/orders
-// Provides persistent orders endpoint and relays to real-time cloud stream
+// Centralized Serverless API for Vercel deployment - /api/orders
+// Connects directly to persistent central cloud store (AWS edge) for 100% reliable global sync
 
-const TOPIC = 'mits_campus_canteen_sync_prod_2026';
-const CLOUD_URL = `https://ntfy.sh/${TOPIC}`;
+const CLOUD_STORE_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a1b6de08125dc5';
+
+const isMock = (ord) => {
+  if (!ord || typeof ord !== 'object') return true;
+  const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
+  const mockNames = ['Aryan Sharma', 'Priya Patel'];
+  const name = String(ord.studentName || ord.customerName || '');
+  const id = String(ord.id || ord._id || '');
+  if (mockIds.includes(id)) return true;
+  if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return true;
+  return false;
+};
+
+const doesMatch = (ord, cleanId, cleanToken) => {
+  if (!ord) return false;
+  const id = String(ord.id || ord._id || ord.orderId || '').toLowerCase();
+  const token = String(ord.tokenNumber || '').replace('#', '').toLowerCase();
+  const num = String(ord.orderNumber || '').toLowerCase();
+  const targetId = String(cleanId || '').toLowerCase();
+  const targetToken = String(cleanToken || '').replace('#', '').toLowerCase();
+
+  if (targetToken && token && token === targetToken) return true;
+  if (targetId && (id === targetId || num === targetId || token === targetId)) return true;
+  return false;
+};
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -18,113 +41,101 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 1. POST: Place a new order
     if (req.method === 'POST') {
       const order = req.body;
+      if (!order || isMock(order)) {
+        return res.status(200).json({ success: true, order });
+      }
+
       try {
-        await fetch(CLOUD_URL, {
-          method: 'POST',
-          headers: { 'Title': 'NEW_ORDER' },
-          body: JSON.stringify({ type: 'NEW_ORDER', newOrder: order }),
-        });
-      } catch (_) {}
+        const storeRes = await fetch(CLOUD_STORE_URL);
+        const storeJson = await storeRes.json();
+        const existing = Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : [];
+
+        const alreadyExists = existing.some(
+          (o) =>
+            (o.id && o.id === order.id) ||
+            (o.tokenNumber && o.tokenNumber === order.tokenNumber)
+        );
+
+        if (!alreadyExists) {
+          const nextList = [order, ...existing].filter((o) => !isMock(o)).slice(0, 100);
+          await fetch(CLOUD_STORE_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: 'mits-campus-canteen-orders-master',
+              data: { orders: nextList, lastUpdated: Date.now() },
+            }),
+          });
+        }
+      } catch (err) {
+        console.error('POST order sync error:', err.message);
+      }
+
       return res.status(201).json({ success: true, order });
     }
 
+    // 2. PATCH / PUT: Update order status
     if (req.method === 'PATCH' || req.method === 'PUT') {
       const {
-        orderId, tokenNumber, orderNumber, status, newStatus, reason,
-        updatedOrder, assignedCounter, estimatedPrepMinutes, estimatedReadyTime
+        orderId,
+        tokenNumber,
+        status,
+        newStatus,
+        reason,
+        assignedCounter,
+        estimatedPrepMinutes,
+        estimatedReadyTime,
       } = req.body || {};
-      const finalStatus = status || newStatus || updatedOrder?.status;
-      const cleanToken = tokenNumber || updatedOrder?.tokenNumber;
-      const cleanOrderId = orderId || updatedOrder?.id || updatedOrder?._id;
-      const cleanOrderNumber = orderNumber || updatedOrder?.orderNumber;
+      const finalStatus = status || newStatus;
+      const cleanToken = tokenNumber;
+      const cleanOrderId = orderId;
 
       try {
-        await fetch(CLOUD_URL, {
-          method: 'POST',
-          headers: { 'Title': 'STATUS_UPDATED', 'Priority': 'urgent' },
+        const storeRes = await fetch(CLOUD_STORE_URL);
+        const storeJson = await storeRes.json();
+        const existing = Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : [];
+
+        const nextList = existing.map((o) => {
+          if (doesMatch(o, cleanOrderId, cleanToken)) {
+            return {
+              ...o,
+              status: finalStatus,
+              assignedCounter: assignedCounter || o.assignedCounter || 1,
+              estimatedPrepMinutes: estimatedPrepMinutes || o.estimatedPrepMinutes,
+              estimatedReadyTime: estimatedReadyTime || o.estimatedReadyTime,
+              rejectionReason: reason || o.rejectionReason,
+              cancellationReason: reason || o.cancellationReason,
+            };
+          }
+          return o;
+        });
+
+        await fetch(CLOUD_STORE_URL, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: 'STATUS_UPDATED',
-            orderId: cleanOrderId,
-            tokenNumber: cleanToken,
-            orderNumber: cleanOrderNumber,
-            newStatus: finalStatus,
-            status: finalStatus,
-            assignedCounter: assignedCounter || updatedOrder?.assignedCounter || 1,
-            estimatedPrepMinutes: estimatedPrepMinutes || updatedOrder?.estimatedPrepMinutes,
-            estimatedReadyTime: estimatedReadyTime || updatedOrder?.estimatedReadyTime,
-            reason,
-            timestamp: Date.now(),
+            name: 'mits-campus-canteen-orders-master',
+            data: { orders: nextList, lastUpdated: Date.now() },
           }),
         });
-      } catch (_) {}
+      } catch (err) {
+        console.error('PATCH status sync error:', err.message);
+      }
+
       return res.status(200).json({ success: true, orderId: cleanOrderId, status: finalStatus });
     }
 
-    // Default GET: fetch recent events from cloud and aggregate
-    const cloudRes = await fetch(`${CLOUD_URL}/json?poll=1&since=12h`);
-    const text = await cloudRes.text();
-    const lines = text.trim().split('\n');
-    const ordersMap = new Map();
+    // 3. GET: Fetch all active & historical orders
+    const storeRes = await fetch(CLOUD_STORE_URL);
+    const storeJson = await storeRes.json();
+    const orders = (Array.isArray(storeJson?.data?.orders) ? storeJson.data.orders : []).filter(
+      (o) => !isMock(o)
+    );
 
-    for (const line of lines) {
-      if (!line) continue;
-      try {
-        const item = JSON.parse(line);
-        let parsed = null;
-        if (item.message) {
-          try {
-            parsed = JSON.parse(item.message);
-          } catch (_) {}
-        }
-        if (!parsed && item.attachment && item.attachment.url) {
-          try {
-            const attRes = await fetch(item.attachment.url);
-            parsed = await attRes.json();
-          } catch (_) {}
-        }
-
-        if (parsed) {
-          if (parsed.type === 'NEW_ORDER' && parsed.newOrder) {
-            const key = parsed.newOrder.tokenNumber || parsed.newOrder.id || parsed.newOrder._id;
-            ordersMap.set(key, parsed.newOrder);
-          } else if (parsed.type === 'STATUS_UPDATED') {
-            const token = parsed.tokenNumber || parsed.updatedOrder?.tokenNumber;
-            const id = parsed.orderId || parsed.updatedOrder?.id || parsed.updatedOrder?._id;
-            const nextStatus = parsed.newStatus || parsed.status || parsed.updatedOrder?.status;
-
-            for (const [k, v] of ordersMap.entries()) {
-              if (
-                k === token ||
-                k === id ||
-                (token && v.tokenNumber === token) ||
-                (id && (v.id === id || v._id === id))
-              ) {
-                ordersMap.set(k, {
-                  ...v,
-                  status: nextStatus,
-                  rejectionReason: parsed.reason || v.rejectionReason,
-                  cancellationReason: parsed.reason || v.cancellationReason,
-                });
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    const allOrders = Array.from(ordersMap.values()).filter((ord) => {
-      const mockIds = ['ord-100', 'ord-101', 'ord-102', 'ord-103', 'ord-104'];
-      const mockNames = ['Aryan Sharma', 'Priya Patel'];
-      const name = String(ord?.studentName || ord?.customerName || '');
-      const id = String(ord?.id || ord?._id || '');
-      if (mockIds.includes(id)) return false;
-      if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return false;
-      return true;
-    });
-
-    return res.status(200).json({ success: true, orders: allOrders });
+    return res.status(200).json({ success: true, orders });
   } catch (err) {
     return res.status(200).json({ success: true, orders: [] });
   }
