@@ -77,20 +77,41 @@ export const LiveTokenDisplay = () => {
         } = res.data.data;
 
         // Merge server live tokens with client orders: strictly Preparing and Ready
-        if (ready.length > 0 || preparing.length > 0 || completed.length > 0) {
+        if (Array.isArray(preparing) && Array.isArray(ready) && Array.isArray(completed)) {
+          const completedKeys = new Set(completed.map((o) => o.tokenNumber || o.id));
+          const readyKeys = new Set(ready.map((o) => o.tokenNumber || o.id));
+
           setPreparingTokens((prev) => {
             const map = new Map();
-            [...prev, ...preparing].forEach((o) => map.set(o.tokenNumber || o.id, o));
+            preparing.forEach((o) => {
+              if (o.status === 'Preparing') map.set(o.tokenNumber || o.id, o);
+            });
+            prev.forEach((o) => {
+              const k = o.tokenNumber || o.id;
+              if (!completedKeys.has(k) && !readyKeys.has(k) && o.status === 'Preparing' && !map.has(k)) {
+                map.set(k, o);
+              }
+            });
             return Array.from(map.values()).filter((o) => o.status === 'Preparing');
           });
+
           setReadyTokens((prev) => {
             const map = new Map();
-            [...prev, ...ready].forEach((o) => map.set(o.tokenNumber || o.id, o));
+            ready.forEach((o) => {
+              if (o.status === 'Ready for Pickup') map.set(o.tokenNumber || o.id, o);
+            });
+            prev.forEach((o) => {
+              const k = o.tokenNumber || o.id;
+              if (!completedKeys.has(k) && o.status === 'Ready for Pickup' && !map.has(k)) {
+                map.set(k, o);
+              }
+            });
             return Array.from(map.values()).filter((o) => o.status === 'Ready for Pickup');
           });
+
           setRecentlyCompleted((prev) => {
             const map = new Map();
-            [...prev, ...completed].forEach((o) => map.set(o.tokenNumber || o.id, o));
+            [...completed, ...prev].forEach((o) => map.set(o.tokenNumber || o.id, o));
             return Array.from(map.values()).slice(0, 10);
           });
         }

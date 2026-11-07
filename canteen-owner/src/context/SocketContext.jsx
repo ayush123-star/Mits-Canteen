@@ -13,8 +13,8 @@ const getSocketServerUrl = () => {
   }
   if (typeof window !== 'undefined') {
     const { hostname, port, protocol } = window.location;
-    // When running Vite dev server locally on port 5173 / 3000, connect directly to port 5000 backend
-    if (port === '5173' || port === '3000') {
+    // When running Vite dev server locally on port 5173 / 5174 / 3000, connect directly to port 5000 backend
+    if (port === '5173' || port === '5174' || port === '3000' || port === '5175') {
       return `${protocol}//${hostname}:5000`;
     }
     return window.location.origin;

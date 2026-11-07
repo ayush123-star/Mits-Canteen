@@ -97,41 +97,75 @@ export const MyOrdersPage = () => {
 
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL', 'ACTIVE', 'PAST'
   const [selectedPassOrder, setSelectedPassOrder] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
-  // Real-time notification listener for student's orders
+  // Real-time notification & auto-refresh listener for student's orders
   useEffect(() => {
     const handleStatusUpdate = (e) => {
-      const data = e.detail;
+      setRefreshTick((t) => t + 1);
+      const data = e?.detail;
       if (!data) return;
       const targetToken = data.tokenNumber || data.updatedOrder?.tokenNumber;
       const newStatus = data.newStatus || data.status || data.updatedOrder?.status;
 
-      if (newStatus === 'Ready for Pickup') {
+      if (newStatus === 'Accepted') {
+        playNotificationSound('accepted');
+        sendBrowserNotification(`Order #${targetToken} Accepted!`, {
+          body: 'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.',
+          icon: '/images/mits/mits-logo.png',
+        });
+      } else if (newStatus === 'Preparing') {
+        playNotificationSound('preparing');
+        sendBrowserNotification(`Order #${targetToken} Preparing!`, {
+          body: 'Your order is now being freshly prepared by our kitchen.',
+          icon: '/images/mits/mits-logo.png',
+        });
+      } else if (newStatus === 'Ready for Pickup') {
         playNotificationSound('ready');
         sendBrowserNotification(`Order #${targetToken} is READY!`, {
           body: 'Great news! Your MITS Canteen order is READY FOR PICKUP at the counter.',
           icon: '/images/mits/mits-logo.png',
         });
-      } else if (newStatus === 'Accepted') {
-        playNotificationSound('accepted');
-        sendBrowserNotification(`Order #${targetToken} Accepted!`, {
-          body: 'Your order has been accepted by MITS Main Canteen! Our kitchen is preparing your food.',
+      } else if (newStatus === 'Completed' || newStatus === 'Collected') {
+        playNotificationSound('completed');
+        sendBrowserNotification(`Order #${targetToken} Collected!`, {
+          body: 'Your order has been collected. Thank you for dining with MITS Canteen!',
           icon: '/images/mits/mits-logo.png',
         });
       }
     };
 
     window.addEventListener('smartcanteen:order_status_updated', handleStatusUpdate);
+    window.addEventListener('smartcanteen:orders_sync', handleStatusUpdate);
     window.addEventListener('smartcanteen:token_ready', handleStatusUpdate);
+    window.addEventListener('smartcanteen:tokens_refresh', handleStatusUpdate);
+    window.addEventListener('storage', handleStatusUpdate);
 
     return () => {
       window.removeEventListener('smartcanteen:order_status_updated', handleStatusUpdate);
+      window.removeEventListener('smartcanteen:orders_sync', handleStatusUpdate);
       window.removeEventListener('smartcanteen:token_ready', handleStatusUpdate);
+      window.removeEventListener('smartcanteen:tokens_refresh', handleStatusUpdate);
+      window.removeEventListener('storage', handleStatusUpdate);
     };
   }, []);
 
+  // Live responsive orders source: reads directly from localStorage + DataContext
+  const currentOrders = React.useMemo(() => {
+    try {
+      const stored = localStorage.getItem('smart_canteen_orders');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return orders;
+  }, [orders, refreshTick]);
+
   // Filter orders for current student (fallback to all student orders if demo)
-  const studentOrders = orders.filter((o) => {
+  const studentOrders = currentOrders.filter((o) => {
     if (!user) return true;
     return o.studentId === user.id || o.studentRoll === user.studentId || true;
   });

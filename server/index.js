@@ -7,6 +7,9 @@ const dotenv = require('dotenv');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+const mongoose = require('mongoose');
+mongoose.set('bufferCommands', false);
+
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const foodRoutes = require('./routes/food');

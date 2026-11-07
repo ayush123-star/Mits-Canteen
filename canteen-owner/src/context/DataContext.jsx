@@ -44,6 +44,36 @@ export const DEFAULT_HOMEPAGE_CONFIG = {
   },
 };
 
+// Helper to determine if an order matches an identifier or target object
+export const doesOrderMatch = (ord, target) => {
+  if (!ord || !target) return false;
+  const tId = target.orderId || target.id || target._id || target.updatedOrder?.id || target.updatedOrder?._id || target.updatedOrder?.orderId;
+  const tToken = target.tokenNumber || target.updatedOrder?.tokenNumber;
+  const tNum = target.orderNumber || target.orderId || target.updatedOrder?.orderNumber || target.updatedOrder?.orderId;
+
+  const cleanOrdToken = ord.tokenNumber ? String(ord.tokenNumber).replace('#', '').trim().toLowerCase() : '';
+  const cleanTargetToken = tToken ? String(tToken).replace('#', '').trim().toLowerCase() : '';
+
+  if (cleanOrdToken && cleanTargetToken && cleanOrdToken === cleanTargetToken) return true;
+
+  const ordIds = [
+    ord.id,
+    ord._id,
+    ord.orderId,
+    ord.orderNumber,
+    ord.tokenNumber,
+  ].filter(Boolean).map((v) => String(v).replace('#', '').trim().toLowerCase());
+
+  const targetIds = [
+    tId,
+    tToken,
+    tNum,
+    target.orderId,
+  ].filter(Boolean).map((v) => String(v).replace('#', '').trim().toLowerCase());
+
+  return ordIds.some((id) => targetIds.includes(id));
+};
+
 const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
@@ -233,21 +263,43 @@ export const DataProvider = ({ children }) => {
 
     const handleOrderStatusUpdated = (e) => {
       const data = e.detail;
-      if (data && data.orderId) {
-        setOrders((prev) =>
-          prev.map((ord) => {
-            if (ord.id === data.orderId || ord._id === data.orderId) {
+      if (data && (data.orderId || data.tokenNumber || data.id || data.updatedOrder)) {
+        const newStatus = data.status || data.newStatus || data.updatedOrder?.status;
+        if (!newStatus) return;
+
+        setOrders((prev) => {
+          let updatedAny = false;
+          let nextList = prev.map((ord) => {
+            if (doesOrderMatch(ord, data)) {
+              updatedAny = true;
               return {
                 ...ord,
-                status: data.status,
-                assignedCounter: data.assignedCounter || ord.assignedCounter,
+                status: newStatus,
+                ...(data.updatedOrder || {}),
+                assignedCounter: data.assignedCounter || ord.assignedCounter || 1,
                 estimatedPrepMinutes: data.estimatedPrepMinutes || ord.estimatedPrepMinutes,
                 estimatedReadyTime: data.estimatedReadyTime || ord.estimatedReadyTime,
               };
             }
             return ord;
-          })
-        );
+          });
+
+          if (!updatedAny && (data.updatedOrder || data.order)) {
+            const incoming = normalizeOrder(data.updatedOrder || data.order);
+            if (incoming) {
+              incoming.status = newStatus;
+              nextList = [incoming, ...nextList];
+              updatedAny = true;
+            }
+          }
+
+          if (updatedAny) {
+            try {
+              localStorage.setItem('smart_canteen_orders', JSON.stringify(nextList));
+            } catch (_) {}
+          }
+          return nextList;
+        });
       }
     };
 
@@ -389,26 +441,34 @@ export const DataProvider = ({ children }) => {
           return updated;
         });
       } else if (type === 'STATUS_UPDATED') {
+        const targetStatus = newStatus || updatedOrder?.status;
+        if (!targetStatus) return;
+
         setOrders((prev) => {
           let found = false;
           let nextList = prev.map((o) => {
-            const isMatch =
-              (orderId && (o.id === orderId || o._id === orderId || o.orderId === orderId || o.tokenNumber === orderId)) ||
-              (updatedOrder && (o.id === updatedOrder.id || o._id === updatedOrder._id || o.tokenNumber === updatedOrder.tokenNumber));
-
-            if (isMatch) {
+            if (doesOrderMatch(o, cloudEvent)) {
               found = true;
-              const statusToSet = newStatus || updatedOrder?.status || o.status;
-              if (statusToSet === 'Ready for Pickup') {
+              if (targetStatus === 'Ready for Pickup') {
                 playNotificationSound('ready');
               }
-              return { ...o, ...(updatedOrder || {}), status: statusToSet };
+              return {
+                ...o,
+                ...(updatedOrder || {}),
+                status: targetStatus,
+                assignedCounter: cloudEvent.assignedCounter || o.assignedCounter || 1,
+              };
             }
             return o;
           });
 
           if (!found && updatedOrder) {
-            nextList = [updatedOrder, ...nextList];
+            const incoming = normalizeOrder(updatedOrder);
+            if (incoming) {
+              incoming.status = targetStatus;
+              nextList = [incoming, ...nextList];
+              found = true;
+            }
           }
 
           if (incomingOrders && Array.isArray(incomingOrders)) {
@@ -421,20 +481,20 @@ export const DataProvider = ({ children }) => {
 
           window.dispatchEvent(
             new CustomEvent('smartcanteen:orders_sync', {
-              detail: { orders: nextList, type: 'STATUS_UPDATED', orderId, newStatus, updatedOrder },
+              detail: { orders: nextList, type: 'STATUS_UPDATED', orderId, newStatus: targetStatus, updatedOrder },
             })
           );
           window.dispatchEvent(
             new CustomEvent('smartcanteen:order_status_updated', {
-              detail: { orders: nextList, orderId, newStatus, status: newStatus, updatedOrder },
+              detail: { orders: nextList, orderId, newStatus: targetStatus, status: targetStatus, updatedOrder, tokenNumber: cloudEvent.tokenNumber },
             })
           );
           window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
 
-          if (newStatus === 'Ready for Pickup' || updatedOrder?.status === 'Ready for Pickup') {
+          if (targetStatus === 'Ready for Pickup' || updatedOrder?.status === 'Ready for Pickup') {
             window.dispatchEvent(
               new CustomEvent('smartcanteen:token_ready', {
-                detail: { tokenNumber: updatedOrder?.tokenNumber, orderId, order: updatedOrder },
+                detail: { tokenNumber: updatedOrder?.tokenNumber || cloudEvent.tokenNumber, orderId, order: updatedOrder },
               })
             );
           }
@@ -701,15 +761,10 @@ export const DataProvider = ({ children }) => {
   const updateOrderStatus = (orderId, newStatus, actorName = 'Kitchen Supervisor', extraOptions = {}) => {
     let targetUpdatedOrder = null;
     const cleanId = String(orderId || '').trim();
-    const nextOrders = orders.map((ord) => {
-        const isMatch =
-          ord.id === cleanId ||
-          ord._id === cleanId ||
-          (ord.orderId && ord.orderId === cleanId) ||
-          (ord.tokenNumber && ord.tokenNumber === cleanId) ||
-          (ord.tokenNumber && ord.tokenNumber === `#${cleanId}`) ||
-          (cleanId.startsWith('#') && ord.tokenNumber === cleanId.slice(1));
+    const queryObj = { orderId: cleanId, tokenNumber: cleanId, id: cleanId };
 
+    const nextOrders = orders.map((ord) => {
+        const isMatch = doesOrderMatch(ord, queryObj);
         if (!isMatch) return ord;
 
         const updated = { ...ord, status: newStatus };
@@ -844,8 +899,9 @@ export const DataProvider = ({ children }) => {
       });
 
     persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
-      orderId,
+      orderId: cleanId,
       tokenNumber: targetUpdatedOrder?.tokenNumber,
+      orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
       newStatus,
       updatedOrder: targetUpdatedOrder,
       orders: nextOrders,
@@ -853,9 +909,10 @@ export const DataProvider = ({ children }) => {
 
     // Sync status & notify backend
     axios
-      .patch(`/api/orders/${orderId}/status`, {
-        orderId,
+      .patch(`/api/orders/${encodeURIComponent(cleanId)}/status`, {
+        orderId: cleanId,
         tokenNumber: targetUpdatedOrder?.tokenNumber,
+        orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
         status: newStatus,
         note: extraOptions.note,
         estimatedPrepMinutes: extraOptions.estimatedMinutes,
@@ -924,8 +981,11 @@ export const DataProvider = ({ children }) => {
 
   const rejectOrder = (orderId, reason = 'Ingredients or kitchen capacity temporarily unavailable') => {
     let targetUpdatedOrder = null;
+    const cleanId = String(orderId || '').trim();
+    const queryObj = { orderId: cleanId, tokenNumber: cleanId, id: cleanId };
+
     const nextOrders = orders.map((ord) => {
-      if (ord.id === orderId || ord._id === orderId || ord.tokenNumber === orderId) {
+      if (doesOrderMatch(ord, queryObj)) {
         logActivity('Canteen Owner', 'ORDER_REJECTED', 'ORDERS', `Rejected order #${ord.tokenNumber}: ${reason}`);
         targetUpdatedOrder = { ...ord, status: 'Rejected', rejectionReason: reason };
         return targetUpdatedOrder;
@@ -934,17 +994,19 @@ export const DataProvider = ({ children }) => {
     });
 
     persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
-      orderId,
+      orderId: cleanId,
       tokenNumber: targetUpdatedOrder?.tokenNumber,
+      orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
       newStatus: 'Rejected',
       updatedOrder: targetUpdatedOrder,
       reason,
     });
 
     axios
-      .patch(`/api/orders/${orderId}/status`, {
-        orderId,
+      .patch(`/api/orders/${encodeURIComponent(cleanId)}/status`, {
+        orderId: cleanId,
         tokenNumber: targetUpdatedOrder?.tokenNumber,
+        orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
         status: 'Rejected',
         reason,
         updatedOrder: targetUpdatedOrder,
@@ -954,8 +1016,11 @@ export const DataProvider = ({ children }) => {
 
   const cancelOrder = (orderId, reason = 'Student requested cancellation') => {
     let targetUpdatedOrder = null;
+    const cleanId = String(orderId || '').trim();
+    const queryObj = { orderId: cleanId, tokenNumber: cleanId, id: cleanId };
+
     const nextOrders = orders.map((ord) => {
-      if (ord.id === orderId || ord._id === orderId || ord.tokenNumber === orderId) {
+      if (doesOrderMatch(ord, queryObj)) {
         logActivity(ord.studentName, 'ORDER_CANCELLED', 'ORDERS', `Cancelled order #${ord.tokenNumber}: ${reason}`);
         targetUpdatedOrder = { ...ord, status: 'Cancelled', cancellationReason: reason };
         return targetUpdatedOrder;
@@ -964,17 +1029,19 @@ export const DataProvider = ({ children }) => {
     });
 
     persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
-      orderId,
+      orderId: cleanId,
       tokenNumber: targetUpdatedOrder?.tokenNumber,
+      orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
       newStatus: 'Cancelled',
       updatedOrder: targetUpdatedOrder,
       reason,
     });
 
     axios
-      .patch(`/api/orders/${orderId}/status`, {
-        orderId,
+      .patch(`/api/orders/${encodeURIComponent(cleanId)}/status`, {
+        orderId: cleanId,
         tokenNumber: targetUpdatedOrder?.tokenNumber,
+        orderNumber: targetUpdatedOrder?.orderNumber || targetUpdatedOrder?.orderId,
         status: 'Cancelled',
         reason,
         updatedOrder: targetUpdatedOrder,

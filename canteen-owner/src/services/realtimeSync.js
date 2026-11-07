@@ -17,8 +17,12 @@ const CLOUD_POLL_URL = `https://ntfy.sh/${REALTIME_TOPIC}/json?poll=1&since=12h`
 export const publishOrderEvent = async (event) => {
   if (!event || typeof event !== 'object') return;
 
+  // Keep payload UNDER 4000 bytes so ntfy.sh never rejects it (HTTP 413)
+  const safeEvent = { ...event };
+  delete safeEvent.orders; // Strip massive arrays to guarantee sub-100ms delivery
+
   const payload = {
-    ...event,
+    ...safeEvent,
     emitterId: getClientInstanceId(),
     timestamp: Date.now(),
   };
