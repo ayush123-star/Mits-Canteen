@@ -904,11 +904,17 @@ export const DataProvider = ({ children }) => {
       ...fbData,
       id: 'fb-' + Date.now(),
       date: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
     setFeedbackList((prev) => [newFb, ...prev]);
     logActivity(fbData.studentName, 'FEEDBACK_SUBMITTED', 'STUDENT_FEEDBACK', `Reviewed ${fbData.foodName || fbData.foodItem || 'Dish'} (${fbData.rating} Stars)`);
     axios.post('/api/feedback', fbData).catch(() => {});
     return newFb;
+  };
+
+  const deleteFeedback = (feedbackId) => {
+    setFeedbackList((prev) => prev.filter((f) => (f.id !== feedbackId && f._id !== feedbackId)));
+    axios.delete(`/api/feedback/${feedbackId}`).catch(() => {});
   };
 
   return (
@@ -947,6 +953,7 @@ export const DataProvider = ({ children }) => {
         updateCanteenPaymentQR,
         changeUserPassword,
         submitFeedback,
+        deleteFeedback,
         logActivity,
         homepageConfig,
         updateHomepageConfig,

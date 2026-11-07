@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { playNotificationSound } from '../../utils/audio';
 import {
   Star,
   MessageSquare,
@@ -10,7 +13,8 @@ import {
   CheckCircle2,
   Sparkles,
   Utensils,
-  User
+  User,
+  X
 } from 'lucide-react';
 
 const POPULAR_TAGS = [
@@ -33,6 +37,7 @@ export const FeedbackPage = () => {
   const [selectedTags, setSelectedTags] = useState(['Crispy & Fresh']);
   const [comment, setComment] = useState('');
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [successModalData, setSuccessModalData] = useState(null);
 
   const toggleTag = (tag) => {
     if (selectedTags.includes(tag)) {
@@ -52,9 +57,32 @@ export const FeedbackPage = () => {
     const foodObj = menuItems.find((m) => (m.id === selectedFoodId || m._id === selectedFoodId));
 
     submitFeedback({
-      studentId: user?.id || 'user-stu-1',
+      studentId: user?.id || user?.studentId || 'BTET25O1039',
       studentName: user?.name || 'Ayush Pandey',
       foodItemId: selectedFoodId,
+      foodName: foodObj?.name || 'Campus Special',
+      rating,
+      comment,
+      tags: selectedTags,
+    });
+
+    // Play sparkling chime sound effect
+    playNotificationSound('feedback');
+
+    // Celebratory confetti animation
+    try {
+      confetti({
+        particleCount: 85,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#7955E8', '#526DFF', '#F59E0B', '#10B981'],
+      });
+    } catch (err) {
+      console.debug('Confetti effect skipped', err);
+    }
+
+    // Open detailed confirmation pop-up modal
+    setSuccessModalData({
       foodName: foodObj?.name || 'Campus Special',
       rating,
       comment,
@@ -104,7 +132,7 @@ export const FeedbackPage = () => {
           {submittedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              Thank you! Your feedback has been shared with the canteen kitchen team!
+              Thank you! Your feedback has been shared with the canteen owner and kitchen team!
             </div>
           )}
 
@@ -140,7 +168,7 @@ export const FeedbackPage = () => {
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
                     onClick={() => setRating(star)}
-                    className="p-1 transition-transform hover:scale-125 focus:outline-none"
+                    className="p-1 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                   >
                     <Star
                       className={`w-7 h-7 ${
@@ -176,7 +204,7 @@ export const FeedbackPage = () => {
                       key={tag}
                       type="button"
                       onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md shadow-purple-500/20'
                           : 'bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/20'
@@ -207,10 +235,10 @@ export const FeedbackPage = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-98"
             >
               <Send className="w-4 h-4" />
-              Publish Dish Feedback
+              <span>Submit Feedback</span>
             </button>
           </form>
         </div>
@@ -230,7 +258,7 @@ export const FeedbackPage = () => {
           <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
             {feedbackList.map((item) => (
               <div
-                key={item.id}
+                key={item.id || item._id}
                 className="p-5 rounded-3xl bg-[#1C263A]/90 backdrop-blur-xl border border-purple-500/20 shadow-xl space-y-3"
               >
                 <div className="flex items-center justify-between">
@@ -240,7 +268,7 @@ export const FeedbackPage = () => {
                     </div>
                     <div>
                       <h4 className="text-xs font-black text-white">{item.studentName}</h4>
-                      <p className="text-[10px] text-[#AAB3C5]">{item.createdAt}</p>
+                      <p className="text-[10px] text-[#AAB3C5]">{item.createdAt || item.date}</p>
                     </div>
                   </div>
 
@@ -276,6 +304,89 @@ export const FeedbackPage = () => {
           </div>
         </div>
       </div>
+
+      {/* 4. Feedback Submission Success Pop-up Modal with Sound & Confetti */}
+      {successModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md bg-[#1C263A] border-2 border-purple-500/40 rounded-3xl p-6 sm:p-7 text-white shadow-2xl text-center space-y-4 animate-scaleUp overflow-hidden"
+          >
+            {/* Ambient decorative glow */}
+            <div className="absolute -top-12 -right-12 w-36 h-36 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Close Button */}
+            <button
+              onClick={() => setSuccessModalData(null)}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Glowing Trophy / Sparkles Icon */}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30 ring-4 ring-amber-400/20 animate-bounce">
+              <Sparkles className="w-8 h-8" />
+            </div>
+
+            {/* Heading & Confirmation */}
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Feedback Recorded Live
+              </span>
+              <h3 className="text-xl font-black text-white pt-1">
+                Thank You for Your Feedback!
+              </h3>
+              <p className="text-xs text-slate-400">
+                Your review has been successfully submitted and delivered directly to the Canteen Owner console.
+              </p>
+            </div>
+
+            {/* Review Summary Box */}
+            <div className="p-4 rounded-2xl bg-[#151C30] border border-purple-500/25 text-left space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-white text-sm">{successModalData.foodName}</span>
+                <div className="flex items-center gap-1">
+                  {[...Array(successModalData.rating)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-slate-300 italic">
+                "{successModalData.comment}"
+              </p>
+              {successModalData.tags && successModalData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {successModalData.tags.map((t, idx) => (
+                    <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0B1020] text-purple-300 border border-purple-500/20">
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setSuccessModalData(null)}
+                className="flex-1 py-3 rounded-xl bg-[#151C30] hover:bg-[#25334d] border border-purple-500/30 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Write Another Review
+              </button>
+              <Link
+                to="/menu"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs shadow-md shadow-purple-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>View Menu</span>
+                <span>&rarr;</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

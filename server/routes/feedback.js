@@ -35,4 +35,15 @@ router.post('/', async (req, res) => {
   }
 });
 
+// @route   DELETE /api/feedback/:id
+// @desc    Delete review
+router.delete('/:id', async (req, res) => {
+  try {
+    await Feedback.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Review removed' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to delete review' });
+  }
+});
+
 module.exports = router;

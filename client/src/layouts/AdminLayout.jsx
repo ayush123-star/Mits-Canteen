@@ -26,12 +26,14 @@ import {
   EyeOff,
   Lock,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  MessageSquare,
+  Star
 } from 'lucide-react';
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
-  const { canteens, toggleCanteenStatus, orders, inventoryItems } = useData();
+  const { canteens, toggleCanteenStatus, orders, inventoryItems, feedbackList } = useData();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rushHour, setRushHour] = useState(false);
   
@@ -67,6 +69,7 @@ export const AdminLayout = () => {
     { label: 'Recipe Studio', path: '/admin/recipes', icon: UtensilsCrossed },
     { label: 'Stock History Ledger', path: '/admin/stock-history', icon: History },
     { label: 'Cravings & Day Offers', path: '/admin/homepage-manager', icon: Flame, badge: 'Home', badgeColor: 'bg-gradient-to-r from-[#7955E8] to-[#526DFF]' },
+    { label: 'Customer Feedback', path: '/admin/feedback', icon: MessageSquare, badge: feedbackList?.length || 0, badgeColor: 'bg-emerald-600' },
     { label: 'Cash & Online Payments', path: '/admin/payments', icon: DollarSign },
     { label: 'Sales Reports & Analytics', path: '/admin/reports', icon: BarChart3 },
     { label: 'Payment QR & Settings', path: '/admin/settings', icon: QrCode },

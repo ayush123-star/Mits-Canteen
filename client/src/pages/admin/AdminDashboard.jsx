@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import {
@@ -29,7 +30,7 @@ import {
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
-  const { orders, updateOrderStatus, cancelOrder } = useData();
+  const { orders, updateOrderStatus, cancelOrder, feedbackList } = useData();
 
   const [searchToken, setSearchToken] = useState('');
   const [selectedCounter, setSelectedCounter] = useState('ALL');
@@ -155,25 +156,40 @@ export const AdminDashboard = () => {
           </p>
         </div>
 
-        {/* Quick Token Call / Scanner Box (Full-width on phone) */}
-        <form onSubmit={handleVerifyTokenSubmit} className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <QrCode className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchToken}
-              onChange={(e) => setSearchToken(e.target.value)}
-              placeholder="Verify Token (e.g. TK-101)..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl sm:rounded-2xl bg-[#151C30] border border-purple-500/30 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-[#7955E8] shadow-xs"
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-md shadow-purple-500/30 transition-all cursor-pointer shrink-0 active:scale-95"
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Quick Token Call / Scanner Box */}
+          <form onSubmit={handleVerifyTokenSubmit} className="flex items-center gap-2 flex-1 md:w-auto">
+            <div className="relative flex-1 md:w-56">
+              <QrCode className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchToken}
+                onChange={(e) => setSearchToken(e.target.value)}
+                placeholder="Verify Token (e.g. TK-101)..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl sm:rounded-2xl bg-[#151C30] border border-purple-500/30 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-[#7955E8] shadow-xs"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-md shadow-purple-500/30 transition-all cursor-pointer shrink-0 active:scale-95"
+            >
+              Verify
+            </button>
+          </form>
+
+          {/* Quick Shortcut to Customer Feedback */}
+          <Link
+            to="/admin/feedback"
+            className="px-3 py-2.5 rounded-xl sm:rounded-2xl bg-[#1C263A] hover:bg-[#25334d] border border-purple-500/30 text-purple-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs shrink-0"
+            title="View Student Reviews & Feedback"
           >
-            Verify
-          </button>
-        </form>
+            <MessageSquare className="w-4 h-4 text-purple-400" />
+            <span className="hidden sm:inline">Feedback</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black">
+              {feedbackList?.length || 0}
+            </span>
+          </Link>
+        </div>
       </div>
 
       {/* 2. Stat Metric Cards (Phone-Responsive Grid) */}

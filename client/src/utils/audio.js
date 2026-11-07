@@ -28,21 +28,23 @@ export const playNotificationSound = (type = 'success') => {
       gain2.connect(ctx.destination);
       osc2.start(ctx.currentTime + 0.12);
       osc2.stop(ctx.currentTime + 0.38);
-    } else if (type === 'ready') {
-      // Pleasant 3-note chime for "Order Ready"
-      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    } else if (type === 'ready' || type === 'feedback') {
+      // Pleasant multi-note sparkling chime for "Order Ready" or "Feedback Submitted"
+      const notes = type === 'feedback' 
+        ? [523.25, 659.25, 783.99, 1046.50, 1318.51] // C5, E5, G5, C6, E6 sparkling celebration
+        : [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
       notes.forEach((freq, index) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + index * 0.12);
-        gain.gain.setValueAtTime(0, ctx.currentTime + index * 0.12);
-        gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + index * 0.12 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + index * 0.12 + 0.35);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + index * 0.1);
+        gain.gain.setValueAtTime(0, ctx.currentTime + index * 0.1);
+        gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime + index * 0.1 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + index * 0.1 + 0.38);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + index * 0.12);
-        osc.stop(ctx.currentTime + index * 0.12 + 0.4);
+        osc.start(ctx.currentTime + index * 0.1);
+        osc.stop(ctx.currentTime + index * 0.1 + 0.42);
       });
     } else if (type === 'new_order') {
       // Bell alert for admin incoming order

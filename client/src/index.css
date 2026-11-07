@@ -548,6 +548,21 @@ html.light ::-webkit-scrollbar-thumb {
   animation: rotateBorderBeam 6s linear infinite;
 }
 
+@keyframes scaleUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .neon-border-glow {
   position: relative;
 }

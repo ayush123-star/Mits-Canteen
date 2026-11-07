@@ -36,6 +36,7 @@ import { PaymentsManagementPage } from './pages/admin/PaymentsManagementPage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { CanteenSettingsPage } from './pages/admin/CanteenSettingsPage';
 import { HomepageManagerPage } from './pages/admin/HomepageManagerPage';
+import { AdminFeedbackPage } from './pages/admin/AdminFeedbackPage';
 
 // Super Admin Portal Pages
 import { SuperAdminDashboard } from './pages/superAdmin/SuperAdminDashboard';
@@ -149,6 +150,7 @@ export function App() {
                   <Route path="reports" element={<AdminReportsPage />} />
                   <Route path="settings" element={<CanteenSettingsPage />} />
                   <Route path="homepage-manager" element={<HomepageManagerPage />} />
+                  <Route path="feedback" element={<AdminFeedbackPage />} />
                 </Route>
 
                 {/* 4. SUPER ADMIN PORTAL (Governance, 24h Owner Invites, Audits) */}
