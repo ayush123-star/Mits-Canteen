@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { MitsCampusBackground } from '../components/common/MitsCampusBackground';
 import {
@@ -12,13 +12,23 @@ import {
   MapPin,
   CheckCircle,
   Flame,
-  ChefHat
+  ChefHat,
+  Megaphone,
+  Radio
 } from 'lucide-react';
+import {
+  playNotificationSound,
+  announceTokenCall,
+  speakAnnouncement,
+  unlockAudio
+} from '../utils/audio';
 
 export const LiveTokenDisplay = () => {
   const { orders } = useData();
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [audioToast, setAudioToast] = useState(null);
+  const [lastCalledToken, setLastCalledToken] = useState(null);
 
   const preparingTokens = (orders || []).filter((o) => o.status === 'Preparing');
   const readyTokens = (orders || []).filter((o) => o.status === 'Ready for Pickup');
@@ -36,10 +46,98 @@ export const LiveTokenDisplay = () => {
         : 8,
   };
 
+  // Clock ticker
   useEffect(() => {
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(clockInterval);
   }, []);
+
+  // Unlock audio automatically on any first touch or tap on the page (mobile browser requirement)
+  useEffect(() => {
+    const handleFirstGesture = () => {
+      unlockAudio();
+    };
+    window.addEventListener('click', handleFirstGesture, { once: true });
+    window.addEventListener('touchstart', handleFirstGesture, { once: true });
+    return () => {
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+    };
+  }, []);
+
+  // Track announced tokens to prevent spamming duplicates, but announce new ready tokens automatically
+  const announcedTokensRef = useRef(new Set());
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      // Record already ready tokens on page load
+      readyTokens.forEach((o) => {
+        if (o.tokenNumber) announcedTokensRef.current.add(String(o.tokenNumber));
+      });
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (!audioEnabled) return;
+
+    // Detect newly ready tokens
+    readyTokens.forEach((ord) => {
+      const key = String(ord.tokenNumber);
+      if (key && !announcedTokensRef.current.has(key)) {
+        announcedTokensRef.current.add(key);
+        setLastCalledToken(ord.tokenNumber);
+        setAudioToast({
+          message: `Now Calling Token #${ord.tokenNumber} at Counter! 📣`,
+          active: true,
+        });
+        announceTokenCall(ord.tokenNumber, 'Counter');
+      }
+    });
+  }, [readyTokens, audioEnabled]);
+
+  // Auto-dismiss floating audio toast
+  useEffect(() => {
+    if (audioToast) {
+      const timer = setTimeout(() => setAudioToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [audioToast]);
+
+  // Audio Toggle with immediate feedback
+  const handleToggleAudio = () => {
+    unlockAudio();
+    if (!audioEnabled) {
+      setAudioEnabled(true);
+      setAudioToast({
+        message: 'Voice Calling Enabled 🔊',
+        active: true,
+      });
+      playNotificationSound('test');
+      speakAnnouncement('Voice calling enabled for MITS Canteen.');
+    } else {
+      setAudioEnabled(false);
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setAudioToast({
+        message: 'Sound & Voice Muted 🔇',
+        active: true,
+      });
+    }
+  };
+
+  // Manual Test Sound or Re-Announce specific token
+  const handleTestSound = (tokenToCall = null) => {
+    unlockAudio();
+    const tokenNum = tokenToCall || readyTokens[0]?.tokenNumber || '101';
+    setLastCalledToken(tokenNum);
+    setAudioToast({
+      message: `Calling Token #${tokenNum} at Counter 📣`,
+      active: true,
+    });
+    announceTokenCall(tokenNum, 'Counter');
+  };
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -53,6 +151,19 @@ export const LiveTokenDisplay = () => {
     <div className="relative min-h-screen bg-[#0B1020] text-white flex flex-col p-4 sm:p-6 lg:p-8 space-y-6 overflow-hidden dark-surface">
       {/* Real Animated MITS Gwalior Campus Drone Reel Background */}
       <MitsCampusBackground overlay="tv" showBadge={true} showControls={false} />
+
+      {/* FLOATING AUDIO STATUS TOAST */}
+      {audioToast && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-[#151C30]/95 border-2 border-purple-500/50 shadow-2xl shadow-purple-950/80 rounded-2xl px-5 py-3 flex items-center gap-3 backdrop-blur-xl animate-bounce">
+          <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 border border-purple-500/30 shrink-0">
+            <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-black text-white">{audioToast.message}</p>
+            <p className="text-[10px] text-[#AAB3C5]">MITS Live Audio Announcement System</p>
+          </div>
+        </div>
+      )}
 
       {/* 1. TOP HEADER BAR */}
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0B1020]/80 border border-purple-500/25 rounded-3xl p-5 shadow-2xl backdrop-blur-xl">
@@ -76,7 +187,10 @@ export const LiveTokenDisplay = () => {
             <p className="text-xs text-[#AAB3C5] flex items-center gap-2 mt-0.5">
               <span>Address: MITS Main Canteen, Counter, MITS Campus, Gwalior</span>
               <span>•</span>
-              <span className="text-emerald-400 font-bold">Kitchen Synced</span>
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                Kitchen Synced
+              </span>
             </p>
           </div>
         </div>
@@ -93,18 +207,31 @@ export const LiveTokenDisplay = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Quick Test Voice & Sound Button */}
             <button
-              onClick={() => setAudioEnabled(!audioEnabled)}
-              className={`p-3 rounded-2xl border transition-all ${
-                audioEnabled
-                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-md shadow-purple-500/20'
-                  : 'bg-[#151C30] text-[#AAB3C5] border-purple-500/20'
-              }`}
-              title={audioEnabled ? 'Voice Announcements On' : 'Voice Announcements Muted'}
+              onClick={() => handleTestSound()}
+              className="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-lg shadow-purple-500/25 flex items-center gap-1.5 transition-all transform active:scale-95"
+              title="Test token announcement chime and natural voice speech"
             >
-              {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              <Megaphone className="w-4 h-4 animate-bounce" />
+              <span className="hidden sm:inline">Test Voice</span>
+              <span className="sm:hidden">Test</span>
             </button>
 
+            {/* Audio Toggle Button */}
+            <button
+              onClick={handleToggleAudio}
+              className={`p-3 rounded-2xl border transition-all flex items-center justify-center ${
+                audioEnabled
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-md shadow-purple-500/20 ring-2 ring-purple-500/30'
+                  : 'bg-[#151C30] text-[#AAB3C5] border-purple-500/20 opacity-80'
+              }`}
+              title={audioEnabled ? 'Voice Calling Active (Click to Mute)' : 'Sound Muted (Click to Enable)'}
+            >
+              {audioEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5 text-red-400" />}
+            </button>
+
+            {/* Fullscreen Button */}
             <button
               onClick={toggleFullScreen}
               className="p-3 rounded-2xl bg-[#151C30] hover:bg-[#25334d] border border-purple-500/30 text-white transition-colors"
@@ -144,8 +271,8 @@ export const LiveTokenDisplay = () => {
 
             {/* Tokens Cards Grid */}
             {readyTokens.length === 0 ? (
-              <div className="py-20 text-center space-y-3 bg-[#151C30]/80 rounded-3xl border border-purple-500/20 p-6 mt-4">
-                <div className="w-16 h-16 rounded-2xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center mx-auto">
+              <div className="py-20 text-center space-y-4 bg-[#151C30]/80 rounded-3xl border border-purple-500/20 p-6 mt-4">
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center mx-auto shadow-inner">
                   <ChefHat className="w-8 h-8 text-purple-300" />
                 </div>
                 <div className="space-y-1">
@@ -156,20 +283,30 @@ export const LiveTokenDisplay = () => {
                     There are no ready orders right now. Place an order from the campus menu to generate your live token.
                   </p>
                 </div>
-                <a
-                  href="/menu"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-lg shadow-purple-500/30 transition-all mt-2"
-                >
-                  <span>Order Food Now</span>
-                  <span>&rarr;</span>
-                </a>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={() => handleTestSound('101')}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-black transition-all shadow-md active:scale-95"
+                    title="Test airport chime and token voice calling"
+                  >
+                    <Megaphone className="w-4 h-4 text-purple-300 animate-pulse" />
+                    <span>Test Calling Sound 🔊</span>
+                  </button>
+                  <a
+                    href="/menu"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white text-xs font-black shadow-lg shadow-purple-500/30 transition-all"
+                  >
+                    <span>Order Food Now</span>
+                    <span>&rarr;</span>
+                  </a>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
                 {readyTokens.map((ord) => (
                   <div
                     key={ord.id || ord._id}
-                    className="p-5 rounded-3xl bg-gradient-to-b from-emerald-950/80 to-emerald-900/60 border-2 border-emerald-400 shadow-xl flex flex-col items-center justify-center text-center transform transition-transform hover:scale-105 animate-pulse-glow"
+                    className="p-5 rounded-3xl bg-gradient-to-b from-emerald-950/80 to-emerald-900/60 border-2 border-emerald-400 shadow-xl flex flex-col items-center justify-center text-center transform transition-transform hover:scale-105 animate-pulse-glow relative group"
                   >
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
                       TOKEN
@@ -181,6 +318,19 @@ export const LiveTokenDisplay = () => {
                       <MapPin className="w-3 h-3" />
                       Counter
                     </div>
+
+                    {/* Manual Call Again Sound Trigger Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTestSound(ord.tokenNumber);
+                      }}
+                      className="mt-2.5 px-3 py-1 rounded-xl bg-emerald-400/20 hover:bg-emerald-400/30 border border-emerald-400/40 text-emerald-200 text-[11px] font-black flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      title="Broadcast token calling chime and voice announcement"
+                    >
+                      <Megaphone className="w-3 h-3 text-emerald-300" />
+                      <span>Call Again 📣</span>
+                    </button>
                   </div>
                 ))}
               </div>
