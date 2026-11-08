@@ -150,6 +150,8 @@ export const INITIAL_CANTEENS = [
     todayRevenue: 5420,
     totalMonthlyRevenue: 142500,
     wastagePercentage: 1.5,
+    upiId: 'pandeyayush1603-1@okicici',
+    upiMerchantName: 'Ayush Pandey',
   },
   {
     id: 'canteen-2',

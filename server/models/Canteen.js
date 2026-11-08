@@ -67,7 +67,7 @@ const canteenSchema = new mongoose.Schema({
   },
   upiId: {
     type: String,
-    default: 'smartcampus.canteen@okhdfcbank',
+    default: 'pandeyayush1603-1@okicici',
   },
   upiMerchantName: {
     type: String,

@@ -170,7 +170,7 @@ export const PaymentsManagementPage = () => {
               </span>
             </div>
             <p className="text-xs text-[#AAB3C5] mt-0.5">
-              Receiving UPI ID: <strong className="font-mono text-purple-300">{myCanteen?.upiId || 'campus.canteen@okhdfcbank'}</strong> • Payee: <strong className="text-white">{myCanteen?.upiMerchantName || myCanteen?.name || 'MITS Main Canteen'}</strong>
+              Receiving UPI ID: <strong className="font-mono text-purple-300">{myCanteen?.upiId || 'pandeyayush1603-1@okicici'}</strong> • Payee: <strong className="text-white">{myCanteen?.upiMerchantName || 'Ayush Pandey'}</strong>
             </p>
           </div>
         </div>

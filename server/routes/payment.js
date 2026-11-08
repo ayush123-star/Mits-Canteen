@@ -13,7 +13,7 @@ router.post('/create-order', protect, async (req, res) => {
     }
 
     const transactionRef = `TXN${Date.now()}`;
-    const vpa = 'smartcampus.canteen@okhdfcbank';
+    const vpa = 'pandeyayush1603-1@okicici';
     const payeeName = 'Smart Campus Canteen';
     
     // Standard UPI URI format supported by GPay, PhonePe, Paytm, BHIM

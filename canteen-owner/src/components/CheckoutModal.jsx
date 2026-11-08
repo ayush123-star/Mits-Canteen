@@ -82,8 +82,12 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const { placeOrder, canteens } = useData();
 
   const currentCanteen = (canteens && canteens[0]) || {};
-  const canteenUpiId = currentCanteen.upiId || 'smartcampus.canteen@okhdfcbank';
-  const canteenMerchantName = currentCanteen.upiMerchantName || currentCanteen.name || 'MITS Main Canteen';
+  const canteenUpiId = (!currentCanteen.upiId || currentCanteen.upiId.includes('smartcampus.canteen') || currentCanteen.upiId.includes('okhdfcbank'))
+    ? 'pandeyayush1603-1@okicici'
+    : currentCanteen.upiId;
+  const canteenMerchantName = (!currentCanteen.upiMerchantName || currentCanteen.upiMerchantName === 'MITS Main Canteen' || currentCanteen.upiMerchantName === 'Smart Campus Canteen')
+    ? 'Ayush Pandey'
+    : currentCanteen.upiMerchantName;
   const customQrImage = currentCanteen.qrCodeImage;
 
   // Real, decoded UPI details (fallback to currentCanteen settings)

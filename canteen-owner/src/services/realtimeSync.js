@@ -15,9 +15,7 @@ export const CENTRAL_API = typeof window !== 'undefined' && window.location.orig
   ? '/api/orders'
   : 'https://mits-canteen.vercel.app/api/orders';
 
-export const CENTRAL_CANTEEN_API = typeof window !== 'undefined' && window.location.origin.includes('localhost')
-  ? '/api/canteen-config'
-  : 'https://mits-canteen.vercel.app/api/canteen-config';
+export const CENTRAL_CANTEEN_API = 'https://mits-canteen.vercel.app/api/canteen-config';
 
 // Global topic namespace for MITS Campus Canteen
 const BASE_TOPIC = 'mits_campus_canteen_prod_2026';

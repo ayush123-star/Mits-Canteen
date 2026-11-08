@@ -88,7 +88,30 @@ export const DataProvider = ({ children }) => {
 
   const [canteens, setCanteens] = useState(() => {
     const saved = localStorage.getItem('smart_canteen_canteens');
-    return saved ? JSON.parse(saved) : INITIAL_CANTEENS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const migrated = parsed.map((c) => {
+            const hasDummyUpi = !c.upiId || c.upiId.includes('smartcampus.canteen') || c.upiId.includes('okhdfcbank');
+            const hasDummyName = !c.upiMerchantName || c.upiMerchantName === 'MITS Main Canteen' || c.upiMerchantName === 'Smart Campus Canteen';
+            if (hasDummyUpi || hasDummyName) {
+              return {
+                ...c,
+                upiId: hasDummyUpi ? 'pandeyayush1603-1@okicici' : c.upiId,
+                upiMerchantName: hasDummyName ? 'Ayush Pandey' : c.upiMerchantName,
+              };
+            }
+            return c;
+          });
+          try {
+            localStorage.setItem('smart_canteen_canteens', JSON.stringify(migrated));
+          } catch (_) {}
+          return migrated;
+        }
+      } catch (_) {}
+    }
+    return INITIAL_CANTEENS;
   });
 
   const [menuItems, setMenuItems] = useState(() => {
@@ -293,12 +316,12 @@ export const DataProvider = ({ children }) => {
       if (cfg && (cfg.qrCodeImage || cfg.upiId)) {
         setCanteens((prev) => {
           const next = prev.map((c) => {
-            if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id)) {
+            if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
               return {
                 ...c,
                 qrCodeImage: cfg.qrCodeImage !== undefined ? cfg.qrCodeImage : c.qrCodeImage,
-                upiId: cfg.upiId || c.upiId,
-                upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName,
+                upiId: cfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+                upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName || 'Ayush Pandey',
               };
             }
             return c;
@@ -527,12 +550,12 @@ export const DataProvider = ({ children }) => {
         const incomingCfg = cloudEvent.config || cloudEvent.canteen;
         setCanteens((prev) => {
           const next = prev.map((c) => {
-            if (c.id === incomingCfg.id || c._id === incomingCfg.id || (!c.id && !c._id)) {
+            if (c.id === incomingCfg.id || c._id === incomingCfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
               return {
                 ...c,
                 qrCodeImage: incomingCfg.qrCodeImage !== undefined ? incomingCfg.qrCodeImage : c.qrCodeImage,
-                upiId: incomingCfg.upiId || c.upiId,
-                upiMerchantName: incomingCfg.upiMerchantName || incomingCfg.name || c.upiMerchantName,
+                upiId: incomingCfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+                upiMerchantName: incomingCfg.upiMerchantName || incomingCfg.name || c.upiMerchantName || 'Ayush Pandey',
               };
             }
             return c;
@@ -1438,8 +1461,8 @@ export const DataProvider = ({ children }) => {
           updatedCanteenObj = {
             ...c,
             qrCodeImage: qrPayload.qrCodeImage !== undefined ? qrPayload.qrCodeImage : c.qrCodeImage,
-            upiId: qrPayload.upiId || c.upiId || 'smartcampus.canteen@okhdfcbank',
-            upiMerchantName: qrPayload.upiMerchantName || c.upiMerchantName || c.name,
+            upiId: qrPayload.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+            upiMerchantName: qrPayload.upiMerchantName || c.upiMerchantName || 'Ayush Pandey',
           };
           return updatedCanteenObj;
         }

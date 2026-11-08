@@ -4,8 +4,8 @@
 let canteenConfigCache = {
   id: 'canteen-1',
   name: 'MITS Main Canteen',
-  upiId: 'smartcampus.canteen@okhdfcbank',
-  upiMerchantName: 'MITS Main Canteen',
+  upiId: 'pandeyayush1603-1@okicici',
+  upiMerchantName: 'Ayush Pandey',
   qrCodeImage: '',
   updatedAt: Date.now(),
 };

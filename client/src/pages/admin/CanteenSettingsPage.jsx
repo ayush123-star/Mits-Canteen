@@ -42,7 +42,7 @@ export const CanteenSettingsPage = () => {
     closingTime: '07:30 PM',
     activeCounters: 3,
     qrCodeImage: '',
-    upiId: 'smartcampus.canteen@okhdfcbank',
+    upiId: 'pandeyayush1603-1@okicici',
     upiMerchantName: 'Main Campus Food Court',
   };
 
@@ -56,8 +56,16 @@ export const CanteenSettingsPage = () => {
 
   // QR Code & Payment States
   const [qrCodeImage, setQrCodeImage] = useState(currentCanteen.qrCodeImage || '');
-  const [upiId, setUpiId] = useState(currentCanteen.upiId || 'smartcampus.canteen@okhdfcbank');
-  const [upiMerchantName, setUpiMerchantName] = useState(currentCanteen.upiMerchantName || currentCanteen.name);
+  const [upiId, setUpiId] = useState(
+    currentCanteen.upiId && !currentCanteen.upiId.includes('smartcampus.canteen') && !currentCanteen.upiId.includes('okhdfcbank')
+      ? currentCanteen.upiId
+      : 'pandeyayush1603-1@okicici'
+  );
+  const [upiMerchantName, setUpiMerchantName] = useState(
+    currentCanteen.upiMerchantName && currentCanteen.upiMerchantName !== 'MITS Main Canteen' && currentCanteen.upiMerchantName !== 'Main Campus Food Court'
+      ? currentCanteen.upiMerchantName
+      : 'Ayush Pandey'
+  );
 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [qrSuccess, setQrSuccess] = useState(false);
@@ -122,7 +130,7 @@ export const CanteenSettingsPage = () => {
   const handleSavePaymentQR = (e) => {
     e.preventDefault();
     if (!upiId.trim()) {
-      setUploadError('Please provide a valid UPI ID (e.g., yourname@okhdfcbank)');
+      setUploadError('Please provide a valid UPI ID (e.g., yourname@okicici)');
       return;
     }
 
@@ -273,7 +281,7 @@ export const CanteenSettingsPage = () => {
                     required
                     value={upiId}
                     onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="e.g. yourcanteen@okhdfcbank"
+                    placeholder="e.g. pandeyayush1603-1@okicici"
                     className="w-full px-3.5 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/20 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#7955E8] focus:ring-1 focus:ring-[#7955E8]"
                   />
                 </div>
