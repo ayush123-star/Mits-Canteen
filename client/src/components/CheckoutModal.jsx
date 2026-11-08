@@ -65,12 +65,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   // Automated Payment States
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [transactionId, setTransactionId] = useState('');
-  const [isAutoDetecting, setIsAutoDetecting] = useState(true);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const autoDetectTimerRef = useRef(null);
   const autoPlaceTimerRef = useRef(null);
 
   const upiDeepLink = `upi://pay?pa=${encodeURIComponent(canteenUpiId)}&pn=${encodeURIComponent(
@@ -85,18 +83,17 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     } catch (_) {}
   };
 
-  // Seamless Auto-Payment Trigger & Pop-up Animation
+  // User-Initiated Payment Proceed & Pop-up Animation
   const triggerPaymentSuccess = (methodLabel = 'UPI') => {
     if (showSuccessPopup || loading) return;
 
-    if (autoDetectTimerRef.current) {
-      clearTimeout(autoDetectTimerRef.current);
+    if (autoPlaceTimerRef.current) {
+      clearTimeout(autoPlaceTimerRef.current);
     }
 
     const genTxn = `${methodLabel}-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     setTransactionId(genTxn);
     setShowSuccessPopup(true);
-    setIsAutoDetecting(false);
 
     try {
       playNotificationSound('success');
@@ -112,33 +109,20 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       });
     } catch (_) {}
 
-    // Automatically generate token after showing popup for 1.8 seconds!
+    // Automatically generate token after showing popup for 1.5 seconds!
     autoPlaceTimerRef.current = setTimeout(() => {
       executeOrderPlacement(genTxn, 'PAID', methodLabel === 'CARD' ? 'CARD' : 'UPI');
-    }, 1800);
+    }, 1500);
   };
 
-  // Auto-detection timer: Automatically detects payment once QR is visible
+  // Cleanup timers on unmount
   useEffect(() => {
-    if (isOpen && paymentType === 'ONLINE' && onlineCategory === 'UPI' && !showSuccessPopup && !loading) {
-      setIsAutoDetecting(true);
-      // Realistic 3.8s simulated bank payment detection
-      autoDetectTimerRef.current = setTimeout(() => {
-        triggerPaymentSuccess('UPI');
-      }, 3800);
-    } else {
-      if (autoDetectTimerRef.current) clearTimeout(autoDetectTimerRef.current);
-      setIsAutoDetecting(false);
-    }
-
     return () => {
-      if (autoDetectTimerRef.current) clearTimeout(autoDetectTimerRef.current);
       if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
     };
-  }, [isOpen, paymentType, onlineCategory]);
+  }, []);
 
   const handleSelectPrimaryType = (type) => {
-    if (autoDetectTimerRef.current) clearTimeout(autoDetectTimerRef.current);
     if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
     setPaymentType(type);
     setShowSuccessPopup(false);
@@ -321,8 +305,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 <div className="mt-2.5">
                   <div className="flex items-center gap-1.5">
                     <h4 className="text-xs font-black text-white">Scan & Pay Online</h4>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Auto
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      UPI / QR
                     </span>
                   </div>
                   <p className="text-[10px] text-[#AAB3C5] mt-0.5">UPI, GPay, PhonePe, QR</p>
@@ -363,12 +347,12 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               <div className="flex items-center justify-between pb-2 border-b border-purple-500/20">
                 <span className="text-xs font-black text-white flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-purple-400" />
-                  Instant UPI Payment & Auto-Detection
+                  Instant UPI & QR Payment
                 </span>
 
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 animate-pulse">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  Listening for Payment...
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                  Scan & Proceed
                 </span>
               </div>
 
@@ -430,10 +414,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                         <button
                           key={app.id}
                           type="button"
-                          onClick={() => {
-                            setSelectedUpiApp(app.id);
-                            triggerPaymentSuccess(app.name);
-                          }}
+                          onClick={() => setSelectedUpiApp(app.id)}
                           className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
                             selectedUpiApp === app.id
                               ? 'border-[#7955E8] bg-[#7955E8]/20 ring-1 ring-purple-400 text-white'
@@ -447,32 +428,34 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                     </div>
                   </div>
 
-                  {/* Official QR Code Box with Live Radar Animation */}
+                  {/* Official QR Code Box */}
                   <div
-                    onClick={() => triggerPaymentSuccess('UPI')}
-                    className="relative text-center p-3.5 rounded-2xl bg-[#0B1020] border border-purple-500/25 space-y-2.5 cursor-pointer hover:border-emerald-500/50 transition-all group"
-                    title="Tap QR to simulate instant payment"
+                    className="relative text-center p-4 rounded-2xl bg-[#0B1020] border border-purple-500/25 space-y-3"
                   >
                     {customQrImage ? (
-                      <div className="relative inline-block p-2 bg-white rounded-xl shadow-md border border-slate-200 mx-auto">
+                      <div className="relative inline-block p-2.5 bg-white rounded-2xl shadow-xl border border-slate-200 mx-auto">
                         <img
                           src={customQrImage}
                           alt="Official Canteen UPI QR"
-                          className="w-32 h-32 object-contain rounded-lg mx-auto"
+                          className="w-36 h-36 object-contain rounded-xl mx-auto"
                         />
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs whitespace-nowrap">
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs whitespace-nowrap">
                           Official QR ✓
                         </span>
                       </div>
                     ) : (
-                      <div className="relative inline-block p-2.5 bg-white rounded-xl shadow-md border border-slate-200 mx-auto">
-                        <QRCodeSVG value={upiDeepLink} size={120} level="M" />
+                      <div className="relative inline-block p-3 bg-white rounded-2xl shadow-xl border-2 border-purple-500/30 mx-auto">
+                        <QRCodeSVG value={upiDeepLink} size={140} level="M" />
+                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#7955E8] text-white shadow-md whitespace-nowrap border border-white/40 flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                          <span>Campus UPI QR</span>
+                        </div>
                       </div>
                     )}
 
-                    <div>
-                      <p className="text-xs font-black text-white">{canteenMerchantName}</p>
-                      <div className="flex items-center justify-center gap-2 mt-0.5">
+                    <div className="pt-1">
+                      <p className="text-sm font-black text-white">{canteenMerchantName}</p>
+                      <div className="flex items-center justify-center gap-2 mt-1">
                         <span className="text-[11px] text-purple-300 font-mono font-bold truncate max-w-[210px]">
                           {canteenUpiId}
                         </span>
@@ -492,31 +475,37 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span>Copy</span>
+                              <span>Copy UPI</span>
                             </>
                           )}
                         </button>
                       </div>
-                      <p className="text-xs font-black text-white mt-1">
-                        Amount to Pay: <span className="text-emerald-400 font-bold text-sm">₹{total}</span>
+                      <p className="text-xs font-black text-white mt-1.5">
+                        Amount to Pay: <span className="text-emerald-400 font-bold text-base">₹{total}</span>
                       </p>
-                    </div>
-
-                    {/* Auto-detecting live indicator banner */}
-                    <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-center gap-2 text-[11px] text-purple-200 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span>Payment scan karte he token automatically generate ho jayega!</span>
                     </div>
 
                     {/* Pay via UPI App Deep Link */}
                     <a
                       href={upiDeepLink}
-                      onClick={() => triggerPaymentSuccess('UPI')}
-                      className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs transition-all w-full shadow-md shadow-purple-600/30 cursor-pointer"
+                      onClick={() => triggerPaymentSuccess(selectedUpiApp || 'UPI')}
+                      className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#151C30] hover:bg-[#1C263A] text-purple-200 border border-purple-500/30 font-bold text-xs transition-all w-full cursor-pointer shadow-xs"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Pay via UPI App (GPay / PhonePe / Paytm)</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
                     </a>
+
+                    {/* Proceed Button */}
+                    <button
+                      type="button"
+                      onClick={() => triggerPaymentSuccess(selectedUpiApp || 'UPI')}
+                      disabled={loading || showSuccessPopup}
+                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-[#7955E8] to-[#526DFF] hover:from-emerald-500 hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                      <span>Proceed to Pay ₹{total} via QR</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -674,17 +663,30 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
           {/* DYNAMIC CONFIRM & GENERATE TOKEN BUTTON */}
           <div className="flex-1 w-full flex flex-col gap-1.5">
             {paymentType === 'ONLINE' ? (
-              // ONLINE AUTO-PAYMENT STATUS BAR (NO MANUAL CONFIRM CLICK REQUIRED!)
-              <div className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600/20 via-purple-600/20 to-indigo-600/20 border-2 border-emerald-500/40 text-emerald-200 font-bold text-xs flex items-center justify-center gap-2 shadow-sm">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>QR scan / pay karte he right tick aayega aur token apne aap generate ho jayega!</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => triggerPaymentSuccess(selectedUpiApp || 'UPI')}
+                disabled={loading || showSuccessPopup}
+                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-[#7955E8] to-[#526DFF] hover:from-emerald-500 hover:to-[#3d5bff] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Processing Payment...
+                  </span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>Proceed to Pay ₹{total} & Generate Token</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
             ) : (
-              // CASH AT COUNTER DIRECT BUTTON
               <button
                 type="button"
                 onClick={() => executeOrderPlacement(null, 'UNPAID', 'CASH_AT_COUNTER')}
-                disabled={loading}
+                disabled={loading || showSuccessPopup}
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-[#7955E8] to-[#526DFF] hover:from-emerald-500 hover:to-[#3d5bff] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
               >
                 {loading ? (
