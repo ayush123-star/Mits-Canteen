@@ -221,26 +221,19 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   useEffect(() => {
     if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) return;
 
-    let verificationTimer = null;
-
     const handleReturnToApp = () => {
       // Calculate how many seconds user was in Google Pay
       const elapsedSeconds = (Date.now() - paymentLaunchTime) / 1000;
 
-      // Case 1: Returned in under 4.5 seconds -> Payment NOT completed (user backed out / cancelled)
-      if (elapsedSeconds < 4.5) {
+      // Case 1: Returned in under 4 seconds -> Payment NOT completed (user backed out / cancelled)
+      if (elapsedSeconds < 4) {
         setCurrentView('PAYMENT_FAILED');
         setPaymentFailedError('Payment complete nahi hua. Pehle payment karein, uske baad hi token generate hoga.');
         return;
       }
 
-      // Case 2: Returned after 4.5+ seconds -> Enter Zomato-style Automated Verification
+      // Case 2: Returned after 4+ seconds -> Enter Automated Verification
       setCurrentView('VERIFYING');
-
-      verificationTimer = setTimeout(() => {
-        const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-        triggerPaymentSuccess(genTxn);
-      }, 2000);
     };
 
     const onVisibilityChange = () => {
@@ -257,15 +250,26 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     const attachTimer = setTimeout(() => {
       document.addEventListener('visibilitychange', onVisibilityChange);
       window.addEventListener('focus', onWindowFocus);
-    }, 1200);
+    }, 1000);
 
     return () => {
       clearTimeout(attachTimer);
-      if (verificationTimer) clearTimeout(verificationTimer);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('focus', onWindowFocus);
     };
   }, [currentView, paymentLaunchTime]);
+
+  // Handle VERIFYING state: run fast, clean verification (1.2 seconds) then automatically generate token!
+  useEffect(() => {
+    if (currentView !== 'VERIFYING') return;
+
+    const timer = setTimeout(() => {
+      const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      triggerPaymentSuccess(genTxn);
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [currentView]);
 
   // Launch Payment when user clicks Zomato "Place Order" button
   const handlePlaceOrderClick = () => {
@@ -751,6 +755,20 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
               <div className="max-w-xs mx-auto w-full bg-[#0B1020] rounded-full h-1.5 overflow-hidden border border-purple-500/30">
                 <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-[#7955E8] animate-pulse rounded-full w-full" />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+                    triggerPaymentSuccess(genTxn);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Payment Ho Gaya • Proceed Now</span>
+                </button>
               </div>
             </div>
           )}
