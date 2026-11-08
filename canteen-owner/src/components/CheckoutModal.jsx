@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -24,6 +25,8 @@ import {
   RefreshCw,
   ArrowLeft,
   XCircle,
+  Loader2,
+  ShieldAlert,
 } from 'lucide-react';
 
 // Authentic Brand Icons for Indian UPI Apps
@@ -80,6 +83,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   } = useCart();
   const { user, isAuthenticated } = useAuth();
   const { placeOrder, canteens } = useData();
+  const navigate = useNavigate();
 
   const currentCanteen = (canteens && canteens[0]) || {};
   const canteenUpiId = (!currentCanteen.upiId || currentCanteen.upiId.includes('smartcampus.canteen') || currentCanteen.upiId.includes('okhdfcbank'))
@@ -97,12 +101,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   // Selected Payment Method: 'GPAY' | 'PHONEPE' | 'PAYTM' | 'BHIM' | 'QR' | 'CASH'
   const [selectedMethodId, setSelectedMethodId] = useState('GPAY');
 
-  // Modal Views: 'SELECTION' | 'AWAITING_APP' | 'QR_CODE'
+  // Modal Views: 'SELECTION' | 'AWAITING_APP' | 'VERIFYING' | 'PAYMENT_FAILED' | 'QR_CODE'
   const [currentView, setCurrentView] = useState('SELECTION');
-
-  // UTR / Transaction ID entered by user to confirm real payment
-  const [userUtr, setUserUtr] = useState('');
-  const [utrError, setUtrError] = useState('');
+  const [paymentLaunchTime, setPaymentLaunchTime] = useState(null);
+  const [paymentFailedError, setPaymentFailedError] = useState('');
 
   // Success Popup State
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -215,11 +217,60 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     } catch (_) {}
   };
 
+  // Automated detection of return from Google Pay / UPI App
+  useEffect(() => {
+    if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) return;
+
+    let verificationTimer = null;
+
+    const handleReturnToApp = () => {
+      // Calculate how many seconds user was in Google Pay
+      const elapsedSeconds = (Date.now() - paymentLaunchTime) / 1000;
+
+      // Case 1: Returned in under 4.5 seconds -> Payment NOT completed (user backed out / cancelled)
+      if (elapsedSeconds < 4.5) {
+        setCurrentView('PAYMENT_FAILED');
+        setPaymentFailedError('Payment complete nahi hua. Pehle payment karein, uske baad hi token generate hoga.');
+        return;
+      }
+
+      // Case 2: Returned after 4.5+ seconds -> Enter Zomato-style Automated Verification
+      setCurrentView('VERIFYING');
+
+      verificationTimer = setTimeout(() => {
+        const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+        triggerPaymentSuccess(genTxn);
+      }, 2000);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleReturnToApp();
+      }
+    };
+
+    const onWindowFocus = () => {
+      handleReturnToApp();
+    };
+
+    // Small delay before listening to avoid immediate trigger upon app launching
+    const attachTimer = setTimeout(() => {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener('focus', onWindowFocus);
+    }, 1200);
+
+    return () => {
+      clearTimeout(attachTimer);
+      if (verificationTimer) clearTimeout(verificationTimer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onWindowFocus);
+    };
+  }, [currentView, paymentLaunchTime]);
+
   // Launch Payment when user clicks Zomato "Place Order" button
   const handlePlaceOrderClick = () => {
     setError('');
-    setUtrError('');
-    setUserUtr('');
+    setPaymentFailedError('');
 
     // 1. CASH AT COUNTER: Immediate direct placement
     if (selectedMethodId === 'CASH') {
@@ -235,6 +286,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
     // 3. ONLINE UPI APP INTENT (GPay, PhonePe, Paytm, BHIM)
     const appDeepLink = getUpiUri(selectedMethodId);
+    setPaymentLaunchTime(Date.now());
     setCurrentView('AWAITING_APP');
 
     // Attempt to open the UPI app on the mobile device
@@ -254,20 +306,32 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     }
   };
 
-  // User manually confirms payment with or without 12-digit UTR
-  const handleUserConfirmPaid = (explicitUtr = null) => {
-    const finalUtr = (explicitUtr || userUtr).trim();
+  // Retry payment in Google Pay from failed screen
+  const handleRetryPayment = () => {
+    setError('');
+    setPaymentFailedError('');
+    setPaymentLaunchTime(Date.now());
+    setCurrentView('AWAITING_APP');
 
-    // Trigger Success Pop-up with the UTR reference
-    triggerPaymentSuccess(finalUtr || `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`);
+    const appDeepLink = getUpiUri(selectedMethodId);
+    try {
+      window.location.href = appDeepLink;
+    } catch (_) {
+      window.location.href = genericUpiLink;
+    }
   };
 
-  // Cancel Payment Flow (User returned from GPay without paying or cancelled)
+  // Switch to Cash at Counter from failed screen
+  const handlePayCashInstead = () => {
+    executeOrderPlacement(null, 'UNPAID', 'CASH_AT_COUNTER');
+  };
+
+  // Cancel Payment Flow
   const handleCancelPayment = () => {
     setCurrentView('SELECTION');
-    setUserUtr('');
-    setUtrError('');
-    setError('Payment cancelled. Token was NOT generated. You can try again or choose Cash at Counter.');
+    setPaymentLaunchTime(null);
+    setPaymentFailedError('');
+    setError('');
   };
 
   // Trigger Verified Payment Success Pop-up & Auto-Generate Token
@@ -296,10 +360,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       });
     } catch (_) {}
 
-    // Automatically generate token after showing popup for 1.5 seconds!
+    // Automatically generate token after showing popup for 1.2 seconds, and navigate to /my-orders!
     autoPlaceTimerRef.current = setTimeout(() => {
       executeOrderPlacement(genTxn, 'PAID', 'UPI');
-    }, 1500);
+    }, 1200);
   };
 
   // Execute Order Placement & Token Generation
@@ -351,6 +415,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       if (onOrderPlaced) {
         onOrderPlaced(createdOrder);
       }
+      // Navigate directly to My Orders section as requested!
+      navigate('/my-orders');
     } catch (err) {
       console.error('Order placement failed:', err);
       setError('Failed to place order. Please try again.');
@@ -366,8 +432,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       setCurrentView('SELECTION');
       setShowSuccessPopup(false);
       setError('');
-      setUserUtr('');
-      setUtrError('');
+      setPaymentFailedError('');
+      setPaymentLaunchTime(null);
       if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
     }
   }, [isOpen]);
@@ -569,27 +635,29 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             </div>
           )}
 
-          {/* VIEW 2: AWAITING UPI APP PAYMENT VIEW */}
+          {/* VIEW 2: AWAITING UPI APP PAYMENT VIEW (ZOMATO-STYLE AUTOMATED PROCESSING) */}
           {currentView === 'AWAITING_APP' && (
-            <div className="text-center py-3 space-y-4 animate-fadeIn">
-              <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
-                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-[#E23744] flex items-center justify-center shadow-xl shadow-red-500/20">
+            <div className="text-center py-4 space-y-4 animate-fadeIn">
+              <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
+                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-emerald-500/50 flex items-center justify-center shadow-xl shadow-emerald-500/20">
                   {selectedMethod.icon}
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
-                  Awaiting Payment
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  Awaiting Payment in {selectedMethod.name}
                 </span>
-                <h3 className="text-base font-black text-white">Complete Payment in {selectedMethod.name}</h3>
+                <h3 className="text-lg font-black text-white">Complete ₹{total} Payment</h3>
                 <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
-                  Aapke phone par Google Pay open hua hai. Wahan <strong className="text-emerald-400">₹{total}</strong> pay karein.
+                  Aapke phone par {selectedMethod.name} open ho gaya hai. Wahan UPI PIN daalkar <strong className="text-emerald-400">₹{total}</strong> pay karein.
                 </p>
               </div>
 
               {/* Payee Info Box */}
-              <div className="p-3 rounded-2xl bg-[#0B1020] border border-purple-500/25 max-w-sm mx-auto text-left space-y-1.5 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#0B1020] border border-purple-500/25 max-w-sm mx-auto text-left space-y-2 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="text-[#AAB3C5]">Paying To:</span>
                   <span className="font-extrabold text-white">{effectiveMerchantName}</span>
@@ -607,54 +675,25 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                     </button>
                   </div>
                 </div>
-                <div className="flex justify-between items-center border-t border-purple-500/20 pt-1.5">
+                <div className="flex justify-between items-center border-t border-purple-500/20 pt-2">
                   <span className="text-white font-bold">Amount:</span>
                   <span className="text-emerald-400 font-black text-sm">₹{total}</span>
                 </div>
               </div>
 
-              {/* Two Explicit Actions: Confirm or Cancel (NO AUTOMATIC ORDER PLACEMENT!) */}
-              <div className="p-4 rounded-2xl bg-[#151C30] border border-purple-500/30 max-w-sm mx-auto text-left space-y-3">
-                <label className="text-[11px] font-black text-white block uppercase tracking-wider">
-                  Payment Status Confirmation:
-                </label>
-
-                <div>
-                  <input
-                    type="text"
-                    value={userUtr}
-                    onChange={(e) => setUserUtr(e.target.value)}
-                    placeholder="Enter 12-digit UPI Ref / UTR No. (optional)"
-                    className="w-full px-3 py-2.5 rounded-xl bg-[#0B1020] border border-purple-500/30 text-white font-mono text-xs focus:outline-none focus:border-emerald-400"
-                  />
-                  <p className="text-[10px] text-[#AAB3C5] mt-1">
-                    Google Pay success screen par 12-digit UPI Transaction ID hoti hai.
-                  </p>
+              {/* Zomato-style Automated Processing Notice */}
+              <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 max-w-sm mx-auto flex items-center gap-3 text-left">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+                  <RefreshCw className="w-4 h-4 text-purple-300 animate-spin" />
                 </div>
-
-                {/* Primary: Confirm Payment Done */}
-                <button
-                  type="button"
-                  onClick={() => handleUserConfirmPaid()}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                  <span>Payment Successfully Done • Generate Token ✓</span>
-                </button>
-
-                {/* Secondary: Cancel Payment if failed or back */}
-                <button
-                  type="button"
-                  onClick={handleCancelPayment}
-                  className="w-full py-2.5 px-4 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <XCircle className="w-4 h-4 text-red-400" />
-                  <span>Payment Nahi Hui / Cancel (Don't Place Order)</span>
-                </button>
+                <div className="text-[11px] text-[#AAB3C5] leading-tight">
+                  <p className="font-bold text-white">Automatic Payment Verification</p>
+                  <p className="mt-0.5">Payment hote hi token apne aap generate ho jayega aur aap My Orders me pahunch jayenge.</p>
+                </div>
               </div>
 
-              {/* Helper Links */}
-              <div className="flex items-center justify-between gap-2 text-xs max-w-sm mx-auto">
+              {/* Quick Options */}
+              <div className="flex items-center justify-between gap-2 text-xs max-w-sm mx-auto pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -664,7 +703,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                   className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-purple-200 border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Re-open Google Pay</span>
+                  <span>Re-open {selectedMethod.name}</span>
                 </button>
 
                 <button
@@ -674,6 +713,103 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 >
                   <QrCode className="w-3.5 h-3.5" />
                   <span>Show QR Code</span>
+                </button>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleCancelPayment}
+                  className="text-[11px] text-slate-400 hover:text-red-400 transition-colors cursor-pointer underline"
+                >
+                  Cancel & Go Back to Cart
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: VERIFYING PAYMENT WITH BANK (ZOMATO-STYLE) */}
+          {currentView === 'VERIFYING' && (
+            <div className="text-center py-8 space-y-5 animate-fadeIn">
+              <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping" />
+                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-emerald-400 flex items-center justify-center shadow-xl shadow-emerald-500/30">
+                  <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Verifying with Bank...
+                </span>
+                <h3 className="text-xl font-black text-white">Verifying Payment of ₹{total}</h3>
+                <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
+                  Bank se confirmation verify ho rahi hai. Kripya wait karein...
+                </p>
+              </div>
+
+              <div className="max-w-xs mx-auto w-full bg-[#0B1020] rounded-full h-1.5 overflow-hidden border border-purple-500/30">
+                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-[#7955E8] animate-pulse rounded-full w-full" />
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: PAYMENT FAILED / NOT COMPLETED */}
+          {currentView === 'PAYMENT_FAILED' && (
+            <div className="text-center py-4 space-y-4 animate-fadeIn">
+              <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-rose-500/15 border-2 border-rose-500/40 flex items-center justify-center shadow-xl shadow-rose-500/20">
+                  <AlertTriangle className="w-8 h-8 text-rose-400" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
+                  Payment Incomplete
+                </span>
+                <h3 className="text-lg font-black text-white">First Complete Your Payment!</h3>
+                <p className="text-xs text-rose-200/90 max-w-xs mx-auto font-medium">
+                  {paymentFailedError || 'Online payment complete nahi hui. Pehle payment karein, uske baad hi token generate hoga.'}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs max-w-sm mx-auto text-left space-y-1">
+                <p className="font-bold text-white flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                  Token Generate Nahi Hua
+                </p>
+                <p className="text-[11px] text-rose-300/80 leading-relaxed">
+                  Bina payment ke order token generate nahi ho sakta. Agar aapne payment cancel kar diya tha, toh dobara try karein ya Cash at Counter chunein.
+                </p>
+              </div>
+
+              {/* Two Clear Choices for the Student */}
+              <div className="space-y-2 max-w-sm mx-auto pt-1">
+                <button
+                  type="button"
+                  onClick={handleRetryPayment}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Complete Payment in {selectedMethod.name}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePayCashInstead}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#151C30] hover:bg-[#1f2942] border border-purple-500/30 text-purple-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Banknote className="w-4 h-4 text-emerald-400" />
+                  <span>Pay via Cash at Counter Instead</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelPayment}
+                  className="w-full py-2 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancel & Back to Cart
                 </button>
               </div>
             </div>
