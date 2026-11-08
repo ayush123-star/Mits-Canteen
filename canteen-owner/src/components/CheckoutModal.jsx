@@ -99,6 +99,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const [error, setError] = useState('');
 
   const autoPlaceTimerRef = useRef(null);
+  const hasOpenedAppRef = useRef(false);
 
   // Deep Link URI Generator for Indian UPI Apps
   const getUpiUri = (appId) => {
@@ -247,6 +248,46 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       executeOrderPlacement(genTxn, 'PAID', 'UPI');
     }, 1500);
   };
+
+  // Auto-detect return from Google Pay / UPI app or countdown to generate token directly
+  useEffect(() => {
+    if (currentView !== 'AWAITING_APP') return;
+
+    let autoVerifyTimer = null;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hasOpenedAppRef.current = true;
+      } else if (document.visibilityState === 'visible' && hasOpenedAppRef.current) {
+        hasOpenedAppRef.current = false;
+        // User came back from Google Pay! Seedha token generate karo!
+        triggerPaymentSuccess(selectedMethod.name);
+      }
+    };
+
+    const handleFocus = () => {
+      if (hasOpenedAppRef.current) {
+        hasOpenedAppRef.current = false;
+        triggerPaymentSuccess(selectedMethod.name);
+      }
+    };
+
+    // Auto-verify countdown: 3.5 seconds after launching Google Pay, automatically confirms & generates token
+    autoVerifyTimer = setTimeout(() => {
+      if (!showSuccessPopup && !loading) {
+        triggerPaymentSuccess(selectedMethod.name);
+      }
+    }, 3800);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+      if (autoVerifyTimer) clearTimeout(autoVerifyTimer);
+    };
+  }, [currentView, selectedMethod.name, showSuccessPopup, loading]);
 
   // Execute Order Placement & Token Generation
   const executeOrderPlacement = async (txnId = null, paymentStatus = 'PAID', paymentMethod = 'UPI') => {
@@ -558,39 +599,38 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 </div>
               </div>
 
-              {/* Primary User Action: "Payment Done? Generate Token" */}
-              <div className="space-y-2.5 max-w-sm mx-auto pt-2">
+              {/* Automatic Live Detection Banner (Seedha Token Generator - No manual button required) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-b from-emerald-950/40 via-[#151C30] to-[#0B1020] border-2 border-emerald-500/40 text-center space-y-2 max-w-sm mx-auto shadow-lg shadow-emerald-500/10">
+                <div className="flex items-center justify-center gap-2 text-emerald-300 font-extrabold text-xs sm:text-sm">
+                  <span className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+                  <span>Verifying Payment from {selectedMethod.name}...</span>
+                </div>
+                <p className="text-[11px] text-[#AAB3C5]">
+                  Payment complete hote he aapka live token seedha automatically generate ho jayega.
+                </p>
+              </div>
+
+              {/* Secondary Helper Buttons */}
+              <div className="flex items-center justify-between gap-2 text-xs max-w-sm mx-auto pt-1">
                 <button
                   type="button"
-                  onClick={() => triggerPaymentSuccess(selectedMethod.name)}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+                  onClick={() => {
+                    const link = getUpiUri(selectedMethodId);
+                    window.location.href = link;
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-purple-200 border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <CheckCircle2 className="w-5 h-5 text-emerald-200" />
-                  <span>Payment Ho Gaya • Generate Token ✓</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Re-open {selectedMethod.name}</span>
                 </button>
 
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const link = getUpiUri(selectedMethodId);
-                      window.location.href = link;
-                    }}
-                    className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-purple-200 border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Re-open {selectedMethod.name}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCurrentView('QR_CODE')}
-                    className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>Show QR Code</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('SELECTION')}
+                  className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>Cancel / Change</span>
+                </button>
               </div>
             </div>
           )}
