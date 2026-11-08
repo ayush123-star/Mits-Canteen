@@ -383,6 +383,15 @@ export const DataProvider = ({ children }) => {
     localStorage.setItem('smart_canteen_transactions', JSON.stringify(stockTransactions));
   }, [stockTransactions]);
 
+  // Guaranteed localStorage sync for orders state whenever it changes
+  useEffect(() => {
+    if (orders && Array.isArray(orders)) {
+      try {
+        localStorage.setItem('smart_canteen_orders', JSON.stringify(orders));
+      } catch (_) {}
+    }
+  }, [orders]);
+
   // 1. Cross-Tab & Cross-Device Instant Real-time Orders Synchronization Channel
   const ordersBroadcastRef = useRef(null);
 
@@ -492,7 +501,13 @@ export const DataProvider = ({ children }) => {
       if (type === 'SNAPSHOT_SYNC') {
         const list = incomingOrders || cloudEvent.orders;
         if (Array.isArray(list) && list.length > 0) {
-          setOrders((prev) => mergeOrders(prev, list));
+          setOrders((prev) => {
+            const merged = mergeOrders(prev, list);
+            try {
+              localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
+            } catch (_) {}
+            return merged;
+          });
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
           }, 0);
@@ -509,7 +524,11 @@ export const DataProvider = ({ children }) => {
               (o.tokenNumber && o.tokenNumber === newOrder.tokenNumber)
           );
           if (exists) return prev;
-          return [newOrder, ...prev];
+          const next = [newOrder, ...prev];
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(next));
+          } catch (_) {}
+          return next;
         });
         setTimeout(() => {
           playNotificationSound('new_order');
@@ -551,6 +570,10 @@ export const DataProvider = ({ children }) => {
           if (incomingOrders && Array.isArray(incomingOrders)) {
             nextList = mergeOrders(nextList, incomingOrders);
           }
+
+          try {
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(nextList));
+          } catch (_) {}
 
           return nextList;
         });

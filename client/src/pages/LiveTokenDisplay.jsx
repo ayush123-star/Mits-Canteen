@@ -24,6 +24,7 @@ import {
   speakAnnouncement,
   unlockAudio
 } from '../utils/audio';
+import { isMockOrder, mergeOrders } from '../services/realtimeSync';
 
 export const LiveTokenDisplay = () => {
   const { orders } = useData();
@@ -70,47 +71,40 @@ export const LiveTokenDisplay = () => {
     }
   }, [orders]);
 
-  // 2. Fetch live tokens directly from the centralized database & merge
+  // 2. Fetch live tokens directly from centralized cloud API & merge
   const fetchLiveTokensFromDB = useCallback(async () => {
     try {
-      const res = await axios.get('/api/orders/live-tokens', { timeout: 2500 });
-      if (res.data?.success && res.data?.data) {
-        const {
-          preparing = [],
-          ready = [],
-          recentlyCompleted: completed = [],
-          stats: serverStats = {},
-        } = res.data.data;
+      const res = await axios.get('https://mits-canteen.vercel.app/api/orders', { timeout: 3000 });
+      if (res.data?.success && Array.isArray(res.data?.orders)) {
+        const cloudOrders = res.data.orders.filter((o) => !isMockOrder(o));
+        const sourceList = orders && orders.length > 0 ? mergeOrders(orders, cloudOrders) : cloudOrders;
 
-        // Authoritative server sync: Only display tokens that the server reports as active
-        const prepList = preparing.filter((o) => {
+        const prepList = sourceList.filter((o) => {
           const tok = String(o.tokenNumber || '').replace('#', '').trim();
           return o.status === 'Preparing' && tok !== 'TK-114' && tok !== '114';
         });
-        const readyList = ready.filter((o) => {
+        const readyList = sourceList.filter((o) => {
           const tok = String(o.tokenNumber || '').replace('#', '').trim();
           return o.status === 'Ready for Pickup' && tok !== 'TK-114' && tok !== '114';
         });
-        const completedList = completed.slice(0, 10);
+        const completedList = sourceList
+          .filter((o) => ['Completed', 'Collected'].includes(o.status) && !isMockOrder(o))
+          .slice(0, 10);
 
-        // Only override if the backend returned active records or if local orders is empty
-        if (prepList.length > 0 || readyList.length > 0 || (orders && orders.length === 0)) {
-          setPreparingTokens(prepList);
-          setReadyTokens(readyList);
-          setRecentlyCompleted(completedList);
-          setStats({
-            totalActive: prepList.length + readyList.length,
-            avgWaitMinutes: prepList.length > 0
-              ? Math.round(prepList.reduce((acc, o) => acc + (o.estimatedPrepMinutes || 10), 0) / prepList.length)
-              : 8,
-            countersActive: 1,
-          });
-        }
+        setPreparingTokens(prepList);
+        setReadyTokens(readyList);
+        setRecentlyCompleted(completedList);
+        setStats({
+          totalActive: prepList.length + readyList.length,
+          avgWaitMinutes: prepList.length > 0
+            ? Math.round(prepList.reduce((acc, o) => acc + (o.estimatedPrepMinutes || 10), 0) / prepList.length)
+            : 8,
+          countersActive: 1,
+        });
         setIsKitchenSynced(true);
-        return;
       }
     } catch (_) {
-      // Backend request fallback to DataContext reactive state
+      // DataContext reactive state handles fallback
     }
   }, [orders]);
 

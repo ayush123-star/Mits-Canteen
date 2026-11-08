@@ -150,18 +150,21 @@ export const MyOrdersPage = () => {
     };
   }, []);
 
-  // Live responsive orders source: reads directly from localStorage + DataContext
+  // Live responsive orders source: uses reactive DataContext orders as authoritative source
   const currentOrders = React.useMemo(() => {
+    if (Array.isArray(orders) && orders.length > 0) {
+      return orders.filter((o) => o && typeof o === 'object');
+    }
     try {
       const stored = localStorage.getItem('smart_canteen_orders');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.filter((o) => o && typeof o === 'object');
         }
       }
     } catch (_) {}
-    return orders;
+    return [];
   }, [orders, refreshTick]);
 
   // Filter orders for current student (fallback to all student orders if demo)
