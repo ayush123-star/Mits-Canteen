@@ -259,17 +259,11 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     };
   }, [currentView, paymentLaunchTime]);
 
-  // Handle VERIFYING state: run fast, clean verification (1.2 seconds) then automatically generate token!
-  useEffect(() => {
-    if (currentView !== 'VERIFYING') return;
-
-    const timer = setTimeout(() => {
-      const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-      triggerPaymentSuccess(genTxn);
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [currentView]);
+  // Handle cancelled or failed payment
+  const handlePaymentFailed = (customMsg) => {
+    setCurrentView('PAYMENT_FAILED');
+    setPaymentFailedError(customMsg || 'Payment complete nahi hua. Pehle payment karein, uske baad hi token generate hoga.');
+  };
 
   // Launch Payment when user clicks Zomato "Place Order" button
   const handlePlaceOrderClick = () => {
@@ -732,42 +726,63 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             </div>
           )}
 
-          {/* VIEW: VERIFYING PAYMENT WITH BANK (ZOMATO-STYLE) */}
+          {/* VIEW: VERIFYING PAYMENT WITH BANK */}
           {currentView === 'VERIFYING' && (
-            <div className="text-center py-8 space-y-5 animate-fadeIn">
-              <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping" />
-                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-emerald-400 flex items-center justify-center shadow-xl shadow-emerald-500/30">
-                  <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+            <div className="text-center py-4 space-y-4 animate-fadeIn">
+              <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-purple-500/40 flex items-center justify-center shadow-xl shadow-purple-500/20">
+                  {selectedMethod.icon}
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <span className="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Verifying with Bank...
+              <div className="space-y-1">
+                <span className="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 inline-flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-purple-300" />
+                  Payment Status Verification
                 </span>
-                <h3 className="text-xl font-black text-white">Verifying Payment of ₹{total}</h3>
+                <h3 className="text-xl font-black text-white">Google Pay Payment Status</h3>
                 <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
-                  Bank se confirmation verify ho rahi hai. Kripya wait karein...
+                  Kya aapne <strong className="text-emerald-400">₹{total}</strong> ka payment complete kiya ya cancel kar diya?
                 </p>
               </div>
 
-              <div className="max-w-xs mx-auto w-full bg-[#0B1020] rounded-full h-1.5 overflow-hidden border border-purple-500/30">
-                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-[#7955E8] animate-pulse rounded-full w-full" />
+              {/* Payee Info Box */}
+              <div className="p-3 rounded-2xl bg-[#0B1020] border border-purple-500/25 max-w-sm mx-auto text-left space-y-1.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#AAB3C5]">Paying To:</span>
+                  <span className="font-extrabold text-white">{effectiveMerchantName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#AAB3C5]">UPI ID:</span>
+                  <span className="font-mono text-purple-300 font-bold truncate max-w-[180px]">{effectiveUpiId}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-purple-500/20 pt-1.5">
+                  <span className="text-white font-bold">Amount:</span>
+                  <span className="text-emerald-400 font-black text-sm">₹{total}</span>
+                </div>
               </div>
 
-              <div className="pt-2">
+              {/* Two Distinct Actions: Success vs Cancelled */}
+              <div className="space-y-2.5 max-w-sm mx-auto pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
                     triggerPaymentSuccess(genTxn);
                   }}
-                  className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm"
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Payment Ho Gaya • Proceed Now</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                  <span>Haan, Payment Ho Gaya • Generate Token ✓</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePaymentFailed('Aapne payment cancel kar diya tha. Token generate nahi kiya gaya. Pehle payment complete karein.')}
+                  className="w-full py-3 px-4 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/35 text-red-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                >
+                  <XCircle className="w-4 h-4 text-red-400" />
+                  <span>Nahi, Payment Cancel / Fail Hua (Don't Generate Token)</span>
                 </button>
               </div>
             </div>
