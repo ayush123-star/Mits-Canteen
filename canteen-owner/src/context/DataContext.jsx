@@ -709,7 +709,8 @@ export const DataProvider = ({ children }) => {
       finalAmount: orderData.finalAmount,
       couponCode: orderData.couponCode || '',
       paymentMethod: orderData.paymentMethod || 'UPI',
-      paymentStatus: orderData.paymentMethod === 'UPI' ? 'PAID' : 'UNPAID',
+      paymentStatus: orderData.paymentStatus || (orderData.paymentMethod === 'UPI' ? 'PAID' : 'UNPAID'),
+      transactionId: orderData.transactionId || null,
       status: 'Placed',
       assignedCounter: 1, // Single Express Counter (MITS Canteen)
       scheduledPickupTime: orderData.scheduledPickupTime || 'ASAP (Immediate ~8m)',

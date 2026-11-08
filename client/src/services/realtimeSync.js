@@ -187,6 +187,7 @@ export const sanitizeOrderForBroadcast = (ord) => {
     couponCode: ord.couponCode,
     paymentMethod: ord.paymentMethod,
     paymentStatus: ord.paymentStatus,
+    transactionId: ord.transactionId,
     status: ord.status,
     assignedCounter: ord.assignedCounter || 1,
     scheduledPickupTime: ord.scheduledPickupTime,
