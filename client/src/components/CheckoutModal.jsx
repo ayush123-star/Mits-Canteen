@@ -17,14 +17,53 @@ import {
   Sparkles,
   Smartphone,
   AlertTriangle,
-  Lock,
   Copy,
   Check,
   ExternalLink,
-  Building2,
-  Wallet,
+  ChevronRight,
   RefreshCw,
+  ArrowLeft,
 } from 'lucide-react';
+
+// Authentic Brand Icons for Indian UPI Apps
+const GPayIcon = () => (
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M23.04 12.26c0-.82-.07-1.6-.2-2.36H12v4.47h6.2a5.3 5.3 0 0 1-2.3 3.48v2.88h3.72c2.18-2 3.42-4.96 3.42-8.47z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23.5c3.1 0 5.72-1.03 7.62-2.79l-3.72-2.88c-1.03.69-2.35 1.1-3.9 1.1-3 0-5.54-2.03-6.45-4.75H1.67v2.98A11.5 11.5 0 0 0 12 23.5z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.55 14.18A6.9 6.9 0 0 1 5.18 12c0-.76.13-1.5.37-2.18V6.84H1.67A11.5 11.5 0 0 0 .5 12c0 1.86.44 3.62 1.17 5.16l3.88-2.98z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 4.98c1.69 0 3.2.58 4.4 1.72l3.3-3.3C17.7 1.58 15.08.5 12 .5 7.37.5 3.38 3.16 1.67 6.84l3.88 2.98C6.46 7.1 9 4.98 12 4.98z"
+      fill="#EA4335"
+    />
+  </svg>
+);
+
+const PhonePeIcon = () => (
+  <div className="w-5 h-5 rounded-lg bg-[#5f259f] flex items-center justify-center text-white font-black text-[11px] shadow-xs shrink-0">
+    पे
+  </div>
+);
+
+const PaytmIcon = () => (
+  <div className="w-5 h-5 rounded-lg bg-[#002e6e] flex items-center justify-center text-[#00b9f5] font-black text-[8px] tracking-tighter shadow-xs shrink-0">
+    paytm
+  </div>
+);
+
+const UpiIcon = () => (
+  <div className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-black text-[9px] tracking-wider shrink-0">
+    UPI
+  </div>
+);
 
 export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const {
@@ -46,23 +85,13 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const canteenMerchantName = currentCanteen.upiMerchantName || currentCanteen.name || 'MITS Main Canteen';
   const customQrImage = currentCanteen.qrCodeImage;
 
-  // Primary payment type: 'ONLINE' or 'CASH_AT_COUNTER'
-  const [paymentType, setPaymentType] = useState('ONLINE'); // 'ONLINE' | 'CASH_AT_COUNTER'
+  // Selected Payment Method: 'GPAY' | 'PHONEPE' | 'PAYTM' | 'BHIM' | 'QR' | 'CASH'
+  const [selectedMethodId, setSelectedMethodId] = useState('GPAY');
 
-  // Online sub-categories: 'UPI' | 'CARDS' | 'NETBANKING_WALLETS'
-  const [onlineCategory, setOnlineCategory] = useState('UPI');
+  // Modal Views: 'SELECTION' | 'AWAITING_APP' | 'QR_CODE'
+  const [currentView, setCurrentView] = useState('SELECTION');
 
-  // Specific selections
-  const [selectedUpiApp, setSelectedUpiApp] = useState('GPAY');
-  const [selectedBank, setSelectedBank] = useState('HDFC');
-  const [cardForm, setCardForm] = useState({
-    number: '4532 •••• •••• 8821',
-    name: user?.name || 'Ayush Pandey',
-    expiry: '09/28',
-    cvv: '•••',
-  });
-
-  // Automated Payment States
+  // Success Popup State
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [transactionId, setTransactionId] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -71,9 +100,76 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
   const autoPlaceTimerRef = useRef(null);
 
-  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(canteenUpiId)}&pn=${encodeURIComponent(
+  // Deep Link URI Generator for Indian UPI Apps
+  const getUpiUri = (appId) => {
+    const encodedPa = encodeURIComponent(canteenUpiId);
+    const encodedPn = encodeURIComponent(canteenMerchantName);
+    const encodedTn = encodeURIComponent(`MITS Canteen Order ₹${total}`);
+    const generic = `upi://pay?pa=${encodedPa}&pn=${encodedPn}&am=${total}&cu=INR&tn=${encodedTn}`;
+
+    if (appId === 'GPAY') {
+      return `tez://upi/pay?pa=${encodedPa}&pn=${encodedPn}&am=${total}&cu=INR&tn=${encodedTn}`;
+    }
+    if (appId === 'PHONEPE') {
+      return `phonepe://upi/pay?pa=${encodedPa}&pn=${encodedPn}&am=${total}&cu=INR&tn=${encodedTn}`;
+    }
+    if (appId === 'PAYTM') {
+      return `paytmmp://upi/pay?pa=${encodedPa}&pn=${encodedPn}&am=${total}&cu=INR&tn=${encodedTn}`;
+    }
+    return generic;
+  };
+
+  const genericUpiLink = `upi://pay?pa=${encodeURIComponent(canteenUpiId)}&pn=${encodeURIComponent(
     canteenMerchantName
   )}&am=${total}&cu=INR&tn=${encodeURIComponent(`MITS Canteen Order ₹${total}`)}`;
+
+  // Payment Options Configuration
+  const PAYMENT_METHODS = [
+    {
+      id: 'GPAY',
+      name: 'Google Pay UPI',
+      subtitle: 'Pay directly via Google Pay',
+      category: 'UPI',
+      icon: <GPayIcon />,
+    },
+    {
+      id: 'PHONEPE',
+      name: 'PhonePe UPI',
+      subtitle: 'Instant payment in PhonePe app',
+      category: 'UPI',
+      icon: <PhonePeIcon />,
+    },
+    {
+      id: 'PAYTM',
+      name: 'Paytm UPI',
+      subtitle: 'Pay using Paytm app or wallet',
+      category: 'UPI',
+      icon: <PaytmIcon />,
+    },
+    {
+      id: 'BHIM',
+      name: 'Any UPI App (BHIM / CRED)',
+      subtitle: 'Choose any installed UPI app',
+      category: 'UPI',
+      icon: <UpiIcon />,
+    },
+    {
+      id: 'QR',
+      name: 'Scan Campus QR Code',
+      subtitle: 'Show QR code on screen to scan',
+      category: 'QR',
+      icon: <QrCode className="w-5 h-5 text-purple-400" />,
+    },
+    {
+      id: 'CASH',
+      name: 'Cash at Counter',
+      subtitle: 'Pay in cash when collecting order',
+      category: 'CASH',
+      icon: <Banknote className="w-5 h-5 text-emerald-400" />,
+    },
+  ];
+
+  const selectedMethod = PAYMENT_METHODS.find((m) => m.id === selectedMethodId) || PAYMENT_METHODS[0];
 
   const handleCopyUpi = () => {
     try {
@@ -83,15 +179,52 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     } catch (_) {}
   };
 
-  // User-Initiated Payment Proceed & Pop-up Animation
-  const triggerPaymentSuccess = (methodLabel = 'UPI') => {
+  // Launch Payment when user clicks Zomato "Place Order" button
+  const handlePlaceOrderClick = () => {
+    setError('');
+
+    // 1. CASH AT COUNTER: Immediate direct placement
+    if (selectedMethodId === 'CASH') {
+      executeOrderPlacement(null, 'UNPAID', 'CASH_AT_COUNTER');
+      return;
+    }
+
+    // 2. DISPLAY QR CODE VIEW
+    if (selectedMethodId === 'QR') {
+      setCurrentView('QR_CODE');
+      return;
+    }
+
+    // 3. ONLINE UPI APP INTENT (GPay, PhonePe, Paytm, BHIM)
+    const appDeepLink = getUpiUri(selectedMethodId);
+    setCurrentView('AWAITING_APP');
+
+    // Attempt to open the UPI app on the mobile device
+    try {
+      window.location.href = appDeepLink;
+    } catch (_) {
+      window.location.href = genericUpiLink;
+    }
+
+    // Fallback: If device doesn't register app scheme, trigger generic UPI
+    if (selectedMethodId !== 'BHIM') {
+      setTimeout(() => {
+        try {
+          window.location.href = genericUpiLink;
+        } catch (_) {}
+      }, 700);
+    }
+  };
+
+  // Trigger Verified Payment Success Pop-up & Auto-Generate Token
+  const triggerPaymentSuccess = (methodLabel = selectedMethod.name) => {
     if (showSuccessPopup || loading) return;
 
     if (autoPlaceTimerRef.current) {
       clearTimeout(autoPlaceTimerRef.current);
     }
 
-    const genTxn = `${methodLabel}-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+    const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     setTransactionId(genTxn);
     setShowSuccessPopup(true);
 
@@ -105,28 +238,14 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
         particleCount: 110,
         spread: 80,
         origin: { y: 0.5 },
-        colors: ['#10B981', '#7955E8', '#526DFF', '#F59E0B'],
+        colors: ['#10B981', '#7955E8', '#526DFF', '#EF4444'],
       });
     } catch (_) {}
 
     // Automatically generate token after showing popup for 1.5 seconds!
     autoPlaceTimerRef.current = setTimeout(() => {
-      executeOrderPlacement(genTxn, 'PAID', methodLabel === 'CARD' ? 'CARD' : 'UPI');
+      executeOrderPlacement(genTxn, 'PAID', 'UPI');
     }, 1500);
-  };
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
-    };
-  }, []);
-
-  const handleSelectPrimaryType = (type) => {
-    if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
-    setPaymentType(type);
-    setShowSuccessPopup(false);
-    setError('');
   };
 
   // Execute Order Placement & Token Generation
@@ -173,6 +292,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
       clearCart();
       setShowSuccessPopup(false);
+      setCurrentView('SELECTION');
       onClose();
       if (onOrderPlaced) {
         onOrderPlaced(createdOrder);
@@ -186,13 +306,23 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     }
   };
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentView('SELECTION');
+      setShowSuccessPopup(false);
+      setError('');
+      if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn text-white">
-      {/* 1. AUTOMATIC PAYMENT SUCCESS POP-UP WITH GREEN TICK & AUTO-TOKEN GENERATION */}
+      {/* 1. GREEN CHECKMARK TICK POP-UP & AUTO TOKEN GENERATOR */}
       {showSuccessPopup && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#1C263A] via-[#151C30] to-[#0B1020] border-2 border-emerald-500 p-6 text-center shadow-2xl shadow-emerald-500/30 space-y-4 animate-scaleUp">
             {/* Animated Bouncy Green Circle with Checkmark Tick */}
             <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
@@ -208,7 +338,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               </span>
               <h3 className="text-xl font-black text-white mt-2">Payment Successful!</h3>
               <p className="text-sm font-black text-emerald-400 mt-0.5">
-                ₹{total} Received via UPI
+                ₹{total} Paid via {selectedMethod.name}
               </p>
               <p className="text-[11px] font-mono text-[#AAB3C5] mt-1 bg-[#0B1020] py-1 px-2.5 rounded-lg border border-purple-500/20 inline-block">
                 Txn Ref: <strong className="text-white">{transactionId}</strong>
@@ -223,20 +353,37 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
         </div>
       )}
 
-      {/* 2. MAIN CHECKOUT MODAL WINDOW */}
+      {/* 2. MAIN MODAL CONTAINER */}
       <div
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-lg bg-[#1C263A] rounded-3xl shadow-2xl border border-purple-500/30 overflow-hidden flex flex-col max-h-[92vh]"
       >
-        {/* Header */}
+        {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#0B1020] via-[#151C30] to-[#0B1020] text-white flex items-center justify-between border-b border-purple-500/20 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center font-bold">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-            </div>
+            {currentView !== 'SELECTION' ? (
+              <button
+                onClick={() => setCurrentView('SELECTION')}
+                className="w-8 h-8 rounded-full bg-[#1C263A] hover:bg-[#25334d] text-white flex items-center justify-center transition-colors mr-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center font-bold">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </div>
+            )}
             <div>
-              <h3 className="font-extrabold text-sm sm:text-base text-white">Payment & Live Token Generation</h3>
-              <p className="text-[11px] text-[#AAB3C5]">Scan QR or Select Payment Method</p>
+              <h3 className="font-extrabold text-sm sm:text-base text-white">
+                {currentView === 'AWAITING_APP'
+                  ? `Paying via ${selectedMethod.name}`
+                  : currentView === 'QR_CODE'
+                  ? 'Scan Campus QR Code'
+                  : 'Select Payment Method'}
+              </h3>
+              <p className="text-[11px] text-[#AAB3C5]">
+                {cartItems.length} dish(es) • Final Total ₹{total}
+              </p>
             </div>
           </div>
           <button
@@ -247,8 +394,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
           </button>
         </div>
 
-        {/* Body Content */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
+        {/* Modal Body */}
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="p-3.5 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-bold flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
@@ -256,455 +403,314 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             </div>
           )}
 
-          {/* Student Info Card */}
-          <div className="p-3.5 rounded-2xl bg-[#151C30] border border-purple-500/20 flex items-center justify-between text-xs">
-            <div>
-              <p className="text-[#AAB3C5] font-medium text-[10px] uppercase tracking-wider">Ordering Student:</p>
-              <p className="font-extrabold text-white text-sm">{user?.name || 'Ayush Pandey'}</p>
-              <p className="text-[11px] text-purple-300 font-bold">
-                {user?.department || 'Electronics and Telecommunication'}
-              </p>
-            </div>
-            <div className="text-right">
-              <span className="px-2.5 py-1 rounded-lg bg-[#0B1020] text-purple-200 font-mono font-black text-xs border border-purple-500/30 shadow-xs inline-block">
-                Enroll: {user?.studentId || user?.enrollmentNumber || 'BTET25O1039'}
-              </span>
-              <p className="text-[10px] text-[#AAB3C5] mt-1 flex items-center gap-1 justify-end">
-                <Clock className="w-3 h-3 text-purple-400" />
-                {scheduledTime}
-              </p>
-            </div>
-          </div>
-
-          {/* Top-Level Payment Method Selector (Online vs Cash) */}
-          <div>
-            <label className="text-xs font-black text-slate-200 uppercase tracking-wider block mb-2">
-              Payment Method
-            </label>
-
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-              {/* Online Option */}
-              <div
-                onClick={() => handleSelectPrimaryType('ONLINE')}
-                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  paymentType === 'ONLINE'
-                    ? 'border-[#7955E8] bg-gradient-to-b from-[#7955E8]/25 to-[#1C263A] shadow-md shadow-purple-500/20 ring-1 ring-purple-500/40'
-                    : 'border-purple-500/20 bg-[#151C30] hover:border-purple-500/40 opacity-75'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold">
-                    <Smartphone className="w-4 h-4" />
+          {/* VIEW 1: ZOMATO-STYLE PAYMENT SELECTION VIEW */}
+          {currentView === 'SELECTION' && (
+            <div className="space-y-4">
+              {/* Quick Pay Banner (Like Zomato Money banner) */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-[#151C30] border border-purple-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-[#E23744] text-white flex items-center justify-center font-black text-sm shadow-md">
+                    ⚡
                   </div>
-                  {paymentType === 'ONLINE' && (
-                    <span className="w-5 h-5 rounded-full bg-[#7955E8] text-white flex items-center justify-center text-xs">
-                      ✓
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <h4 className="text-xs font-black text-white">Scan & Pay Online</h4>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      UPI / QR
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-[#AAB3C5] mt-0.5">UPI, GPay, PhonePe, QR</p>
-                </div>
-              </div>
-
-              {/* Cash at Counter Option */}
-              <div
-                onClick={() => handleSelectPrimaryType('CASH_AT_COUNTER')}
-                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  paymentType === 'CASH_AT_COUNTER'
-                    ? 'border-[#7955E8] bg-gradient-to-b from-[#7955E8]/25 to-[#1C263A] shadow-md shadow-purple-500/20 ring-1 ring-purple-500/40'
-                    : 'border-purple-500/20 bg-[#151C30] hover:border-purple-500/40 opacity-75'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold">
-                    <Banknote className="w-4 h-4" />
-                  </div>
-                  {paymentType === 'CASH_AT_COUNTER' && (
-                    <span className="w-5 h-5 rounded-full bg-[#7955E8] text-white flex items-center justify-center text-xs">
-                      ✓
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2.5">
-                  <h4 className="text-xs font-black text-white">Cash at Counter</h4>
-                  <p className="text-[10px] text-[#AAB3C5] mt-0.5">Pay in cash upon pickup</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ONLINE PAYMENT & QR CODE HUB */}
-          {paymentType === 'ONLINE' && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#151C30] border-2 border-purple-500/30 space-y-4">
-              {/* Status Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-purple-500/20">
-                <span className="text-xs font-black text-white flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-purple-400" />
-                  Instant UPI & QR Payment
-                </span>
-
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1.5">
-                  <QrCode className="w-3.5 h-3.5 text-emerald-400" />
-                  Scan & Proceed
-                </span>
-              </div>
-
-              {/* Category Sub-Tabs */}
-              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#0B1020] border border-purple-500/20">
-                <button
-                  type="button"
-                  onClick={() => setOnlineCategory('UPI')}
-                  className={`py-2 px-2 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    onlineCategory === 'UPI'
-                      ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md'
-                      : 'text-[#AAB3C5] hover:text-white'
-                  }`}
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>UPI & QR</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setOnlineCategory('CARDS')}
-                  className={`py-2 px-2 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    onlineCategory === 'CARDS'
-                      ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md'
-                      : 'text-[#AAB3C5] hover:text-white'
-                  }`}
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>Cards</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setOnlineCategory('NETBANKING_WALLETS')}
-                  className={`py-2 px-2 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    onlineCategory === 'NETBANKING_WALLETS'
-                      ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-md'
-                      : 'text-[#AAB3C5] hover:text-white'
-                  }`}
-                >
-                  <Building2 className="w-3.5 h-3.5" />
-                  <span>NetBanking</span>
-                </button>
-              </div>
-
-              {/* SUB-VIEW 1: UPI QR CODE & APPS */}
-              {onlineCategory === 'UPI' && (
-                <div className="space-y-3.5 pt-1">
-                  {/* Popular UPI Apps Pill Selector */}
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-[#AAB3C5] mb-1.5">Choose UPI App:</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { id: 'GPAY', name: 'Google Pay', icon: '🟢' },
-                        { id: 'PHONEPE', name: 'PhonePe', icon: '🟣' },
-                        { id: 'PAYTM', name: 'Paytm UPI', icon: '🔵' },
-                        { id: 'CRED', name: 'CRED / BHIM', icon: '⚡' },
-                      ].map((app) => (
-                        <button
-                          key={app.id}
-                          type="button"
-                          onClick={() => setSelectedUpiApp(app.id)}
-                          className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
-                            selectedUpiApp === app.id
-                              ? 'border-[#7955E8] bg-[#7955E8]/20 ring-1 ring-purple-400 text-white'
-                              : 'border-purple-500/20 bg-[#0B1020] text-slate-300 hover:border-purple-400/40'
+                    <h4 className="text-xs font-black text-white">MITS Quick Pay</h4>
+                    <p className="text-[10px] text-[#AAB3C5]">Single-tap payment & instant live token</p>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  Instant
+                </span>
+              </div>
+
+              {/* Student Ordering Card */}
+              <div className="p-3 rounded-xl bg-[#151C30] border border-purple-500/20 flex items-center justify-between text-xs">
+                <div>
+                  <p className="text-[10px] uppercase text-[#AAB3C5] font-bold">Ordering Student:</p>
+                  <p className="font-extrabold text-white text-xs">{user?.name || 'Ayush Pandey'}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] font-mono font-bold text-purple-300">
+                    {user?.studentId || user?.enrollmentNumber || 'BTET25O1039'}
+                  </span>
+                  <p className="text-[10px] text-[#AAB3C5] mt-0.5">{scheduledTime}</p>
+                </div>
+              </div>
+
+              {/* Payment Methods List (Like Zomato's Payment Options) */}
+              <div>
+                <label className="text-[11px] font-black text-[#AAB3C5] uppercase tracking-wider block mb-2">
+                  Recommended Payment Options
+                </label>
+
+                <div className="space-y-2">
+                  {PAYMENT_METHODS.map((method) => {
+                    const isSelected = selectedMethodId === method.id;
+                    return (
+                      <div
+                        key={method.id}
+                        onClick={() => setSelectedMethodId(method.id)}
+                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                          isSelected
+                            ? 'border-[#E23744] bg-[#E23744]/10 shadow-md ring-1 ring-[#E23744]/40'
+                            : 'border-purple-500/20 bg-[#151C30] hover:border-purple-500/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-[#0B1020] border border-white/10 flex items-center justify-center shrink-0">
+                            {method.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-black text-white">{method.name}</h4>
+                              {method.id === 'GPAY' && (
+                                <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                  Popular
+                                </span>
+                              )}
+                              {method.id === 'CASH' && (
+                                <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  Counter
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-[#AAB3C5] mt-0.5">{method.subtitle}</p>
+                          </div>
+                        </div>
+
+                        {/* Radio Selection Dot */}
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'border-[#E23744] bg-[#E23744] text-white shadow-xs'
+                              : 'border-slate-500 bg-transparent'
                           }`}
                         >
-                          <span className="text-sm block">{app.icon}</span>
-                          <span className="text-[10px] font-black block mt-0.5 truncate">{app.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Official QR Code Box */}
-                  <div
-                    className="relative text-center p-4 rounded-2xl bg-[#0B1020] border border-purple-500/25 space-y-3"
-                  >
-                    {customQrImage ? (
-                      <div className="relative inline-block p-2.5 bg-white rounded-2xl shadow-xl border border-slate-200 mx-auto">
-                        <img
-                          src={customQrImage}
-                          alt="Official Canteen UPI QR"
-                          className="w-36 h-36 object-contain rounded-xl mx-auto"
-                        />
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs whitespace-nowrap">
-                          Official QR ✓
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="relative inline-block p-3 bg-white rounded-2xl shadow-xl border-2 border-purple-500/30 mx-auto">
-                        <QRCodeSVG value={upiDeepLink} size={140} level="M" />
-                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#7955E8] text-white shadow-md whitespace-nowrap border border-white/40 flex items-center gap-1">
-                          <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-                          <span>Campus UPI QR</span>
+                          {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
                         </div>
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
+              </div>
 
-                    <div className="pt-1">
-                      <p className="text-sm font-black text-white">{canteenMerchantName}</p>
-                      <div className="flex items-center justify-center gap-2 mt-1">
-                        <span className="text-[11px] text-purple-300 font-mono font-bold truncate max-w-[210px]">
-                          {canteenUpiId}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyUpi();
-                          }}
-                          className="px-2 py-0.5 rounded-md bg-[#1C263A] hover:bg-[#25334d] text-[10px] font-bold text-slate-300 flex items-center gap-1 border border-purple-500/30 transition-colors cursor-pointer"
-                        >
-                          {copiedUpi ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              <span className="text-emerald-400">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy UPI</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs font-black text-white mt-1.5">
-                        Amount to Pay: <span className="text-emerald-400 font-bold text-base">₹{total}</span>
-                      </p>
-                    </div>
+              {/* Bill Details Summary */}
+              <div className="border-t border-purple-500/20 pt-3 space-y-1.5 text-xs text-[#AAB3C5]">
+                <div className="flex justify-between">
+                  <span>Subtotal ({cartItems.length} items)</span>
+                  <span className="font-semibold text-white">₹{subtotal}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-400 font-bold">
+                    <span>Campus Discount</span>
+                    <span>-₹{discountAmount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-black text-white pt-2 border-t border-purple-500/20">
+                  <span>Total Payable</span>
+                  <span className="text-emerald-400 text-base font-black">₹{total}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
-                    {/* Pay via UPI App Deep Link */}
-                    <a
-                      href={upiDeepLink}
-                      onClick={() => triggerPaymentSuccess(selectedUpiApp || 'UPI')}
-                      className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#151C30] hover:bg-[#1C263A] text-purple-200 border border-purple-500/30 font-bold text-xs transition-all w-full cursor-pointer shadow-xs"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-purple-400" />
-                      <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
-                    </a>
+          {/* VIEW 2: AWAITING UPI APP PAYMENT VIEW (When user clicks Place Order for GPay/PhonePe) */}
+          {currentView === 'AWAITING_APP' && (
+            <div className="text-center py-4 space-y-5 animate-fadeIn">
+              <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-rose-500/20 animate-ping"></div>
+                <div className="relative w-20 h-20 rounded-2xl bg-[#0B1020] border-2 border-[#E23744] flex items-center justify-center shadow-xl shadow-red-500/20">
+                  {selectedMethod.icon}
+                </div>
+              </div>
 
-                    {/* Proceed Button */}
+              <div className="space-y-1">
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block animate-pulse">
+                  Payment App Opened
+                </span>
+                <h3 className="text-lg font-black text-white">Complete Payment in {selectedMethod.name}</h3>
+                <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
+                  Aapke phone par <strong className="text-white">{selectedMethod.name}</strong> open ho gaya hai. Wahan <strong className="text-emerald-400">₹{total}</strong> pay karein.
+                </p>
+              </div>
+
+              {/* Payee Info Box */}
+              <div className="p-3.5 rounded-2xl bg-[#0B1020] border border-purple-500/25 max-w-sm mx-auto text-left space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#AAB3C5]">Paying To:</span>
+                  <span className="font-extrabold text-white">{canteenMerchantName}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#AAB3C5]">UPI ID:</span>
+                  <div className="flex items-center gap-1.5 font-mono text-purple-300 font-bold">
+                    <span>{canteenUpiId}</span>
                     <button
                       type="button"
-                      onClick={() => triggerPaymentSuccess(selectedUpiApp || 'UPI')}
-                      disabled={loading || showSuccessPopup}
-                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-[#7955E8] to-[#526DFF] hover:from-emerald-500 hover:to-[#3d5bff] text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+                      onClick={handleCopyUpi}
+                      className="p-1 rounded bg-[#1C263A] hover:bg-[#25334d] text-slate-300"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                      <span>Proceed to Pay ₹{total} via QR</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {copiedUpi ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     </button>
                   </div>
                 </div>
-              )}
+                <div className="flex justify-between items-center text-xs border-t border-purple-500/20 pt-2">
+                  <span className="text-white font-bold">Amount:</span>
+                  <span className="text-emerald-400 font-black text-sm">₹{total}</span>
+                </div>
+              </div>
 
-              {/* SUB-VIEW 2: CREDIT / DEBIT CARDS */}
-              {onlineCategory === 'CARDS' && (
-                <div className="space-y-3 pt-1">
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 border border-purple-400/40 shadow-lg space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono text-[10px] text-purple-200 tracking-wider">CAMPUS DINING CARD</span>
-                      <span className="font-bold text-amber-300 text-xs">RuPay / Visa</span>
-                    </div>
-                    <p className="font-mono text-base font-bold tracking-widest text-white">
-                      {cardForm.number}
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] font-mono text-purple-200">
-                      <span>{cardForm.name}</span>
-                      <span>EXP: {cardForm.expiry}</span>
-                    </div>
-                  </div>
+              {/* Primary User Action: "Payment Done? Generate Token" */}
+              <div className="space-y-2.5 max-w-sm mx-auto pt-2">
+                <button
+                  type="button"
+                  onClick={() => triggerPaymentSuccess(selectedMethod.name)}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+                >
+                  <CheckCircle2 className="w-5 h-5 text-emerald-200" />
+                  <span>Payment Ho Gaya • Generate Token ✓</span>
+                </button>
 
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-[10px] font-bold text-[#AAB3C5] block mb-0.5">Card Number</label>
-                      <input
-                        type="text"
-                        value={cardForm.number}
-                        onChange={(e) => setCardForm({ ...cardForm, number: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-[#0B1020] border border-purple-500/30 text-white font-mono text-xs focus:outline-none focus:border-purple-400"
-                        placeholder="Card Number"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] font-bold text-[#AAB3C5] block mb-0.5">Expiry (MM/YY)</label>
-                        <input
-                          type="text"
-                          value={cardForm.expiry}
-                          onChange={(e) => setCardForm({ ...cardForm, expiry: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-[#0B1020] border border-purple-500/30 text-white font-mono text-xs focus:outline-none focus:border-purple-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-[#AAB3C5] block mb-0.5">CVV</label>
-                        <input
-                          type="password"
-                          value={cardForm.cvv}
-                          maxLength={4}
-                          onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-[#0B1020] border border-purple-500/30 text-white font-mono text-xs focus:outline-none focus:border-purple-400"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const link = getUpiUri(selectedMethodId);
+                      window.location.href = link;
+                    }}
+                    className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-purple-200 border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Re-open {selectedMethod.name}</span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={() => triggerPaymentSuccess('CARD')}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-98"
+                    onClick={() => setCurrentView('QR_CODE')}
+                    className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <CreditCard className="w-4 h-4 text-emerald-200" />
-                    <span>Pay ₹{total} via Card (Auto-Generates Token)</span>
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Show QR Code</span>
                   </button>
                 </div>
-              )}
-
-              {/* SUB-VIEW 3: NETBANKING & WALLETS */}
-              {onlineCategory === 'NETBANKING_WALLETS' && (
-                <div className="space-y-3 pt-1">
-                  <p className="text-[10px] uppercase font-bold text-[#AAB3C5]">Select Popular Bank / Wallet:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'HDFC', name: 'HDFC Bank', icon: '🏦' },
-                      { id: 'SBI', name: 'State Bank of India', icon: '🏛️' },
-                      { id: 'ICICI', name: 'ICICI Bank', icon: '🏢' },
-                      { id: 'AXIS', name: 'Axis Bank', icon: '💼' },
-                      { id: 'PAYTM_WALLET', name: 'Paytm Wallet', icon: '👛' },
-                      { id: 'AMAZON_PAY', name: 'Amazon Pay', icon: '📦' },
-                    ].map((bank) => (
-                      <button
-                        key={bank.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedBank(bank.id);
-                          triggerPaymentSuccess(bank.name);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                          selectedBank === bank.id
-                            ? 'border-[#7955E8] bg-[#7955E8]/20 ring-1 ring-purple-400 text-white'
-                            : 'border-purple-500/20 bg-[#0B1020] text-slate-300 hover:border-purple-400/40'
-                        }`}
-                      >
-                        <span className="text-base">{bank.icon}</span>
-                        <span className="text-[11px] font-black truncate">{bank.name}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => triggerPaymentSuccess(selectedBank)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-98"
-                  >
-                    <Building2 className="w-4 h-4 text-emerald-200" />
-                    <span>Pay ₹{total} via {selectedBank} (Auto-Generates Token)</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Cash At Counter Notice */}
-          {paymentType === 'CASH_AT_COUNTER' && (
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5 text-xs text-emerald-200">
-              <Banknote className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-white text-xs sm:text-sm">Pay Cash at Counter 1</p>
-                <p className="text-[11px] text-[#AAB3C5] mt-0.5">
-                  Aap counter par khana lete samay ₹{total} cash pay kar sakte hain. Niche confirm button par click karke direct apna token generate karein.
-                </p>
               </div>
             </div>
           )}
 
-          {/* Price Breakdown */}
-          <div className="border-t border-purple-500/20 pt-3 space-y-1.5 text-xs text-[#AAB3C5]">
-            <div className="flex justify-between">
-              <span>Items Total ({cartItems.length} items)</span>
-              <span className="font-semibold text-white">₹{subtotal}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-400 font-bold">
-                <span>Campus Promo Discount</span>
-                <span>-₹{discountAmount}</span>
+          {/* VIEW 3: SCAN QR CODE VIEW */}
+          {currentView === 'QR_CODE' && (
+            <div className="text-center py-2 space-y-4 animate-fadeIn">
+              <div className="relative text-center p-4 rounded-2xl bg-[#0B1020] border border-purple-500/25 space-y-3 max-w-xs mx-auto">
+                {customQrImage ? (
+                  <div className="relative inline-block p-2.5 bg-white rounded-2xl shadow-xl border border-slate-200 mx-auto">
+                    <img
+                      src={customQrImage}
+                      alt="Official Canteen UPI QR"
+                      className="w-36 h-36 object-contain rounded-xl mx-auto"
+                    />
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs whitespace-nowrap">
+                      Official QR ✓
+                    </span>
+                  </div>
+                ) : (
+                  <div className="relative inline-block p-3 bg-white rounded-2xl shadow-xl border-2 border-purple-500/30 mx-auto">
+                    <QRCodeSVG value={genericUpiLink} size={140} level="M" />
+                    <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#7955E8] text-white shadow-md whitespace-nowrap border border-white/40 flex items-center gap-1">
+                      <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                      <span>Scan with any UPI App</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-1">
+                  <p className="text-sm font-black text-white">{canteenMerchantName}</p>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <span className="text-[11px] text-purple-300 font-mono font-bold truncate max-w-[200px]">
+                      {canteenUpiId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      className="px-2 py-0.5 rounded-md bg-[#1C263A] hover:bg-[#25334d] text-[10px] font-bold text-slate-300 flex items-center gap-1 border border-purple-500/30 transition-colors cursor-pointer"
+                    >
+                      {copiedUpi ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span className="text-emerald-400">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs font-black text-white mt-1.5">
+                    Pay Amount: <span className="text-emerald-400 font-bold text-base">₹{total}</span>
+                  </p>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between text-sm font-black text-white pt-2 border-t border-purple-500/20">
-              <span>Final Payable Amount</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 text-base font-black">
-                ₹{total}
-              </span>
+
+              {/* Action: Payment Done */}
+              <div className="space-y-2 max-w-xs mx-auto">
+                <button
+                  type="button"
+                  onClick={() => triggerPaymentSuccess('QR')}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                  <span>Payment Done • Generate Token ✓</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('SELECTION')}
+                  className="w-full py-2 text-xs font-bold text-[#AAB3C5] hover:text-white transition-colors cursor-pointer"
+                >
+                  Choose Another Payment Option
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 sm:p-5 bg-[#0B1020]/95 border-t border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-3 rounded-xl text-xs font-bold text-[#AAB3C5] hover:text-white hover:bg-[#1C263A] transition-colors cursor-pointer text-center"
-          >
-            Cancel
-          </button>
+        {/* 3. AUTHENTIC ZOMATO BOTTOM PAYMENT BAR (Visible on SELECTION View) */}
+        {currentView === 'SELECTION' && (
+          <div className="p-3.5 sm:p-4 bg-[#0B1020] border-t border-purple-500/20 flex items-center justify-between gap-3 shrink-0">
+            {/* Left: PAY USING (with chosen app icon & name) */}
+            <div className="flex items-center gap-2.5 py-1 px-1.5 rounded-xl hover:bg-white/5 transition-colors">
+              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10">
+                {selectedMethod.icon}
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[#AAB3C5]">
+                  <span>PAY USING</span>
+                  <span className="text-[8px] text-purple-400">▲</span>
+                </div>
+                <div className="text-xs sm:text-sm font-extrabold text-white truncate max-w-[110px] sm:max-w-[150px]">
+                  {selectedMethod.name}
+                </div>
+              </div>
+            </div>
 
-          {/* DYNAMIC CONFIRM & GENERATE TOKEN BUTTON */}
-          <div className="flex-1 w-full flex flex-col gap-1.5">
-            {paymentType === 'ONLINE' ? (
-              <button
-                type="button"
-                onClick={() => triggerPaymentSuccess(selectedUpiApp || 'UPI')}
-                disabled={loading || showSuccessPopup}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-[#7955E8] to-[#526DFF] hover:from-emerald-500 hover:to-[#3d5bff] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    Processing Payment...
-                  </span>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                    <span>Proceed to Pay ₹{total} & Generate Token</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => executeOrderPlacement(null, 'UNPAID', 'CASH_AT_COUNTER')}
-                disabled={loading || showSuccessPopup}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-[#7955E8] to-[#526DFF] hover:from-emerald-500 hover:to-[#3d5bff] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    Generating Campus Token...
-                  </span>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-emerald-300" />
-                    <span>Confirm & Generate Token (Pay Cash at Counter)</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            )}
+            {/* Right: Solid Red Zomato "Place Order" Button */}
+            <button
+              type="button"
+              onClick={handlePlaceOrderClick}
+              disabled={loading}
+              className="py-3 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#E23744] via-[#EB4454] to-[#F03949] hover:from-[#d12e3b] hover:to-[#e02d3c] active:scale-95 text-white font-black text-xs sm:text-sm flex items-center gap-2.5 sm:gap-3.5 shadow-xl shadow-red-500/30 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <div className="text-left">
+                <div className="text-sm sm:text-base font-black leading-tight">₹{total}</div>
+                <div className="text-[9px] uppercase tracking-wider text-white/80 font-bold leading-tight">TOTAL</div>
+              </div>
+              <div className="w-[1px] h-6 bg-white/25"></div>
+              <div className="flex items-center gap-1">
+                <span>Place Order</span>
+                <ArrowRight className="w-4 h-4 ml-0.5" />
+              </div>
+            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

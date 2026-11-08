@@ -278,21 +278,69 @@ export const CartDrawer = ({ onCheckoutClick }) => {
             )}
           </div>
 
-          {/* Checkout CTA */}
+          {/* Checkout CTA - Zomato Style Bottom Bar */}
           {cartItems.length > 0 && (
-            <div className="p-5 border-t border-purple-500/20 bg-[#0B1020]/90 space-y-3">
-              <button
-                onClick={() => {
-                  setIsCartOpen(false);
-                  onCheckoutClick();
-                }}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-xl shadow-purple-500/30 transition-all transform active:scale-98"
-              >
-                <span>Proceed to Checkout</span>
-                <span>•</span>
-                <span>₹{total}</span>
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </button>
+            <div className="p-3.5 sm:p-4 border-t border-purple-500/20 bg-[#0B1020] space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                {/* Left: PAY USING */}
+                <div
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    onCheckoutClick();
+                  }}
+                  className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded-xl hover:bg-white/5 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M23.04 12.26c0-.82-.07-1.6-.2-2.36H12v4.47h6.2a5.3 5.3 0 0 1-2.3 3.48v2.88h3.72c2.18-2 3.42-4.96 3.42-8.47z"
+                        fill="#4285F4"
+                      />
+                      <path
+                        d="M12 23.5c3.1 0 5.72-1.03 7.62-2.79l-3.72-2.88c-1.03.69-2.35 1.1-3.9 1.1-3 0-5.54-2.03-6.45-4.75H1.67v2.98A11.5 11.5 0 0 0 12 23.5z"
+                        fill="#34A853"
+                      />
+                      <path
+                        d="M5.55 14.18A6.9 6.9 0 0 1 5.18 12c0-.76.13-1.5.37-2.18V6.84H1.67A11.5 11.5 0 0 0 .5 12c0 1.86.44 3.62 1.17 5.16l3.88-2.98z"
+                        fill="#FBBC05"
+                      />
+                      <path
+                        d="M12 4.98c1.69 0 3.2.58 4.4 1.72l3.3-3.3C17.7 1.58 15.08.5 12 .5 7.37.5 3.38 3.16 1.67 6.84l3.88 2.98C6.46 7.1 9 4.98 12 4.98z"
+                        fill="#EA4335"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[#AAB3C5]">
+                      <span>PAY USING</span>
+                      <span className="text-[8px] text-purple-400">▲</span>
+                    </div>
+                    <div className="text-xs font-black text-white truncate max-w-[100px]">
+                      Google Pay UPI
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Solid Red Zomato Place Order Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    onCheckoutClick();
+                  }}
+                  className="py-3 px-5 rounded-2xl bg-gradient-to-r from-[#E23744] via-[#EB4454] to-[#F03949] hover:from-[#d12e3b] hover:to-[#e02d3c] active:scale-95 text-white font-black text-xs sm:text-sm flex items-center gap-2.5 shadow-xl shadow-red-500/30 transition-all cursor-pointer"
+                >
+                  <div className="text-left">
+                    <div className="text-sm sm:text-base font-black leading-tight">₹{total}</div>
+                    <div className="text-[8px] uppercase tracking-wider text-white/80 font-bold leading-tight">TOTAL</div>
+                  </div>
+                  <div className="w-[1px] h-6 bg-white/25"></div>
+                  <div className="flex items-center gap-1">
+                    <span>Place Order</span>
+                    <ArrowRight className="w-4 h-4 ml-0.5" />
+                  </div>
+                </button>
+              </div>
 
               <p className="text-[10px] text-center text-[#AAB3C5] flex items-center justify-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
