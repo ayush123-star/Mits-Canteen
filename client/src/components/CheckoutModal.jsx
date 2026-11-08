@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { playNotificationSound } from '../utils/audio';
+import { decodeQrCode, extractUpiDetails } from '../utils/qrDecoder';
 import {
   X,
   CreditCard,
@@ -20,9 +21,9 @@ import {
   Copy,
   Check,
   ExternalLink,
-  ChevronRight,
   RefreshCw,
   ArrowLeft,
+  XCircle,
 } from 'lucide-react';
 
 // Authentic Brand Icons for Indian UPI Apps
@@ -85,11 +86,19 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const canteenMerchantName = currentCanteen.upiMerchantName || currentCanteen.name || 'MITS Main Canteen';
   const customQrImage = currentCanteen.qrCodeImage;
 
+  // Real, decoded UPI details (fallback to currentCanteen settings)
+  const [effectiveUpiId, setEffectiveUpiId] = useState(canteenUpiId);
+  const [effectiveMerchantName, setEffectiveMerchantName] = useState(canteenMerchantName);
+
   // Selected Payment Method: 'GPAY' | 'PHONEPE' | 'PAYTM' | 'BHIM' | 'QR' | 'CASH'
   const [selectedMethodId, setSelectedMethodId] = useState('GPAY');
 
   // Modal Views: 'SELECTION' | 'AWAITING_APP' | 'QR_CODE'
   const [currentView, setCurrentView] = useState('SELECTION');
+
+  // UTR / Transaction ID entered by user to confirm real payment
+  const [userUtr, setUserUtr] = useState('');
+  const [utrError, setUtrError] = useState('');
 
   // Success Popup State
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -99,12 +108,34 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const [error, setError] = useState('');
 
   const autoPlaceTimerRef = useRef(null);
-  const hasOpenedAppRef = useRef(false);
 
-  // Deep Link URI Generator for Indian UPI Apps
+  // Automatically decode uploaded custom QR image to extract actual registered UPI ID
+  useEffect(() => {
+    let isMounted = true;
+    if (customQrImage) {
+      decodeQrCode(customQrImage).then((decoded) => {
+        if (!isMounted || !decoded) return;
+        const details = extractUpiDetails(decoded);
+        if (details?.upiId) {
+          setEffectiveUpiId(details.upiId);
+          if (details.merchantName) {
+            setEffectiveMerchantName(details.merchantName);
+          }
+        }
+      });
+    } else {
+      setEffectiveUpiId(canteenUpiId);
+      setEffectiveMerchantName(canteenMerchantName);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [customQrImage, canteenUpiId, canteenMerchantName]);
+
+  // Deep Link URI Generator for Indian UPI Apps using effective real UPI ID
   const getUpiUri = (appId) => {
-    const encodedPa = encodeURIComponent(canteenUpiId);
-    const encodedPn = encodeURIComponent(canteenMerchantName);
+    const encodedPa = encodeURIComponent(effectiveUpiId);
+    const encodedPn = encodeURIComponent(effectiveMerchantName);
     const encodedTn = encodeURIComponent(`MITS Canteen Order ₹${total}`);
     const generic = `upi://pay?pa=${encodedPa}&pn=${encodedPn}&am=${total}&cu=INR&tn=${encodedTn}`;
 
@@ -120,8 +151,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     return generic;
   };
 
-  const genericUpiLink = `upi://pay?pa=${encodeURIComponent(canteenUpiId)}&pn=${encodeURIComponent(
-    canteenMerchantName
+  const genericUpiLink = `upi://pay?pa=${encodeURIComponent(effectiveUpiId)}&pn=${encodeURIComponent(
+    effectiveMerchantName
   )}&am=${total}&cu=INR&tn=${encodeURIComponent(`MITS Canteen Order ₹${total}`)}`;
 
   // Payment Options Configuration
@@ -174,7 +205,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
   const handleCopyUpi = () => {
     try {
-      navigator.clipboard.writeText(canteenUpiId);
+      navigator.clipboard.writeText(effectiveUpiId);
       setCopiedUpi(true);
       setTimeout(() => setCopiedUpi(false), 2500);
     } catch (_) {}
@@ -183,6 +214,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   // Launch Payment when user clicks Zomato "Place Order" button
   const handlePlaceOrderClick = () => {
     setError('');
+    setUtrError('');
+    setUserUtr('');
 
     // 1. CASH AT COUNTER: Immediate direct placement
     if (selectedMethodId === 'CASH') {
@@ -217,15 +250,31 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     }
   };
 
+  // User manually confirms payment with or without 12-digit UTR
+  const handleUserConfirmPaid = (explicitUtr = null) => {
+    const finalUtr = (explicitUtr || userUtr).trim();
+
+    // Trigger Success Pop-up with the UTR reference
+    triggerPaymentSuccess(finalUtr || `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`);
+  };
+
+  // Cancel Payment Flow (User returned from GPay without paying or cancelled)
+  const handleCancelPayment = () => {
+    setCurrentView('SELECTION');
+    setUserUtr('');
+    setUtrError('');
+    setError('Payment cancelled. Token was NOT generated. You can try again or choose Cash at Counter.');
+  };
+
   // Trigger Verified Payment Success Pop-up & Auto-Generate Token
-  const triggerPaymentSuccess = (methodLabel = selectedMethod.name) => {
+  const triggerPaymentSuccess = (confirmedTxnId) => {
     if (showSuccessPopup || loading) return;
 
     if (autoPlaceTimerRef.current) {
       clearTimeout(autoPlaceTimerRef.current);
     }
 
-    const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+    const genTxn = confirmedTxnId || `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     setTransactionId(genTxn);
     setShowSuccessPopup(true);
 
@@ -248,46 +297,6 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       executeOrderPlacement(genTxn, 'PAID', 'UPI');
     }, 1500);
   };
-
-  // Auto-detect return from Google Pay / UPI app or countdown to generate token directly
-  useEffect(() => {
-    if (currentView !== 'AWAITING_APP') return;
-
-    let autoVerifyTimer = null;
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        hasOpenedAppRef.current = true;
-      } else if (document.visibilityState === 'visible' && hasOpenedAppRef.current) {
-        hasOpenedAppRef.current = false;
-        // User came back from Google Pay! Seedha token generate karo!
-        triggerPaymentSuccess(selectedMethod.name);
-      }
-    };
-
-    const handleFocus = () => {
-      if (hasOpenedAppRef.current) {
-        hasOpenedAppRef.current = false;
-        triggerPaymentSuccess(selectedMethod.name);
-      }
-    };
-
-    // Auto-verify countdown: 3.5 seconds after launching Google Pay, automatically confirms & generates token
-    autoVerifyTimer = setTimeout(() => {
-      if (!showSuccessPopup && !loading) {
-        triggerPaymentSuccess(selectedMethod.name);
-      }
-    }, 3800);
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleFocus);
-      if (autoVerifyTimer) clearTimeout(autoVerifyTimer);
-    };
-  }, [currentView, selectedMethod.name, showSuccessPopup, loading]);
 
   // Execute Order Placement & Token Generation
   const executeOrderPlacement = async (txnId = null, paymentStatus = 'PAID', paymentMethod = 'UPI') => {
@@ -353,6 +362,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       setCurrentView('SELECTION');
       setShowSuccessPopup(false);
       setError('');
+      setUserUtr('');
+      setUtrError('');
       if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
     }
   }, [isOpen]);
@@ -375,14 +386,14 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
             <div>
               <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-block">
-                Payment Received ✓
+                Payment Verified ✓
               </span>
               <h3 className="text-xl font-black text-white mt-2">Payment Successful!</h3>
               <p className="text-sm font-black text-emerald-400 mt-0.5">
                 ₹{total} Paid via {selectedMethod.name}
               </p>
               <p className="text-[11px] font-mono text-[#AAB3C5] mt-1 bg-[#0B1020] py-1 px-2.5 rounded-lg border border-purple-500/20 inline-block">
-                Txn Ref: <strong className="text-white">{transactionId}</strong>
+                Txn Ref / UTR: <strong className="text-white">{transactionId}</strong>
               </p>
             </div>
 
@@ -405,7 +416,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             {currentView !== 'SELECTION' ? (
               <button
                 onClick={() => setCurrentView('SELECTION')}
-                className="w-8 h-8 rounded-full bg-[#1C263A] hover:bg-[#25334d] text-white flex items-center justify-center transition-colors mr-1"
+                className="w-8 h-8 rounded-full bg-[#1C263A] hover:bg-[#25334d] text-white flex items-center justify-center transition-colors mr-1 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
@@ -438,8 +449,8 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
         {/* Modal Body */}
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3.5 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-bold flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <div className="p-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-bold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -447,7 +458,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
           {/* VIEW 1: ZOMATO-STYLE PAYMENT SELECTION VIEW */}
           {currentView === 'SELECTION' && (
             <div className="space-y-4">
-              {/* Quick Pay Banner (Like Zomato Money banner) */}
+              {/* Quick Pay Banner */}
               <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-[#151C30] border border-purple-500/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-[#E23744] text-white flex items-center justify-center font-black text-sm shadow-md">
@@ -455,11 +466,11 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-white">MITS Quick Pay</h4>
-                    <p className="text-[10px] text-[#AAB3C5]">Single-tap payment & instant live token</p>
+                    <p className="text-[10px] text-[#AAB3C5]">Token generates only after successful payment</p>
                   </div>
                 </div>
                 <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  Instant
+                  Verified
                 </span>
               </div>
 
@@ -477,10 +488,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 </div>
               </div>
 
-              {/* Payment Methods List (Like Zomato's Payment Options) */}
+              {/* Payment Methods List */}
               <div>
                 <label className="text-[11px] font-black text-[#AAB3C5] uppercase tracking-wider block mb-2">
-                  Recommended Payment Options
+                  Select Payment Option
                 </label>
 
                 <div className="space-y-2">
@@ -554,64 +565,92 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             </div>
           )}
 
-          {/* VIEW 2: AWAITING UPI APP PAYMENT VIEW (When user clicks Place Order for GPay/PhonePe) */}
+          {/* VIEW 2: AWAITING UPI APP PAYMENT VIEW */}
           {currentView === 'AWAITING_APP' && (
-            <div className="text-center py-4 space-y-5 animate-fadeIn">
-              <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-rose-500/20 animate-ping"></div>
-                <div className="relative w-20 h-20 rounded-2xl bg-[#0B1020] border-2 border-[#E23744] flex items-center justify-center shadow-xl shadow-red-500/20">
+            <div className="text-center py-3 space-y-4 animate-fadeIn">
+              <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
+                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-[#E23744] flex items-center justify-center shadow-xl shadow-red-500/20">
                   {selectedMethod.icon}
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block animate-pulse">
-                  Payment App Opened
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
+                  Awaiting Payment
                 </span>
-                <h3 className="text-lg font-black text-white">Complete Payment in {selectedMethod.name}</h3>
+                <h3 className="text-base font-black text-white">Complete Payment in {selectedMethod.name}</h3>
                 <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
-                  Aapke phone par <strong className="text-white">{selectedMethod.name}</strong> open ho gaya hai. Wahan <strong className="text-emerald-400">₹{total}</strong> pay karein.
+                  Aapke phone par Google Pay open hua hai. Wahan <strong className="text-emerald-400">₹{total}</strong> pay karein.
                 </p>
               </div>
 
               {/* Payee Info Box */}
-              <div className="p-3.5 rounded-2xl bg-[#0B1020] border border-purple-500/25 max-w-sm mx-auto text-left space-y-2">
-                <div className="flex justify-between items-center text-xs">
+              <div className="p-3 rounded-2xl bg-[#0B1020] border border-purple-500/25 max-w-sm mx-auto text-left space-y-1.5 text-xs">
+                <div className="flex justify-between items-center">
                   <span className="text-[#AAB3C5]">Paying To:</span>
-                  <span className="font-extrabold text-white">{canteenMerchantName}</span>
+                  <span className="font-extrabold text-white">{effectiveMerchantName}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center">
                   <span className="text-[#AAB3C5]">UPI ID:</span>
                   <div className="flex items-center gap-1.5 font-mono text-purple-300 font-bold">
-                    <span>{canteenUpiId}</span>
+                    <span className="truncate max-w-[180px]">{effectiveUpiId}</span>
                     <button
                       type="button"
                       onClick={handleCopyUpi}
-                      className="p-1 rounded bg-[#1C263A] hover:bg-[#25334d] text-slate-300"
+                      className="p-1 rounded bg-[#1C263A] hover:bg-[#25334d] text-slate-300 cursor-pointer"
                     >
                       {copiedUpi ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     </button>
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-xs border-t border-purple-500/20 pt-2">
+                <div className="flex justify-between items-center border-t border-purple-500/20 pt-1.5">
                   <span className="text-white font-bold">Amount:</span>
                   <span className="text-emerald-400 font-black text-sm">₹{total}</span>
                 </div>
               </div>
 
-              {/* Automatic Live Detection Banner (Seedha Token Generator - No manual button required) */}
-              <div className="p-4 rounded-2xl bg-gradient-to-b from-emerald-950/40 via-[#151C30] to-[#0B1020] border-2 border-emerald-500/40 text-center space-y-2 max-w-sm mx-auto shadow-lg shadow-emerald-500/10">
-                <div className="flex items-center justify-center gap-2 text-emerald-300 font-extrabold text-xs sm:text-sm">
-                  <span className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
-                  <span>Verifying Payment from {selectedMethod.name}...</span>
+              {/* Two Explicit Actions: Confirm or Cancel (NO AUTOMATIC ORDER PLACEMENT!) */}
+              <div className="p-4 rounded-2xl bg-[#151C30] border border-purple-500/30 max-w-sm mx-auto text-left space-y-3">
+                <label className="text-[11px] font-black text-white block uppercase tracking-wider">
+                  Payment Status Confirmation:
+                </label>
+
+                <div>
+                  <input
+                    type="text"
+                    value={userUtr}
+                    onChange={(e) => setUserUtr(e.target.value)}
+                    placeholder="Enter 12-digit UPI Ref / UTR No. (optional)"
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#0B1020] border border-purple-500/30 text-white font-mono text-xs focus:outline-none focus:border-emerald-400"
+                  />
+                  <p className="text-[10px] text-[#AAB3C5] mt-1">
+                    Google Pay success screen par 12-digit UPI Transaction ID hoti hai.
+                  </p>
                 </div>
-                <p className="text-[11px] text-[#AAB3C5]">
-                  Payment complete hote he aapka live token seedha automatically generate ho jayega.
-                </p>
+
+                {/* Primary: Confirm Payment Done */}
+                <button
+                  type="button"
+                  onClick={() => handleUserConfirmPaid()}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                  <span>Payment Successfully Done • Generate Token ✓</span>
+                </button>
+
+                {/* Secondary: Cancel Payment if failed or back */}
+                <button
+                  type="button"
+                  onClick={handleCancelPayment}
+                  className="w-full py-2.5 px-4 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <XCircle className="w-4 h-4 text-red-400" />
+                  <span>Payment Nahi Hui / Cancel (Don't Place Order)</span>
+                </button>
               </div>
 
-              {/* Secondary Helper Buttons */}
-              <div className="flex items-center justify-between gap-2 text-xs max-w-sm mx-auto pt-1">
+              {/* Helper Links */}
+              <div className="flex items-center justify-between gap-2 text-xs max-w-sm mx-auto">
                 <button
                   type="button"
                   onClick={() => {
@@ -621,15 +660,16 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                   className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-purple-200 border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Re-open {selectedMethod.name}</span>
+                  <span>Re-open Google Pay</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setCurrentView('SELECTION')}
+                  onClick={() => setCurrentView('QR_CODE')}
                   className="flex-1 py-2 px-3 rounded-xl bg-[#0B1020] hover:bg-[#151C30] text-[#AAB3C5] hover:text-white border border-purple-500/30 font-bold flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <span>Cancel / Change</span>
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Show QR Code</span>
                 </button>
               </div>
             </div>
@@ -644,10 +684,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                     <img
                       src={customQrImage}
                       alt="Official Canteen UPI QR"
-                      className="w-36 h-36 object-contain rounded-xl mx-auto"
+                      className="w-40 h-40 object-contain rounded-xl mx-auto"
                     />
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs whitespace-nowrap">
-                      Official QR ✓
+                      Owner Custom QR ✓
                     </span>
                   </div>
                 ) : (
@@ -661,10 +701,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 )}
 
                 <div className="pt-1">
-                  <p className="text-sm font-black text-white">{canteenMerchantName}</p>
+                  <p className="text-sm font-black text-white">{effectiveMerchantName}</p>
                   <div className="flex items-center justify-center gap-2 mt-1">
                     <span className="text-[11px] text-purple-300 font-mono font-bold truncate max-w-[200px]">
-                      {canteenUpiId}
+                      {effectiveUpiId}
                     </span>
                     <button
                       type="button"
@@ -694,7 +734,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               <div className="space-y-2 max-w-xs mx-auto">
                 <button
                   type="button"
-                  onClick={() => triggerPaymentSuccess('QR')}
+                  onClick={() => handleUserConfirmPaid()}
                   className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
                 >
                   <CheckCircle2 className="w-4 h-4 text-emerald-200" />

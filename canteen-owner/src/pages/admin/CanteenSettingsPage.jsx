@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
+import { decodeQrCode, extractUpiDetails } from '../../utils/qrDecoder';
 import {
   getOwnerWhatsAppNumber,
   setOwnerWhatsAppNumber
@@ -83,8 +84,19 @@ export const CanteenSettingsPage = () => {
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setQrCodeImage(event.target.result);
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
+      setQrCodeImage(dataUrl);
+      try {
+        const decoded = await decodeQrCode(dataUrl);
+        if (decoded) {
+          const details = extractUpiDetails(decoded);
+          if (details?.upiId) {
+            setUpiId(details.upiId);
+            if (details.merchantName) setUpiMerchantName(details.merchantName);
+          }
+        }
+      } catch (err) { console.warn(err); }
     };
     reader.onerror = () => {
       setUploadError('Failed to read image file. Please try again.');
