@@ -79,3 +79,47 @@ export const extractUpiDetails = (upiUri) => {
     return null;
   }
 };
+
+/**
+ * Resizes and compresses QR code image to a lightweight format (< 50KB)
+ * for instant cross-device broadcast over MQTT and Cloud API.
+ */
+export const compressQrImage = (dataUrl, maxDim = 450) => {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string') return resolve(dataUrl);
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.88));
+      } catch (_) {
+        resolve(dataUrl);
+      }
+    };
+
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+};

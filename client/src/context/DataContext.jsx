@@ -21,6 +21,8 @@ import {
   mergeOrders,
   normalizeOrder,
   isMockOrder,
+  broadcastCanteenConfig,
+  fetchRemoteCanteenConfig,
 } from '../services/realtimeSync';
 
 export const DEFAULT_HOMEPAGE_CONFIG = {
@@ -285,6 +287,29 @@ export const DataProvider = ({ children }) => {
     };
 
     syncBackendData();
+
+    // Fetch and apply latest canteen payment QR & config across all domains
+    fetchRemoteCanteenConfig().then((cfg) => {
+      if (cfg && (cfg.qrCodeImage || cfg.upiId)) {
+        setCanteens((prev) => {
+          const next = prev.map((c) => {
+            if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id)) {
+              return {
+                ...c,
+                qrCodeImage: cfg.qrCodeImage !== undefined ? cfg.qrCodeImage : c.qrCodeImage,
+                upiId: cfg.upiId || c.upiId,
+                upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName,
+              };
+            }
+            return c;
+          });
+          try {
+            localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+      }
+    });
   }, []);
 
   // Real-time Automated WhatsApp & Status Update listener from Socket.IO
@@ -494,6 +519,28 @@ export const DataProvider = ({ children }) => {
           } catch (_) {}
           window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
           return cleaned;
+        });
+        return;
+      }
+
+      if (type === 'CANTEEN_CONFIG_SYNC' && (cloudEvent.config || cloudEvent.canteen)) {
+        const incomingCfg = cloudEvent.config || cloudEvent.canteen;
+        setCanteens((prev) => {
+          const next = prev.map((c) => {
+            if (c.id === incomingCfg.id || c._id === incomingCfg.id || (!c.id && !c._id)) {
+              return {
+                ...c,
+                qrCodeImage: incomingCfg.qrCodeImage !== undefined ? incomingCfg.qrCodeImage : c.qrCodeImage,
+                upiId: incomingCfg.upiId || c.upiId,
+                upiMerchantName: incomingCfg.upiMerchantName || incomingCfg.name || c.upiMerchantName,
+              };
+            }
+            return c;
+          });
+          try {
+            localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+          } catch (_) {}
+          return next;
         });
         return;
       }
@@ -1383,22 +1430,33 @@ export const DataProvider = ({ children }) => {
 
   // Canteen Owner Only: Upload or update custom payment QR code & UPI VPA
   const updateCanteenPaymentQR = (canteenId, qrPayload, actor = 'Canteen Owner') => {
-    setCanteens((prev) =>
-      prev.map((c) => {
+    let updatedCanteenObj = null;
+
+    setCanteens((prev) => {
+      const next = prev.map((c) => {
         if (c.id === canteenId || c._id === canteenId) {
-          return {
+          updatedCanteenObj = {
             ...c,
             qrCodeImage: qrPayload.qrCodeImage !== undefined ? qrPayload.qrCodeImage : c.qrCodeImage,
             upiId: qrPayload.upiId || c.upiId || 'smartcampus.canteen@okhdfcbank',
             upiMerchantName: qrPayload.upiMerchantName || c.upiMerchantName || c.name,
           };
+          return updatedCanteenObj;
         }
         return c;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
 
     logActivity(actor, 'PAYMENT_QR_UPDATED', 'CANTEEN_OPERATIONS', `Uploaded / updated custom Canteen UPI payment QR`);
-    axios.patch(`/api/canteens/${canteenId}/payment-qr`, qrPayload).catch((e) => console.debug('Backend QR sync offline'));
+
+    // Broadcast across all student phones & portals instantly via MQTT (retained) + Cloud API
+    if (updatedCanteenObj) {
+      broadcastCanteenConfig(updatedCanteenObj);
+    }
   };
 
   const changeUserPassword = (userId, newPassword) => {

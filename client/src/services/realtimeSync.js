@@ -15,10 +15,15 @@ export const CENTRAL_API = typeof window !== 'undefined' && window.location.orig
   ? '/api/orders'
   : 'https://mits-canteen.vercel.app/api/orders';
 
+export const CENTRAL_CANTEEN_API = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+  ? '/api/canteen-config'
+  : 'https://mits-canteen.vercel.app/api/canteen-config';
+
 // Global topic namespace for MITS Campus Canteen
 const BASE_TOPIC = 'mits_campus_canteen_prod_2026';
 const TOPIC_EVENTS = `${BASE_TOPIC}/events`;
 const TOPIC_SNAPSHOT = `${BASE_TOPIC}/snapshot`;
+const TOPIC_CANTEEN_CONFIG = `${BASE_TOPIC}/canteen_config`;
 
 // Local client instance identifier (prevents self-echo)
 let cachedInstanceId = null;
@@ -59,8 +64,8 @@ const getMqttClient = () => {
     mqttClient.on('connect', () => {
       isConnecting = false;
       console.log(`[RealtimeSync] Connected to MQTT broker: ${PRIMARY_BROKER}`);
-      // Subscribe to instant events and retained order snapshot
-      mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT], { qos: 1 }, (err) => {
+      // Subscribe to instant events, retained order snapshot, and canteen config
+      mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG], { qos: 1 }, (err) => {
         if (err) console.debug('[RealtimeSync] Subscribe error:', err.message);
       });
     });
@@ -98,6 +103,17 @@ const getMqttClient = () => {
           subscribers.forEach((callback) => {
             try {
               callback(data);
+            } catch (_) {}
+          });
+        } else if (topic === TOPIC_CANTEEN_CONFIG) {
+          // Retained/instant canteen config & payment QR sync
+          subscribers.forEach((callback) => {
+            try {
+              callback({
+                type: 'CANTEEN_CONFIG_SYNC',
+                config: data,
+                timestamp: data.timestamp || Date.now(),
+              });
             } catch (_) {}
           });
         }
@@ -533,4 +549,42 @@ export const mergeOrders = (localOrders = [], incomingOrders = []) => {
     const timeB = b.id?.startsWith('ord-') ? parseInt(b.id.replace('ord-', ''), 10) : (new Date(b.createdAt || 0).getTime());
     return timeB - timeA;
   });
+};
+
+/**
+ * Broadcasts updated canteen config & QR image across all client/owner portals
+ */
+export const broadcastCanteenConfig = (configData) => {
+  if (!configData || typeof configData !== 'object') return;
+
+  const payload = {
+    ...configData,
+    emitterId: getClientInstanceId(),
+    timestamp: Date.now(),
+  };
+
+  // 1. MQTT publish with retain: true (so all new student visitors get it instantly!)
+  publishMqtt(TOPIC_CANTEEN_CONFIG, payload, { retain: true, qos: 1 });
+
+  // 2. HTTP sync to Vercel API
+  try {
+    axios.post(CENTRAL_CANTEEN_API, configData).catch((err) => {
+      console.debug('[RealtimeSync] Canteen config API notice:', err.message);
+    });
+  } catch (_) {}
+};
+
+/**
+ * Fetches remote canteen config from Central Cloud API
+ */
+export const fetchRemoteCanteenConfig = async () => {
+  try {
+    const res = await axios.get(CENTRAL_CANTEEN_API, { timeout: 4000 });
+    if (res.data && res.data.config) {
+      return res.data.config;
+    }
+  } catch (err) {
+    console.debug('[RealtimeSync] Fetch remote canteen config notice:', err.message);
+  }
+  return null;
 };

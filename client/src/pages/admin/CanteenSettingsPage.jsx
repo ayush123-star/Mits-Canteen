@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
-import { decodeQrCode, extractUpiDetails } from '../../utils/qrDecoder';
+import { decodeQrCode, extractUpiDetails, compressQrImage } from '../../utils/qrDecoder';
 import {
   getOwnerWhatsAppNumber,
   setOwnerWhatsAppNumber
@@ -63,6 +63,15 @@ export const CanteenSettingsPage = () => {
   const [qrSuccess, setQrSuccess] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
+  // Keep form in sync when latest canteen config arrives via MQTT or Cloud API
+  useEffect(() => {
+    if (currentCanteen) {
+      if (currentCanteen.qrCodeImage) setQrCodeImage(currentCanteen.qrCodeImage);
+      if (currentCanteen.upiId) setUpiId(currentCanteen.upiId);
+      if (currentCanteen.upiMerchantName) setUpiMerchantName(currentCanteen.upiMerchantName);
+    }
+  }, [currentCanteen?.qrCodeImage, currentCanteen?.upiId, currentCanteen?.upiMerchantName]);
+
   const handleToggleOpen = () => {
     toggleCanteenStatus(currentCanteen.id, !currentCanteen.isOpen, user?.name || 'Canteen Owner');
   };
@@ -85,7 +94,8 @@ export const CanteenSettingsPage = () => {
 
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const dataUrl = event.target.result;
+      const rawDataUrl = event.target.result;
+      const dataUrl = await compressQrImage(rawDataUrl, 450);
       setQrCodeImage(dataUrl);
       try {
         const decoded = await decodeQrCode(dataUrl);
