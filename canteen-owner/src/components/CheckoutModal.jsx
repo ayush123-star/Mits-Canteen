@@ -260,7 +260,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
           if (hasLeftWindowRef.current) {
             handleMoveToUtrVerification();
           } else {
-            handlePaymentFailed('UPI payment timeout ho gaya ya initiate nahi hui. Pehle payment karein, uske baad hi token generate hoga.');
+            handlePaymentFailed('UPI payment timed out or was not initiated. Please complete payment first to generate your token.');
           }
           return 0;
         }
@@ -322,7 +322,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
     // 1. Must be exact 12 digits
     if (!cleanUtr || cleanUtr.length !== 12) {
-      setUtrError('Kripya Google Pay / PhonePe receipt se 12-digit UPI Reference (UTR) number daalein.');
+      setUtrError('Please enter the 12-digit UPI Reference (UTR) number from your payment receipt.');
       return;
     }
 
@@ -336,14 +336,14 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       '123456789000',
     ];
     if (dummyList.includes(cleanUtr) || /^(\d)\1{11}$/.test(cleanUtr)) {
-      setUtrError('Invalid dummy UTR number. Kripya apna asli UPI transaction UTR number daalein.');
+      setUtrError('Invalid dummy UTR number. Please enter your genuine UPI transaction reference number.');
       return;
     }
 
     // 3. Reject duplicate UTR to prevent reusing the same payment for multiple orders
     const usedUtrs = JSON.parse(localStorage.getItem('used_canteen_utrs') || '[]');
     if (usedUtrs.includes(cleanUtr)) {
-      setUtrError('Ye UTR number pehle se use ho chuka hai! Duplicate payment reference not allowed.');
+      setUtrError('This UTR number has already been used! Duplicate payment reference not allowed.');
       return;
     }
 
@@ -370,7 +370,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     setShowSuccessPopup(false);
     setLoading(false);
     setCurrentView('PAYMENT_FAILED');
-    setPaymentFailedError(customMsg || 'Payment cancel ya incomplete raha. Koi token generate nahi kiya gaya. Pehle payment complete karein.');
+    setPaymentFailedError(customMsg || 'Payment was cancelled or incomplete. No token has been generated. Please complete payment first.');
     setShowFailedPopup(true);
     try {
       playNotificationSound('new_order');
@@ -633,12 +633,12 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
                 Payment Failed ✕
               </span>
-              <h3 className="text-xl font-black text-white mt-2">Payment Nahi Hua!</h3>
+              <h3 className="text-xl font-black text-white mt-2">Payment Incomplete!</h3>
               <p className="text-xs text-rose-200 mt-1 max-w-xs mx-auto leading-relaxed">
-                {paymentFailedError || 'Bank se payment confirmation receive nahi hua ya UPI app me payment cancel kar diya gaya.'}
+                {paymentFailedError || 'No payment confirmation received from the bank or payment was cancelled in the UPI app.'}
               </p>
               <div className="mt-2.5 bg-[#0B1020] py-1.5 px-3 rounded-xl border border-rose-500/30 text-[11px] text-[#AAB3C5]">
-                ⚠️ <strong className="text-rose-300">Token Generate Nahi Hua:</strong> Pehle payment complete karein.
+                ⚠️ <strong className="text-rose-300">Token Not Generated:</strong> Payment must be completed first.
               </div>
             </div>
 
@@ -652,7 +652,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Dubara Payment Karein (Retry UPI)</span>
+                <span>Try Payment Again (Retry UPI)</span>
               </button>
 
               <button
@@ -859,7 +859,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 </span>
                 <h3 className="text-lg font-black text-white">Complete ₹{total} Payment</h3>
                 <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
-                  Aapke phone par {selectedMethod.name} open ho gaya hai. Wahan UPI PIN daalkar <strong className="text-emerald-400">₹{total}</strong> pay karein.
+                  {selectedMethod.name} has opened on your device. Please enter your UPI PIN to pay <strong className="text-emerald-400">₹{total}</strong>.
                 </p>
               </div>
 
@@ -904,9 +904,9 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Automatic Payment Verification
                   </span>
-                  <h4 className="text-sm font-black text-white">Payment Verify Ho Rahi Hai</h4>
+                  <h4 className="text-sm font-black text-white">Verifying Payment in Real-Time</h4>
                   <p className="text-[11px] text-[#AAB3C5] leading-relaxed max-w-xs mx-auto">
-                    Payment hote hi token apne aap generate ho jayega aur aap My Orders me pahunch jayenge.
+                    Your official canteen token will be generated immediately once payment is verified.
                   </p>
                 </div>
 
@@ -928,7 +928,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                   className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Maine Pay Kar Diya • Enter 12-Digit UTR</span>
+                  <span>I Have Paid • Enter 12-Digit UTR</span>
                 </button>
               </div>
 
@@ -983,9 +983,9 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Strict Security Verification Active
                 </span>
-                <h3 className="text-lg font-black text-white">Payment Verify Karein</h3>
+                <h3 className="text-lg font-black text-white">Verify Your Payment</h3>
                 <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
-                  Google Pay / UPI me ₹{total} payment karne ke baad receipt se <strong className="text-emerald-400">12-Digit UPI Reference (UTR) No.</strong> daalein.
+                  After completing your ₹{total} payment in {selectedMethod.name}, please enter the <strong className="text-emerald-400">12-Digit UPI Reference (UTR) No.</strong> from your receipt.
                 </p>
               </div>
 
@@ -1049,7 +1049,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 )}
 
                 <p className="text-[10px] text-[#AAB3C5] leading-relaxed">
-                  💡 <strong>Kahan milega?</strong> Google Pay / PhonePe receipt me <em>'UPI Transaction ID'</em> ya <em>'UTR'</em> likha hota hai.
+                  💡 <strong>Where to find it?</strong> Look for <em>'UPI Transaction ID'</em> or <em>'UTR'</em> on your {selectedMethod.name} payment confirmation receipt.
                 </p>
 
                 <button
@@ -1076,11 +1076,11 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               <div className="pt-1 max-w-sm mx-auto">
                 <button
                   type="button"
-                  onClick={() => handlePaymentFailed('Aapne payment cancel kar diya tha. Token generate nahi kiya gaya.')}
+                  onClick={() => handlePaymentFailed('Payment was cancelled or not completed. No token has been generated.')}
                   className="w-full py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <XCircle className="w-4 h-4 text-rose-400" />
-                  <span>Payment Cancel Ho Gaya / Nahi Hua</span>
+                  <span>Payment Cancelled / Incomplete</span>
                 </button>
               </div>
             </div>
@@ -1101,17 +1101,17 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 </span>
                 <h3 className="text-lg font-black text-white">First Complete Your Payment!</h3>
                 <p className="text-xs text-rose-200/90 max-w-xs mx-auto font-medium">
-                  {paymentFailedError || 'Online payment complete nahi hui. Pehle payment karein, uske baad hi token generate hoga.'}
+                  {paymentFailedError || 'Online payment was not completed. Please complete payment first to generate your token.'}
                 </p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs max-w-sm mx-auto text-left space-y-1">
                 <p className="font-bold text-white flex items-center gap-1.5">
                   <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-                  Token Generate Nahi Hua
+                  Token Not Generated
                 </p>
                 <p className="text-[11px] text-rose-300/80 leading-relaxed">
-                  Bina payment ke order token generate nahi ho sakta. Agar aapne payment cancel kar diya tha, toh dobara try karein ya Cash at Counter chunein.
+                  An official order token cannot be issued without verified payment. If you cancelled the payment, please try again or choose Cash at Counter.
                 </p>
               </div>
 
