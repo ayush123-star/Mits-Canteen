@@ -246,44 +246,46 @@ export const DataProvider = ({ children }) => {
   });
 
   const updateHomepageConfig = (newConfig) => {
-    let updatedConfig = null;
-    setHomepageConfig((prev) => {
-      updatedConfig = {
-        ...prev,
-        ...newConfig,
-        configVersion: Date.now(),
-        dailyDiscounts: {
-          ...prev.dailyDiscounts,
-          ...(newConfig.dailyDiscounts || {}),
-        },
-        specialOfferBanner: {
-          ...prev.specialOfferBanner,
-          ...(newConfig.specialOfferBanner || {}),
-        },
-      };
-      try {
-        localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(updatedConfig));
-      } catch (_) {}
-      return updatedConfig;
-    });
+    const prev = homepageConfig || DEFAULT_HOMEPAGE_CONFIG;
+    const updatedConfig = {
+      ...prev,
+      ...newConfig,
+      configVersion: Date.now(),
+      dailyDiscounts: {
+        ...(prev.dailyDiscounts || {}),
+        ...(newConfig.dailyDiscounts || {}),
+      },
+      specialOfferBanner: {
+        ...(prev.specialOfferBanner || {}),
+        ...(newConfig.specialOfferBanner || {}),
+      },
+    };
 
-    if (updatedConfig) {
-      if (ordersBroadcastRef.current) {
-        try {
-          ordersBroadcastRef.current.postMessage({
-            type: 'HOMEPAGE_CONFIG_UPDATED',
-            homepageConfig: updatedConfig,
-            timestamp: Date.now(),
-          });
-        } catch (_) {}
-      }
-      window.dispatchEvent(
-        new CustomEvent('smartcanteen:homepage_config_sync', {
-          detail: { homepageConfig: updatedConfig },
-        })
-      );
-      broadcastHomepageConfig(updatedConfig);
+    setHomepageConfig(updatedConfig);
+    try {
+      localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(updatedConfig));
+    } catch (_) {}
+
+    // 1. Post to local BroadcastChannel for instant multi-tab sync (0ms)
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({
+          type: 'HOMEPAGE_CONFIG_UPDATED',
+          homepageConfig: updatedConfig,
+          timestamp: Date.now(),
+        });
+      } catch (_) {}
     }
+
+    // 2. Local DOM event
+    window.dispatchEvent(
+      new CustomEvent('smartcanteen:homepage_config_sync', {
+        detail: { homepageConfig: updatedConfig },
+      })
+    );
+
+    // 3. Cross-device MQTT & Cloud API broadcast (sub-100ms)
+    broadcastHomepageConfig(updatedConfig);
   };
 
   const getTodayDiscount = () => {
@@ -355,48 +357,66 @@ export const DataProvider = ({ children }) => {
     syncBackendData();
 
     // Fetch and apply latest canteen payment QR, UPI config & homepage cravings across all domains
-    fetchRemoteCanteenConfig().then((cfg) => {
-      if (cfg && (cfg.qrCodeImage || cfg.upiId)) {
-        setCanteens((prev) => {
-          const next = prev.map((c) => {
-            if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
-              return {
-                ...c,
-                qrCodeImage: cfg.qrCodeImage !== undefined ? cfg.qrCodeImage : c.qrCodeImage,
-                upiId: cfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
-                upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName || 'Ayush Pandey',
-              };
-            }
-            return c;
+    const syncRemoteConfig = () => {
+      fetchRemoteCanteenConfig().then((cfg) => {
+        if (!cfg) return;
+        if (cfg.qrCodeImage !== undefined || cfg.upiId) {
+          setCanteens((prev) => {
+            const next = prev.map((c) => {
+              if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
+                return {
+                  ...c,
+                  qrCodeImage: cfg.qrCodeImage !== undefined ? cfg.qrCodeImage : c.qrCodeImage,
+                  upiId: cfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+                  upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName || 'Ayush Pandey',
+                };
+              }
+              return c;
+            });
+            try {
+              localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+            } catch (_) {}
+            return next;
           });
-          try {
-            localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
-          } catch (_) {}
-          return next;
-        });
-      }
+        }
 
-      if (cfg && cfg.homepageConfig) {
-        setHomepageConfig((prev) => {
-          const merged = {
-            ...prev,
-            ...cfg.homepageConfig,
-            dailyDiscounts: {
-              ...prev.dailyDiscounts,
-              ...(cfg.homepageConfig.dailyDiscounts || {}),
-            },
-            specialOfferBanner: {
-              ...prev.specialOfferBanner,
-              ...(cfg.homepageConfig.specialOfferBanner || {}),
-            },
-          };
-          try {
-            localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
-          } catch (_) {}
-          return merged;
-        });
-      }
-    });
+        if (cfg.homepageConfig) {
+          setHomepageConfig((prev) => {
+            if (
+              prev.cravingsTitle === cfg.homepageConfig.cravingsTitle &&
+              prev.cravingsSubtitle === cfg.homepageConfig.cravingsSubtitle &&
+              JSON.stringify(prev.featuredCravingsIds) === JSON.stringify(cfg.homepageConfig.featuredCravingsIds) &&
+              JSON.stringify(prev.dailyDiscounts) === JSON.stringify(cfg.homepageConfig.dailyDiscounts)
+            ) {
+              return prev;
+            }
+            const merged = {
+              ...prev,
+              ...cfg.homepageConfig,
+              dailyDiscounts: {
+                ...prev.dailyDiscounts,
+                ...(cfg.homepageConfig.dailyDiscounts || {}),
+              },
+              specialOfferBanner: {
+                ...prev.specialOfferBanner,
+                ...(cfg.homepageConfig.specialOfferBanner || {}),
+              },
+            };
+            try {
+              localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
+            } catch (_) {}
+            return merged;
+          });
+        }
+      });
+    };
+
+    syncRemoteConfig();
+    const configInterval = setInterval(syncRemoteConfig, 2000);
+
+    return () => {
+      clearInterval(configInterval);
+    };
   }, []);
 
   // Real-time Automated WhatsApp & Status Update listener from Socket.IO
@@ -1671,17 +1691,18 @@ export const DataProvider = ({ children }) => {
 
   // Canteen Owner Only: Upload or update custom payment QR code & UPI VPA
   const updateCanteenPaymentQR = (canteenId, qrPayload, actor = 'Canteen Owner') => {
-    let updatedCanteenObj = null;
+    const target = (canteens || []).find((c) => c.id === canteenId || c._id === canteenId || c.id === 'canteen-1') || canteens[0] || {};
+    const updatedCanteenObj = {
+      ...target,
+      id: target.id || canteenId || 'canteen-1',
+      qrCodeImage: qrPayload.qrCodeImage !== undefined ? qrPayload.qrCodeImage : target.qrCodeImage,
+      upiId: qrPayload.upiId || target.upiId || 'pandeyayush1603-1@okicici',
+      upiMerchantName: qrPayload.upiMerchantName || target.upiMerchantName || 'Ayush Pandey',
+    };
 
     setCanteens((prev) => {
       const next = prev.map((c) => {
-        if (c.id === canteenId || c._id === canteenId) {
-          updatedCanteenObj = {
-            ...c,
-            qrCodeImage: qrPayload.qrCodeImage !== undefined ? qrPayload.qrCodeImage : c.qrCodeImage,
-            upiId: qrPayload.upiId || c.upiId || 'pandeyayush1603-1@okicici',
-            upiMerchantName: qrPayload.upiMerchantName || c.upiMerchantName || 'Ayush Pandey',
-          };
+        if (c.id === canteenId || c._id === canteenId || (!c.id && !c._id) || c.id === 'canteen-1') {
           return updatedCanteenObj;
         }
         return c;
@@ -1694,10 +1715,13 @@ export const DataProvider = ({ children }) => {
 
     logActivity(actor, 'PAYMENT_QR_UPDATED', 'CANTEEN_OPERATIONS', `Uploaded / updated custom Canteen UPI payment QR`);
 
-    // Broadcast across all student phones & portals instantly via MQTT (retained) + Cloud API
-    if (updatedCanteenObj) {
-      broadcastCanteenConfig(updatedCanteenObj);
+    // Broadcast across all student phones & portals instantly via BroadcastChannel, MQTT & Cloud API
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'CANTEEN_CONFIG_UPDATED', canteen: updatedCanteenObj });
+      } catch (_) {}
     }
+    broadcastCanteenConfig(updatedCanteenObj);
   };
 
   const changeUserPassword = (userId, newPassword) => {
