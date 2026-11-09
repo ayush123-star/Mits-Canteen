@@ -32,27 +32,31 @@ import {
 
 export const CanteenSettingsPage = () => {
   const { user } = useAuth();
-  const { canteens, toggleCanteenStatus, updateCanteenPaymentQR } = useData();
+  const { canteens, toggleCanteenStatus, updateCanteenPaymentQR, updateCanteenSettings } = useData();
 
   const currentCanteen = canteens[0] || {
     id: 'canteen-1',
-    name: 'Main Campus Food Court',
+    name: 'MITS Main Canteen',
     isOpen: true,
     openingTime: '08:00 AM',
     closingTime: '07:30 PM',
-    activeCounters: 3,
+    activeCounters: 1,
+    managerPhone: '+91 98112 23344',
+    ownerWhatsApp: '919839567623',
+    rushHourMode: false,
     qrCodeImage: '',
     upiId: 'pandeyayush1603-1@okicici',
-    upiMerchantName: 'Main Campus Food Court',
+    upiMerchantName: 'Ayush Pandey',
   };
 
-  const [canteenName, setCanteenName] = useState(currentCanteen.name);
+  const [canteenName, setCanteenName] = useState(currentCanteen.name || 'MITS Main Canteen');
   const [openingTime, setOpeningTime] = useState(currentCanteen.openingTime || '08:00 AM');
   const [closingTime, setClosingTime] = useState(currentCanteen.closingTime || '07:30 PM');
-  const [activeCounters, setActiveCounters] = useState(currentCanteen.activeCounters || 3);
+  const [activeCounters, setActiveCounters] = useState(currentCanteen.activeCounters !== undefined ? currentCanteen.activeCounters : 1);
   const [managerPhone, setManagerPhone] = useState(currentCanteen.managerPhone || '+91 98112 23344');
-  const [ownerWhatsApp, setOwnerWhatsApp] = useState(getOwnerWhatsAppNumber());
-  const [rushHourMode, setRushHourMode] = useState(false);
+  const [ownerWhatsApp, setOwnerWhatsApp] = useState(currentCanteen.ownerWhatsApp || getOwnerWhatsAppNumber());
+  const [rushHourMode, setRushHourMode] = useState(Boolean(currentCanteen.rushHourMode));
+  const [isSavingGeneral, setIsSavingGeneral] = useState(false);
 
   // QR Code & Payment States
   const [qrCodeImage, setQrCodeImage] = useState(currentCanteen.qrCodeImage || '');
@@ -74,11 +78,29 @@ export const CanteenSettingsPage = () => {
   // Keep form in sync when latest canteen config arrives via MQTT or Cloud API
   useEffect(() => {
     if (currentCanteen) {
-      if (currentCanteen.qrCodeImage) setQrCodeImage(currentCanteen.qrCodeImage);
+      if (currentCanteen.name) setCanteenName(currentCanteen.name);
+      if (currentCanteen.openingTime) setOpeningTime(currentCanteen.openingTime);
+      if (currentCanteen.closingTime) setClosingTime(currentCanteen.closingTime);
+      if (currentCanteen.activeCounters !== undefined) setActiveCounters(Number(currentCanteen.activeCounters));
+      if (currentCanteen.managerPhone) setManagerPhone(currentCanteen.managerPhone);
+      if (currentCanteen.ownerWhatsApp) setOwnerWhatsApp(currentCanteen.ownerWhatsApp);
+      if (currentCanteen.rushHourMode !== undefined) setRushHourMode(Boolean(currentCanteen.rushHourMode));
+      if (currentCanteen.qrCodeImage !== undefined) setQrCodeImage(currentCanteen.qrCodeImage);
       if (currentCanteen.upiId) setUpiId(currentCanteen.upiId);
       if (currentCanteen.upiMerchantName) setUpiMerchantName(currentCanteen.upiMerchantName);
     }
-  }, [currentCanteen?.qrCodeImage, currentCanteen?.upiId, currentCanteen?.upiMerchantName]);
+  }, [
+    currentCanteen?.name,
+    currentCanteen?.openingTime,
+    currentCanteen?.closingTime,
+    currentCanteen?.activeCounters,
+    currentCanteen?.managerPhone,
+    currentCanteen?.ownerWhatsApp,
+    currentCanteen?.rushHourMode,
+    currentCanteen?.qrCodeImage,
+    currentCanteen?.upiId,
+    currentCanteen?.upiMerchantName,
+  ]);
 
   const handleToggleOpen = () => {
     toggleCanteenStatus(currentCanteen.id, !currentCanteen.isOpen, user?.name || 'Canteen Owner');
@@ -149,10 +171,52 @@ export const CanteenSettingsPage = () => {
   };
 
   // Save General Operating Settings
-  const handleSaveGeneral = (e) => {
+  const handleToggleRushHour = () => {
+    const nextMode = !rushHourMode;
+    setRushHourMode(nextMode);
+    if (updateCanteenSettings) {
+      updateCanteenSettings(currentCanteen.id || 'canteen-1', { rushHourMode: nextMode }, user?.name || 'Canteen Owner');
+    }
+  };
+
+  // Save General Operating Settings
+  const handleSaveGeneral = async (e) => {
+    e.preventDefault();
+    setIsSavingGeneral(true);
+    try {
+      const cleanPhone = ownerWhatsApp ? ownerWhatsApp.trim() : '';
+      if (cleanPhone) {
+        setOwnerWhatsAppNumber(cleanPhone);
+      }
+      const newSettings = {
+        name: canteenName.trim() || 'MITS Main Canteen',
+        openingTime: openingTime.trim() || '08:00 AM',
+        closingTime: closingTime.trim() || '07:30 PM',
+        activeCounters: Number(activeCounters) || 1,
+        managerPhone: managerPhone.trim() || '+91 98112 23344',
+        ownerWhatsApp: cleanPhone || '919839567623',
+        rushHourMode: Boolean(rushHourMode),
+        isOpen: currentCanteen.isOpen !== undefined ? currentCanteen.isOpen : true,
+        status: currentCanteen.status || 'Operational',
+      };
+
+      if (updateCanteenSettings) {
+        await updateCanteenSettings(currentCanteen.id || 'canteen-1', newSettings, user?.name || 'Canteen Owner');
+      }
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error('[CanteenSettings] Save failed:', err);
+    } finally {
+      setIsSavingGeneral(false);
+    }
+  };
+  const _unusedOldSave = () => {};
+  const _ignore = (e = {}) => {
     e.preventDefault();
     if (ownerWhatsApp) {
-      setOwnerWhatsAppNumber(ownerWhatsApp);
+      // done
     }
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -366,7 +430,8 @@ export const CanteenSettingsPage = () => {
           <div className="pt-3 border-t border-purple-500/20 flex justify-end">
             <button
               type="submit"
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-purple-500/30 flex items-center gap-2 transition-all"
+              disabled={isSavingGeneral}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-purple-500/30 flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               <Save className="w-4 h-4" />
               Save & Publish Canteen QR Code
@@ -416,7 +481,7 @@ export const CanteenSettingsPage = () => {
 
           {/* Rush Hour Mode Switch */}
           <div
-            onClick={() => setRushHourMode(!rushHourMode)}
+            onClick={handleToggleRushHour}
             className={`p-5 rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between ${
               rushHourMode
                 ? 'border-amber-500/40 bg-amber-500/10'
@@ -550,10 +615,11 @@ export const CanteenSettingsPage = () => {
           <div className="pt-3 border-t border-purple-500/20 flex justify-end">
             <button
               type="submit"
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-purple-500/30 flex items-center gap-2 transition-all"
+              disabled={isSavingGeneral}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-purple-500/30 flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              Save Operational Schedule
+              {isSavingGeneral ? 'Saving Operational Schedule...' : saveSuccess ? 'Saved 100% Successfully!' : 'Save Operational Schedule'}
             </button>
           </div>
         </form>

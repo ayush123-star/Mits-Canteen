@@ -3,7 +3,7 @@
  * Dispatches live order details straight to the Owner's WhatsApp
  */
 
-export const DEFAULT_OWNER_PHONE = '919876543210';
+export const DEFAULT_OWNER_PHONE = '919839567623';
 
 export const cleanPhoneNumber = (raw) => {
   if (!raw) return '';

@@ -144,6 +144,8 @@ export const INITIAL_CANTEENS = [
     activeCounters: 1, // Strictly 1 single counter
     managerName: 'MITS Canteen Incharge',
     managerPhone: '+91 98112 23344',
+    ownerWhatsApp: '919839567623',
+    rushHourMode: false,
     rating: 4.9,
     reviewCount: 420,
     todayOrdersCount: 45,

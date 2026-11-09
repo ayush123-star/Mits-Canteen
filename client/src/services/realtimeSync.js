@@ -598,9 +598,15 @@ export const broadcastCanteenConfig = (configData) => {
     if (rawHp) savedHp = JSON.parse(rawHp);
   } catch (_) {}
 
+  let savedOwnerPhone = null;
+  try {
+    savedOwnerPhone = localStorage.getItem('mits_canteen_owner_whatsapp');
+  } catch (_) {}
+
   const postPayload = {
     deletedFoodIds: savedDeleted,
     ...(savedHp ? { homepageConfig: savedHp } : {}),
+    ...(savedOwnerPhone ? { ownerWhatsApp: savedOwnerPhone } : {}),
     ...configData,
     ...(savedMenu ? { menuItems: savedMenu } : {}),
     ...(savedCategories ? { categories: savedCategories } : {}),

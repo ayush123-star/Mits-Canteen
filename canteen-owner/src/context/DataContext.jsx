@@ -13,6 +13,7 @@ import {
   INITIAL_AUDIT_LOGS,
 } from '../mock/mockData';
 import { playNotificationSound, announceTokenCall } from '../utils/audio';
+import { setOwnerWhatsAppNumber } from '../utils/whatsappHelper';
 import {
   publishOrderEvent,
   subscribeToOrderEvents,
@@ -430,25 +431,35 @@ export const DataProvider = ({ children }) => {
     const syncRemoteConfig = () => {
       fetchRemoteCanteenConfig().then((cfg) => {
         if (!cfg) return;
-        if (cfg.qrCodeImage !== undefined || cfg.upiId) {
-          setCanteens((prev) => {
-            const next = prev.map((c) => {
-              if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
-                return {
-                  ...c,
-                  qrCodeImage: cfg.qrCodeImage !== undefined ? cfg.qrCodeImage : c.qrCodeImage,
-                  upiId: cfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
-                  upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName || 'Ayush Pandey',
-                };
-              }
-              return c;
-            });
-            try {
-              localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
-            } catch (_) {}
-            return next;
-          });
+        if (cfg.ownerWhatsApp) {
+          try { setOwnerWhatsAppNumber(cfg.ownerWhatsApp); } catch (_) {}
         }
+        setCanteens((prev) => {
+          const next = prev.map((c) => {
+            if (c.id === cfg.id || c._id === cfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
+              return {
+                ...c,
+                name: cfg.name || c.name || 'MITS Main Canteen',
+                openingTime: cfg.openingTime || c.openingTime || '08:00 AM',
+                closingTime: cfg.closingTime || c.closingTime || '07:30 PM',
+                activeCounters: cfg.activeCounters !== undefined ? Number(cfg.activeCounters) : (c.activeCounters || 1),
+                managerPhone: cfg.managerPhone || c.managerPhone || '+91 98112 23344',
+                ownerWhatsApp: cfg.ownerWhatsApp || c.ownerWhatsApp || '919839567623',
+                rushHourMode: cfg.rushHourMode !== undefined ? cfg.rushHourMode : (c.rushHourMode || false),
+                isOpen: cfg.isOpen !== undefined ? cfg.isOpen : (c.isOpen !== undefined ? c.isOpen : true),
+                status: cfg.status || (cfg.isOpen !== undefined ? (cfg.isOpen ? 'Operational' : 'Closed') : (c.status || 'Operational')),
+                qrCodeImage: cfg.qrCodeImage !== undefined ? cfg.qrCodeImage : c.qrCodeImage,
+                upiId: cfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+                upiMerchantName: cfg.upiMerchantName || cfg.name || c.upiMerchantName || 'Ayush Pandey',
+              };
+            }
+            return c;
+          });
+          try {
+            localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
 
         if (cfg.homepageConfig) {
           setHomepageConfig((prev) => {
@@ -711,16 +722,26 @@ export const DataProvider = ({ children }) => {
     const onCanteenConfigUpdated = (e) => {
       const canteenData = e.detail;
       if (!canteenData) return;
+      if (canteenData.ownerWhatsApp) {
+        try { setOwnerWhatsAppNumber(canteenData.ownerWhatsApp); } catch (_) {}
+      }
       setCanteens((prev) =>
         prev.map((c) => {
           if (c.id === canteenData.id || c._id === canteenData.id || c.id === 'canteen-1' || (!c.id && !c._id)) {
             return {
               ...c,
+              name: canteenData.name || c.name || 'MITS Main Canteen',
+              openingTime: canteenData.openingTime || c.openingTime || '08:00 AM',
+              closingTime: canteenData.closingTime || c.closingTime || '07:30 PM',
+              activeCounters: canteenData.activeCounters !== undefined ? Number(canteenData.activeCounters) : (c.activeCounters || 1),
+              managerPhone: canteenData.managerPhone || c.managerPhone || '+91 98112 23344',
+              ownerWhatsApp: canteenData.ownerWhatsApp || c.ownerWhatsApp || '919839567623',
+              rushHourMode: canteenData.rushHourMode !== undefined ? canteenData.rushHourMode : (c.rushHourMode || false),
               qrCodeImage: canteenData.qrCodeImage !== undefined ? canteenData.qrCodeImage : c.qrCodeImage,
               upiId: canteenData.upiId || c.upiId || 'pandeyayush1603-1@okicici',
               upiMerchantName: canteenData.upiMerchantName || canteenData.name || c.upiMerchantName || 'Ayush Pandey',
-              isOpen: canteenData.isOpen !== undefined ? canteenData.isOpen : c.isOpen,
-              status: canteenData.status || c.status,
+              isOpen: canteenData.isOpen !== undefined ? canteenData.isOpen : (c.isOpen !== undefined ? c.isOpen : true),
+              status: canteenData.status || (canteenData.isOpen !== undefined ? (canteenData.isOpen ? 'Operational' : 'Closed') : (c.status || 'Operational')),
             };
           }
           return c;
@@ -1121,12 +1142,24 @@ export const DataProvider = ({ children }) => {
 
       if (type === 'CANTEEN_CONFIG_SYNC') {
         const incomingCfg = cloudEvent.config || cloudEvent.canteen;
-        if (incomingCfg && (incomingCfg.qrCodeImage !== undefined || incomingCfg.upiId)) {
+        if (incomingCfg) {
+          if (incomingCfg.ownerWhatsApp) {
+            try { setOwnerWhatsAppNumber(incomingCfg.ownerWhatsApp); } catch (_) {}
+          }
           setCanteens((prev) => {
             const next = prev.map((c) => {
               if (c.id === incomingCfg.id || c._id === incomingCfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
                 return {
                   ...c,
+                  name: incomingCfg.name || c.name || 'MITS Main Canteen',
+                  openingTime: incomingCfg.openingTime || c.openingTime || '08:00 AM',
+                  closingTime: incomingCfg.closingTime || c.closingTime || '07:30 PM',
+                  activeCounters: incomingCfg.activeCounters !== undefined ? Number(incomingCfg.activeCounters) : (c.activeCounters || 1),
+                  managerPhone: incomingCfg.managerPhone || c.managerPhone || '+91 98112 23344',
+                  ownerWhatsApp: incomingCfg.ownerWhatsApp || c.ownerWhatsApp || '919839567623',
+                  rushHourMode: incomingCfg.rushHourMode !== undefined ? incomingCfg.rushHourMode : (c.rushHourMode || false),
+                  isOpen: incomingCfg.isOpen !== undefined ? incomingCfg.isOpen : (c.isOpen !== undefined ? c.isOpen : true),
+                  status: incomingCfg.status || (incomingCfg.isOpen !== undefined ? (incomingCfg.isOpen ? 'Operational' : 'Closed') : (c.status || 'Operational')),
                   qrCodeImage: incomingCfg.qrCodeImage !== undefined ? incomingCfg.qrCodeImage : c.qrCodeImage,
                   upiId: incomingCfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
                   upiMerchantName: incomingCfg.upiMerchantName || incomingCfg.name || c.upiMerchantName || 'Ayush Pandey',
@@ -2645,17 +2678,99 @@ export const DataProvider = ({ children }) => {
     );
   };
 
-  const toggleCanteenStatus = (canteenId) => {
-    setCanteens((prev) =>
-      prev.map((c) => {
-        if (c.id === canteenId) {
-          const nextOpen = !c.isOpen;
-          logActivity('Admin', 'CANTEEN_STATUS_TOGGLE', 'CANTEEN_OPERATIONS', `Turned ${c.name} ${nextOpen ? 'OPEN' : 'CLOSED'}`);
-          return { ...c, isOpen: nextOpen, status: nextOpen ? 'Operational' : 'Closed' };
+  const toggleCanteenStatus = (canteenId, requestedStatus, actor = 'Canteen Owner') => {
+    const target = (canteens || []).find((c) => c.id === canteenId || c._id === canteenId || c.id === 'canteen-1') || canteens[0] || {};
+    const nextOpen = requestedStatus !== undefined ? Boolean(requestedStatus) : !target.isOpen;
+    const nextStatus = nextOpen ? 'Operational' : 'Closed';
+    const updatedCanteenObj = {
+      ...target,
+      isOpen: nextOpen,
+      status: nextStatus,
+      updatedAt: Date.now(),
+    };
+
+    setCanteens((prev) => {
+      const next = prev.map((c) => {
+        if (c.id === canteenId || c._id === canteenId || (!c.id && !c._id) || c.id === 'canteen-1') {
+          return updatedCanteenObj;
         }
         return c;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+
+    logActivity(actor, 'CANTEEN_STATUS_TOGGLE', 'CANTEEN_OPERATIONS', `Turned ${updatedCanteenObj.name || 'Canteen'} ${nextOpen ? 'OPEN' : 'CLOSED'}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'CANTEEN_CONFIG_UPDATED', canteen: updatedCanteenObj });
+      } catch (_) {}
+    }
+    broadcastCanteenConfig(updatedCanteenObj);
+
+    try {
+      axios.post('/api/canteen-config', updatedCanteenObj).catch(() => {});
+    } catch (_) {}
+  };
+
+  // Canteen Owner: Update operational schedule, branch profile, active counters, manager phone, WhatsApp
+  const updateCanteenSettings = (canteenId, newSettings, actor = 'Canteen Owner') => {
+    const target = (canteens || []).find((c) => c.id === canteenId || c._id === canteenId || c.id === 'canteen-1') || canteens[0] || {};
+    const updatedCanteenObj = {
+      ...target,
+      ...newSettings,
+      id: target.id || canteenId || 'canteen-1',
+      name: newSettings.name !== undefined ? newSettings.name : (target.name || 'MITS Main Canteen'),
+      openingTime: newSettings.openingTime !== undefined ? newSettings.openingTime : (target.openingTime || '08:00 AM'),
+      closingTime: newSettings.closingTime !== undefined ? newSettings.closingTime : (target.closingTime || '07:30 PM'),
+      activeCounters: newSettings.activeCounters !== undefined ? Number(newSettings.activeCounters) : (target.activeCounters || 1),
+      managerPhone: newSettings.managerPhone !== undefined ? newSettings.managerPhone : (target.managerPhone || '+91 98112 23344'),
+      ownerWhatsApp: newSettings.ownerWhatsApp !== undefined ? newSettings.ownerWhatsApp : (target.ownerWhatsApp || '919839567623'),
+      rushHourMode: newSettings.rushHourMode !== undefined ? newSettings.rushHourMode : (target.rushHourMode || false),
+      isOpen: newSettings.isOpen !== undefined ? newSettings.isOpen : (target.isOpen !== undefined ? target.isOpen : true),
+      status: newSettings.status || (newSettings.isOpen !== undefined ? (newSettings.isOpen ? 'Operational' : 'Closed') : (target.status || 'Operational')),
+      updatedAt: Date.now(),
+    };
+
+    if (newSettings.ownerWhatsApp) {
+      try {
+        setOwnerWhatsAppNumber(newSettings.ownerWhatsApp);
+      } catch (_) {}
+    }
+
+    setCanteens((prev) => {
+      const next = prev.map((c) => {
+        if (c.id === canteenId || c._id === canteenId || (!c.id && !c._id) || c.id === 'canteen-1') {
+          return updatedCanteenObj;
+        }
+        return c;
+      });
+      try {
+        localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+
+    logActivity(actor, 'CANTEEN_SETTINGS_UPDATED', 'CANTEEN_OPERATIONS', `Updated operational schedule & profile for ${updatedCanteenObj.name}`);
+
+    // Broadcast across all portals instantly via BroadcastChannel, MQTT & Cloud API
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'CANTEEN_CONFIG_UPDATED', canteen: updatedCanteenObj });
+      } catch (_) {}
+    }
+    broadcastCanteenConfig(updatedCanteenObj);
+
+    // Save directly to Vercel Cloud API
+    try {
+      axios.post('/api/canteen-config', updatedCanteenObj).catch(() => {});
+    } catch (_) {}
+    try {
+      axios.patch(`/api/canteens/${canteenId || 'canteen-1'}`, newSettings).catch(() => {});
+    } catch (_) {}
   };
 
   // Canteen Owner Only: Upload or update custom payment QR code & UPI VPA
@@ -2667,6 +2782,7 @@ export const DataProvider = ({ children }) => {
       qrCodeImage: qrPayload.qrCodeImage !== undefined ? qrPayload.qrCodeImage : target.qrCodeImage,
       upiId: qrPayload.upiId || target.upiId || 'pandeyayush1603-1@okicici',
       upiMerchantName: qrPayload.upiMerchantName || target.upiMerchantName || 'Ayush Pandey',
+      updatedAt: Date.now(),
     };
 
     setCanteens((prev) => {
@@ -2692,7 +2808,10 @@ export const DataProvider = ({ children }) => {
     }
     broadcastCanteenConfig(updatedCanteenObj);
 
-    // Save to MongoDB backend and emit Socket.IO events
+    // Save to Vercel Cloud API and backend
+    try {
+      axios.post('/api/canteen-config', updatedCanteenObj).catch(() => {});
+    } catch (_) {}
     try {
       axios.patch(`/api/canteens/${canteenId || 'canteen-1'}/payment-qr`, qrPayload).catch(() => {});
     } catch (_) {}
@@ -2771,6 +2890,7 @@ export const DataProvider = ({ children }) => {
         toggleStudentStatus,
         toggleCanteenStatus,
         updateCanteenPaymentQR,
+        updateCanteenSettings,
         changeUserPassword,
         submitFeedback,
         deleteFeedback,
