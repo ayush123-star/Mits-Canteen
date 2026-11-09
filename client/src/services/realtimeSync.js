@@ -104,7 +104,7 @@ const getMqttClient = () => {
             } catch (_) {}
           });
         } else if (topic === TOPIC_CANTEEN_CONFIG) {
-          // Retained/instant canteen config, payment QR, homepage cravings, and menu items sync
+          // Retained/instant canteen config, payment QR, homepage cravings, menu items, inventory, and recipes sync
           subscribers.forEach((callback) => {
             try {
               callback({
@@ -113,6 +113,8 @@ const getMqttClient = () => {
                 homepageConfig: data.homepageConfig,
                 menuItems: data.menuItems,
                 categories: data.categories,
+                inventoryItems: data.inventoryItems,
+                recipes: data.recipes,
                 timestamp: data.timestamp || Date.now(),
               });
             } catch (_) {}
@@ -558,11 +560,34 @@ export const mergeOrders = (localOrders = [], incomingOrders = []) => {
 export const broadcastCanteenConfig = (configData) => {
   if (!configData || typeof configData !== 'object') return;
 
+  let savedMenu = null;
+  let savedCategories = null;
+  let savedInventory = null;
+  let savedRecipes = null;
+  try {
+    const rawMenu = localStorage.getItem('smart_canteen_menu');
+    if (rawMenu) savedMenu = JSON.parse(rawMenu);
+    const rawCat = localStorage.getItem('smart_canteen_categories');
+    if (rawCat) savedCategories = JSON.parse(rawCat);
+    const rawInv = localStorage.getItem('smart_canteen_inventory');
+    if (rawInv) savedInventory = JSON.parse(rawInv);
+    const rawRec = localStorage.getItem('smart_canteen_recipes');
+    if (rawRec) savedRecipes = JSON.parse(rawRec);
+  } catch (_) {}
+
+  const postPayload = {
+    ...configData,
+    ...(savedMenu ? { menuItems: savedMenu } : {}),
+    ...(savedCategories ? { categories: savedCategories } : {}),
+    ...(savedInventory ? { inventoryItems: savedInventory } : {}),
+    ...(savedRecipes ? { recipes: savedRecipes } : {}),
+  };
+
   const payload = {
     type: 'CANTEEN_CONFIG_SYNC',
-    config: configData,
-    canteen: configData,
-    ...configData,
+    config: postPayload,
+    canteen: postPayload,
+    ...postPayload,
     emitterId: getClientInstanceId(),
     timestamp: Date.now(),
   };
@@ -573,23 +598,8 @@ export const broadcastCanteenConfig = (configData) => {
   // 2. Also publish to TOPIC_EVENTS (for active listeners)
   publishMqtt(TOPIC_EVENTS, payload, { qos: 1 });
 
-  // 3. HTTP sync to Vercel API with full menu and category snapshot for cross-device consistency
+  // 3. HTTP sync to Vercel API with full menu, category, inventory and recipe snapshot for cross-device consistency
   try {
-    let savedMenu = null;
-    let savedCategories = null;
-    try {
-      const rawMenu = localStorage.getItem('smart_canteen_menu');
-      if (rawMenu) savedMenu = JSON.parse(rawMenu);
-      const rawCat = localStorage.getItem('smart_canteen_categories');
-      if (rawCat) savedCategories = JSON.parse(rawCat);
-    } catch (_) {}
-
-    const postPayload = {
-      ...configData,
-      ...(savedMenu ? { menuItems: savedMenu } : {}),
-      ...(savedCategories ? { categories: savedCategories } : {}),
-    };
-
     axios.post(CENTRAL_CANTEEN_API, postPayload).catch((err) => {
       console.debug('[RealtimeSync] Canteen config API notice:', err.message);
     });

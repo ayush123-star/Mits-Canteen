@@ -1,0 +1,557 @@
+{
+  "menuItems": [
+    {
+      "id": "food-1",
+      "name": "Double Cheese Veg Supreme Burger",
+      "description": "Crispy herb potato patty topped with double cheddar cheese, sliced farm tomatoes, crisp lettuce, and smoky mayo.",
+      "price": 85,
+      "category": "Fast Food",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 7,
+      "calories": 440,
+      "counter": 1,
+      "rating": 4.9,
+      "reviewCount": 210,
+      "tags": [
+        "Best Seller",
+        "Cheesy",
+        "Youth Pick"
+      ]
+    },
+    {
+      "id": "food-2",
+      "name": "South Indian Masala Dosa",
+      "description": "Crisp golden crepe folded over spiced mashed potato masala, served with fresh coconut chutney and hot lentil sambar.",
+      "price": 70,
+      "category": "Breakfast",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 8,
+      "calories": 320,
+      "counter": 2,
+      "rating": 4.8,
+      "reviewCount": 142,
+      "tags": [
+        "South Indian",
+        "Morning Special"
+      ]
+    },
+    {
+      "id": "food-3",
+      "name": "Special Campus Deluxe Thali",
+      "description": "Wholesome royal meal: Paneer Butter Masala, Dal Makhani, Seasonal Sabzi, Steamed Jeera Rice, 2 Butter Rotis, Gulab Jamun, and Papad.",
+      "price": 130,
+      "category": "Lunch",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 10,
+      "calories": 680,
+      "counter": 2,
+      "rating": 4.9,
+      "reviewCount": 310,
+      "tags": [
+        "Best Seller",
+        "Wholesome Meal"
+      ]
+    },
+    {
+      "id": "food-4",
+      "name": "Mumbai Special Butter Pav Bhaji",
+      "description": "Spiced mashed potato-tomato gravy topped with butter dollop, served with 2 soft toasted buttery pavs and chopped onions.",
+      "price": 85,
+      "category": "Snacks",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 6,
+      "calories": 460,
+      "counter": 1,
+      "rating": 4.8,
+      "reviewCount": 245,
+      "tags": [
+        "Street Classic",
+        "Snack Attack"
+      ]
+    },
+    {
+      "id": "food-5",
+      "name": "Thick Cold Coffee with Choco Ice Cream",
+      "description": "Blended roasted espresso made with chilled full-cream milk, cocoa drizzle, and crowned with chocolate ice cream.",
+      "price": 60,
+      "category": "Beverages",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 3,
+      "calories": 260,
+      "counter": 3,
+      "rating": 4.9,
+      "reviewCount": 340,
+      "tags": [
+        "Chilled",
+        "Exam Saver"
+      ]
+    },
+    {
+      "id": "food-6",
+      "name": "Paneer Tikka Grilled Jumbo Sandwich",
+      "description": "Triple-layer artisan bread toasted with smoky marinated tandoori paneer, capsicum, mozzarella, and spiced mint mayo.",
+      "price": 95,
+      "category": "Fast Food",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 8,
+      "calories": 480,
+      "counter": 1,
+      "rating": 4.9,
+      "reviewCount": 178,
+      "tags": [
+        "Grilled",
+        "High Protein"
+      ]
+    },
+    {
+      "id": "food-7",
+      "name": "Hyderabadi Paneer Dum Biryani",
+      "description": "Long-grain fragrant basmati rice slow-cooked with saffron, royal whole spices, marinated cottage cheese, and cucumber raita.",
+      "price": 120,
+      "category": "Lunch",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 8,
+      "calories": 520,
+      "counter": 2,
+      "rating": 4.8,
+      "reviewCount": 220,
+      "tags": [
+        "Aromatic",
+        "Lunch Special"
+      ]
+    },
+    {
+      "id": "food-8",
+      "name": "Burger + Fries + Cold Coffee Combo",
+      "description": "Double Cheese Veg Burger + Small Peri Peri Fries + Thick Cold Coffee. The signature campus saver combo!",
+      "price": 180,
+      "category": "Combos",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 9,
+      "calories": 820,
+      "counter": 1,
+      "rating": 4.9,
+      "reviewCount": 380,
+      "tags": [
+        "Save ₹30",
+        "Combo Deal"
+      ]
+    },
+    {
+      "id": "food-9",
+      "name": "Cutting Masala Chai (Kulhad Cup)",
+      "description": "Authentic Indian milk tea slow-brewed with crushed ginger, green cardamom, and cloves. Served steaming in clay kulhad.",
+      "price": 20,
+      "category": "Beverages",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 3,
+      "calories": 85,
+      "counter": 3,
+      "rating": 4.9,
+      "reviewCount": 420,
+      "tags": [
+        "Daily Fuel",
+        "Kulhad Chai"
+      ]
+    },
+    {
+      "id": "food-10",
+      "name": "Samosa Chaat with Sweet Curd & Chutneys",
+      "description": "Crushed crispy golden samosas topped with spiced chole, sweet dahi, tamarind chutney, mint dip, and crunchy nylon sev.",
+      "price": 50,
+      "category": "Snacks",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 4,
+      "calories": 340,
+      "counter": 1,
+      "rating": 4.8,
+      "reviewCount": 198,
+      "tags": [
+        "Chatpata",
+        "Recess Hit"
+      ]
+    },
+    {
+      "id": "food-11",
+      "name": "Amritsari Chole Bhature",
+      "description": "Two fluffy golden fried bhaturas paired with rich spiced Punjabi chickpea masala, lemon pickled onions, and green chili.",
+      "price": 90,
+      "category": "Breakfast",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 10,
+      "calories": 550,
+      "counter": 2,
+      "rating": 4.8,
+      "reviewCount": 180,
+      "tags": [
+        "Heavy Breakfast",
+        "Punjabi"
+      ]
+    },
+    {
+      "id": "food-12",
+      "name": "Crispy Peri Peri French Fries (Jumbo)",
+      "description": "Golden skin-on potato fries tossed in fiery African peri peri seasoning. Served with creamy garlic dip.",
+      "price": 65,
+      "category": "Fast Food",
+      "isVeg": true,
+      "isAvailable": true,
+      "image": "https://images.unsplash.com/photo-1576107232684-1279f3908594?w=600&auto=format&fit=crop&q=80",
+      "preparationTime": 5,
+      "calories": 350,
+      "counter": 1,
+      "rating": 4.7,
+      "reviewCount": 115,
+      "tags": [
+        "Crunchy",
+        "Spicy"
+      ]
+    }
+  ],
+  "inventoryItems": [
+    {
+      "id": "inv-1",
+      "name": "Fresh Potatoes",
+      "category": "Vegetables",
+      "currentQuantity": 45,
+      "unit": "kg",
+      "minimumStockLevel": 12,
+      "purchasePrice": 24,
+      "supplier": "Green Valley Farms",
+      "expiryDate": "2026-11-20",
+      "lastStockedAt": "2026-11-02",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-2",
+      "name": "Farm Tomatoes",
+      "category": "Vegetables",
+      "currentQuantity": 8.5,
+      "unit": "kg",
+      "minimumStockLevel": 10,
+      "purchasePrice": 42,
+      "supplier": "Green Valley Farms",
+      "expiryDate": "2026-11-09",
+      "lastStockedAt": "2026-11-01",
+      "status": "Low Stock"
+    },
+    {
+      "id": "inv-3",
+      "name": "Red Onions",
+      "category": "Vegetables",
+      "currentQuantity": 28,
+      "unit": "kg",
+      "minimumStockLevel": 8,
+      "purchasePrice": 32,
+      "supplier": "Green Valley Farms",
+      "expiryDate": "2026-11-25",
+      "lastStockedAt": "2026-11-02",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-4",
+      "name": "Full Cream Milk",
+      "category": "Dairy",
+      "currentQuantity": 32,
+      "unit": "litre",
+      "minimumStockLevel": 10,
+      "purchasePrice": 62,
+      "supplier": "Amul Dairy Distributor",
+      "expiryDate": "2026-11-06",
+      "lastStockedAt": "2026-11-04",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-5",
+      "name": "Sesame Burger Buns",
+      "category": "Bakery",
+      "currentQuantity": 65,
+      "unit": "pieces",
+      "minimumStockLevel": 20,
+      "purchasePrice": 8.5,
+      "supplier": "Modern Bakers Ltd",
+      "expiryDate": "2026-11-08",
+      "lastStockedAt": "2026-11-03",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-6",
+      "name": "Crispy Veg Herb Patties",
+      "category": "Frozen",
+      "currentQuantity": 52,
+      "unit": "pieces",
+      "minimumStockLevel": 15,
+      "purchasePrice": 16,
+      "supplier": "McCain Foods Supply",
+      "expiryDate": "2026-12-15",
+      "lastStockedAt": "2026-10-28",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-7",
+      "name": "Cheddar Cheese Slices",
+      "category": "Dairy",
+      "currentQuantity": 14,
+      "unit": "pieces",
+      "minimumStockLevel": 25,
+      "purchasePrice": 11.5,
+      "supplier": "Amul Dairy Distributor",
+      "expiryDate": "2026-12-30",
+      "lastStockedAt": "2026-10-25",
+      "status": "Low Stock"
+    },
+    {
+      "id": "inv-8",
+      "name": "Refined Cooking Oil",
+      "category": "Oils & Fats",
+      "currentQuantity": 30,
+      "unit": "litre",
+      "minimumStockLevel": 10,
+      "purchasePrice": 135,
+      "supplier": "Fortune Oil Distributors",
+      "expiryDate": "2027-04-10",
+      "lastStockedAt": "2026-10-20",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-9",
+      "name": "Long Grain Basmati Rice",
+      "category": "Grains",
+      "currentQuantity": 50,
+      "unit": "kg",
+      "minimumStockLevel": 15,
+      "purchasePrice": 88,
+      "supplier": "India Gate Supplies",
+      "expiryDate": "2027-08-01",
+      "lastStockedAt": "2026-10-15",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-10",
+      "name": "Fresh Malai Paneer",
+      "category": "Dairy",
+      "currentQuantity": 12,
+      "unit": "kg",
+      "minimumStockLevel": 5,
+      "purchasePrice": 380,
+      "supplier": "Amul Dairy Distributor",
+      "expiryDate": "2026-11-08",
+      "lastStockedAt": "2026-11-03",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-11",
+      "name": "Soft Pav Bread Packets",
+      "category": "Bakery",
+      "currentQuantity": 75,
+      "unit": "pieces",
+      "minimumStockLevel": 20,
+      "purchasePrice": 4.5,
+      "supplier": "Modern Bakers Ltd",
+      "expiryDate": "2026-11-07",
+      "lastStockedAt": "2026-11-04",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-12",
+      "name": "Roasted Coffee Beans & Powder",
+      "category": "Beverage Raw",
+      "currentQuantity": 7,
+      "unit": "kg",
+      "minimumStockLevel": 2,
+      "purchasePrice": 520,
+      "supplier": "Nescafé Wholesale",
+      "expiryDate": "2027-02-15",
+      "lastStockedAt": "2026-10-10",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-13",
+      "name": "Premium Tea Leaves & Spices",
+      "category": "Beverage Raw",
+      "currentQuantity": 5.5,
+      "unit": "kg",
+      "minimumStockLevel": 2,
+      "purchasePrice": 340,
+      "supplier": "Wagh Bakri Depot",
+      "expiryDate": "2027-06-20",
+      "lastStockedAt": "2026-10-12",
+      "status": "Optimal"
+    },
+    {
+      "id": "inv-14",
+      "name": "Mayo & Signature Burger Sauces",
+      "category": "Condiments",
+      "currentQuantity": 15,
+      "unit": "litre",
+      "minimumStockLevel": 4,
+      "purchasePrice": 175,
+      "supplier": "Veeba Food Supplies",
+      "expiryDate": "2027-01-10",
+      "lastStockedAt": "2026-10-18",
+      "status": "Optimal"
+    }
+  ],
+  "recipes": [
+    {
+      "menuItemId": "food-1",
+      "menuItemName": "Double Cheese Veg Supreme Burger",
+      "ingredients": [
+        {
+          "inventoryId": "inv-5",
+          "name": "Sesame Burger Buns",
+          "quantity": 1,
+          "unit": "pieces"
+        },
+        {
+          "inventoryId": "inv-6",
+          "name": "Crispy Veg Herb Patties",
+          "quantity": 1,
+          "unit": "pieces"
+        },
+        {
+          "inventoryId": "inv-7",
+          "name": "Cheddar Cheese Slices",
+          "quantity": 2,
+          "unit": "pieces"
+        },
+        {
+          "inventoryId": "inv-2",
+          "name": "Farm Tomatoes",
+          "quantity": 0.02,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-14",
+          "name": "Mayo & Signature Burger Sauces",
+          "quantity": 0.015,
+          "unit": "litre"
+        }
+      ],
+      "preparationTime": 7,
+      "instructions": "Toast bun with butter, fry patty at 180°C, layer sauce, lettuce, tomato slice, and double cheese.",
+      "estimatedCost": 38.5
+    },
+    {
+      "menuItemId": "food-4",
+      "menuItemName": "Mumbai Special Butter Pav Bhaji",
+      "ingredients": [
+        {
+          "inventoryId": "inv-11",
+          "name": "Soft Pav Bread Packets",
+          "quantity": 2,
+          "unit": "pieces"
+        },
+        {
+          "inventoryId": "inv-1",
+          "name": "Fresh Potatoes",
+          "quantity": 0.15,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-2",
+          "name": "Farm Tomatoes",
+          "quantity": 0.06,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-3",
+          "name": "Red Onions",
+          "quantity": 0.04,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-8",
+          "name": "Refined Cooking Oil",
+          "quantity": 0.02,
+          "unit": "litre"
+        }
+      ],
+      "preparationTime": 6,
+      "instructions": "Boil & mash potatoes and tomatoes with bhaji masala, simmer with butter, toast pav with coriander butter.",
+      "estimatedCost": 26
+    },
+    {
+      "menuItemId": "food-5",
+      "menuItemName": "Thick Cold Coffee with Choco Ice Cream",
+      "ingredients": [
+        {
+          "inventoryId": "inv-4",
+          "name": "Full Cream Milk",
+          "quantity": 0.25,
+          "unit": "litre"
+        },
+        {
+          "inventoryId": "inv-12",
+          "name": "Roasted Coffee Beans & Powder",
+          "quantity": 0.015,
+          "unit": "kg"
+        }
+      ],
+      "preparationTime": 3,
+      "instructions": "Blend espresso shot with chilled milk, sugar syrup, ice cubes, and top with scoop of chocolate ice cream.",
+      "estimatedCost": 21
+    },
+    {
+      "menuItemId": "food-3",
+      "menuItemName": "Special Campus Deluxe Thali",
+      "ingredients": [
+        {
+          "inventoryId": "inv-10",
+          "name": "Fresh Malai Paneer",
+          "quantity": 0.1,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-9",
+          "name": "Long Grain Basmati Rice",
+          "quantity": 0.12,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-2",
+          "name": "Farm Tomatoes",
+          "quantity": 0.05,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-3",
+          "name": "Red Onions",
+          "quantity": 0.04,
+          "unit": "kg"
+        },
+        {
+          "inventoryId": "inv-8",
+          "name": "Refined Cooking Oil",
+          "quantity": 0.03,
+          "unit": "litre"
+        }
+      ],
+      "preparationTime": 10,
+      "instructions": "Prepare fresh paneer gravy, jeera basmati rice, dal makhani, and hot tandoori butter rotis.",
+      "estimatedCost": 58
+    }
+  ]
+}

@@ -1,5 +1,21 @@
 // Centralized Serverless API for Vercel deployment - /api/canteen-config
 // Manages canteen details, payment QR code image, UPI ID, and Payee Name across all portals
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+let canonicalData = {};
+try {
+  canonicalData = require('./canonicalData.json');
+} catch (_) {}
+
+const DEFAULT_CATEGORIES = [
+  { id: 'cat-1', name: 'Breakfast', icon: 'SunMedium', displayOrder: 1 },
+  { id: 'cat-2', name: 'Lunch', icon: 'Utensils', displayOrder: 2 },
+  { id: 'cat-3', name: 'Fast Food', icon: 'Flame', displayOrder: 3 },
+  { id: 'cat-4', name: 'Snacks', icon: 'Cookie', displayOrder: 4 },
+  { id: 'cat-5', name: 'Beverages', icon: 'Coffee', displayOrder: 5 },
+  { id: 'cat-6', name: 'Combos', icon: 'Layers', displayOrder: 6 },
+];
 
 let canteenConfigCache = {
   id: 'canteen-1',
@@ -12,9 +28,27 @@ let canteenConfigCache = {
     cravingsTitle: 'Popular Campus Cravings',
     cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
     featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'],
+    dailyDiscounts: {
+      Monday: { percent: 10, title: 'Monday Kickstart', active: true },
+      Tuesday: { percent: 15, title: 'Tasty Tuesday Feast', active: true },
+      Wednesday: { percent: 10, title: 'Mid-Week Hunger Buster', active: true },
+      Thursday: { percent: 20, title: 'Thursday Campus Special', active: true },
+      Friday: { percent: 15, title: 'Friday Weekend Prep', active: true },
+      Saturday: { percent: 25, title: 'Super Saturday Mega Saver', active: true },
+      Sunday: { percent: 20, title: 'Sunday Campus Brunch', active: true },
+    },
+    specialOfferBanner: {
+      badge: 'Campus Exclusive Daily Offers',
+      heading: 'Get Flat Day Discount On Campus Cravings!',
+      subtitle: 'Canteen owner daily offer active! Use promo code below for instant savings at checkout.',
+      promoCode: 'CAMPUSDAY',
+      minOrderValue: 99,
+    },
   },
-  menuItems: null,
-  categories: null,
+  menuItems: Array.isArray(canonicalData.menuItems) ? canonicalData.menuItems : null,
+  categories: DEFAULT_CATEGORIES,
+  inventoryItems: Array.isArray(canonicalData.inventoryItems) ? canonicalData.inventoryItems : null,
+  recipes: Array.isArray(canonicalData.recipes) ? canonicalData.recipes : null,
   updatedAt: Date.now(),
 };
 
@@ -46,9 +80,24 @@ export default async function handler(req, res) {
         qrCodeImage: payload.qrCodeImage !== undefined ? payload.qrCodeImage : canteenConfigCache.qrCodeImage,
         upiId: payload.upiId || canteenConfigCache.upiId,
         upiMerchantName: payload.upiMerchantName || payload.name || canteenConfigCache.upiMerchantName,
-        homepageConfig: payload.homepageConfig !== undefined ? payload.homepageConfig : canteenConfigCache.homepageConfig,
+        homepageConfig: payload.homepageConfig !== undefined
+          ? {
+              ...canteenConfigCache.homepageConfig,
+              ...payload.homepageConfig,
+              dailyDiscounts: {
+                ...(canteenConfigCache.homepageConfig?.dailyDiscounts || {}),
+                ...(payload.homepageConfig?.dailyDiscounts || {}),
+              },
+              specialOfferBanner: {
+                ...(canteenConfigCache.homepageConfig?.specialOfferBanner || {}),
+                ...(payload.homepageConfig?.specialOfferBanner || {}),
+              },
+            }
+          : canteenConfigCache.homepageConfig,
         menuItems: Array.isArray(payload.menuItems) ? payload.menuItems : canteenConfigCache.menuItems,
         categories: Array.isArray(payload.categories) ? payload.categories : canteenConfigCache.categories,
+        inventoryItems: Array.isArray(payload.inventoryItems) ? payload.inventoryItems : canteenConfigCache.inventoryItems,
+        recipes: Array.isArray(payload.recipes) ? payload.recipes : canteenConfigCache.recipes,
         updatedAt: Date.now(),
       };
       return res.status(200).json({ success: true, config: canteenConfigCache });

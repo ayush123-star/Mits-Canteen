@@ -287,7 +287,7 @@ export const InventoryPage = () => {
             className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4" />
-            + Add Raw Material
+            <span>Add Raw Material</span>
           </button>
           <button
             onClick={() => setIsStockInModalOpen(true)}
@@ -363,8 +363,126 @@ export const InventoryPage = () => {
         </div>
       </div>
 
-      {/* 4. Inventory Table */}
-      <div className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl overflow-hidden">
+      {/* 4. Responsive Inventory Presentation (Mobile Cards + Desktop Ledger Table) */}
+      
+      {/* 4A. Mobile View: Responsive Material Stock Cards (Visible on Phones) */}
+      <div className="block sm:hidden space-y-3">
+        {filteredItems.map((item) => {
+          const isLow = item.currentQuantity <= item.minimumStockLevel;
+          const ratio = Math.min(100, Math.round((item.currentQuantity / (item.minimumStockLevel * 2.5 || 1)) * 100));
+
+          return (
+            <div
+              key={item.id || item._id}
+              className="bg-[#1C263A]/95 rounded-2xl border border-purple-500/20 p-4 shadow-lg space-y-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 ${
+                      isLow ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-[#151C30] text-purple-300 border border-purple-500/20'
+                    }`}
+                  >
+                    📦
+                  </div>
+                  <div>
+                    <h4 className="font-black text-white text-sm leading-tight">{item.name}</h4>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] text-[#AAB3C5] font-mono">ID: {item.id || item._id}</span>
+                      <span className="text-[9px] px-2 py-0.2 rounded-full font-bold bg-[#151C30] border border-purple-500/20 text-[#AAB3C5]">
+                        {item.category || 'General'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase shrink-0 ${
+                    isLow
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {isLow ? 'Low Stock' : 'Optimal'}
+                </span>
+              </div>
+
+              {/* Stock Numbers & Threshold */}
+              <div className="grid grid-cols-2 gap-2 bg-[#151C30]/80 p-2.5 rounded-xl border border-purple-500/10 text-xs">
+                <div>
+                  <span className="text-[10px] text-[#AAB3C5] uppercase font-bold block">Current Stock</span>
+                  <span className="font-mono font-black text-white text-base">
+                    {item.currentQuantity} <span className="text-xs font-sans text-purple-300">{item.unit || 'kg'}</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#AAB3C5] uppercase font-bold block">Min. Threshold</span>
+                  <span className="font-mono font-bold text-[#AAB3C5]">
+                    {item.minimumStockLevel} {item.unit || 'kg'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Stock Health Bar */}
+              <div>
+                <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                  <span className="text-[#AAB3C5]">Stock Health:</span>
+                  <span className={isLow ? 'text-amber-400 font-black' : 'text-emerald-400 font-black'}>
+                    {ratio}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-[#151C30] rounded-full overflow-hidden border border-purple-500/10">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      isLow ? 'bg-amber-500' : 'bg-gradient-to-r from-emerald-500 to-[#526DFF]'
+                    }`}
+                    style={{ width: `${ratio}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Supplier & Action Buttons */}
+              <div className="pt-2 border-t border-purple-500/10 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-[#AAB3C5] truncate max-w-[110px]" title={item.supplier}>
+                  🚚 {item.supplier || 'Campus Mart'}
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => openQuickStockIn(item)}
+                    className="px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 font-extrabold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Restock
+                  </button>
+                  <button
+                    onClick={() => openEditModal(item)}
+                    className="p-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 font-bold transition-colors inline-flex items-center cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => openDeleteModal(item)}
+                    className="p-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold transition-colors inline-flex items-center cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredItems.length === 0 && (
+          <div className="py-10 px-4 rounded-3xl bg-[#1C263A]/90 border border-purple-500/20 text-center text-[#AAB3C5] space-y-2">
+            <Package className="w-8 h-8 mx-auto text-purple-400 opacity-60" />
+            <p className="font-bold text-white text-sm">No raw material items found</p>
+            <p className="text-xs text-slate-400">Click "+ Add Raw Material" above to register a new stock SKU.</p>
+          </div>
+        )}
+      </div>
+
+      {/* 4B. Desktop View: Comprehensive Stock Ledger Table (Visible on Tablets & Laptops) */}
+      <div className="hidden sm:block bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#151C30]/80 text-[#AAB3C5] font-extrabold uppercase tracking-wider border-b border-purple-500/20">

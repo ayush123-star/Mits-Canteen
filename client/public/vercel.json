@@ -1,7 +1,25 @@
 {
+  "buildCommand": "npm run build --prefix client",
+  "outputDirectory": "client/dist",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/canteen-config",
+      "destination": "/api/canteen-config.js"
+    },
+    {
+      "source": "/api/orders/:id/status",
+      "destination": "/api/orders"
+    },
+    {
+      "source": "/api/orders/:id",
+      "destination": "/api/orders"
+    },
+    {
+      "source": "/api/orders",
+      "destination": "/api/orders.js"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

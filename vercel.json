@@ -15,6 +15,10 @@
       "destination": "/api/orders"
     },
     {
+      "source": "/api/orders",
+      "destination": "/api/orders.js"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

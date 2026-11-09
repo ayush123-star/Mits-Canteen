@@ -228,23 +228,14 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     } catch (_) {}
   };
 
-  // Automated detection of return from Google Pay / UPI App
+  // Detection of return from Google Pay / UPI App
+  const [hasReturnedFromApp, setHasReturnedFromApp] = useState(false);
+
   useEffect(() => {
     if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) return;
 
     const handleReturnToApp = () => {
-      // Calculate how many seconds user was in Google Pay
-      const elapsedSeconds = (Date.now() - paymentLaunchTime) / 1000;
-
-      // Case 1: Returned in under 5 seconds -> Payment NOT completed (user backed out / cancelled)
-      if (elapsedSeconds < 5) {
-        setCurrentView('PAYMENT_FAILED');
-        setPaymentFailedError('Payment complete nahi hua. Pehle Google Pay me payment karein, uske baad hi token generate hoga.');
-        return;
-      }
-
-      // Case 2: Returned after 5+ seconds -> Enter Automated Verification
-      setCurrentView('VERIFYING');
+      setHasReturnedFromApp(true);
     };
 
     const onVisibilityChange = () => {
@@ -257,11 +248,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       handleReturnToApp();
     };
 
-    // Delay before listening to avoid immediate trigger upon app launching
     const attachTimer = setTimeout(() => {
       document.addEventListener('visibilitychange', onVisibilityChange);
       window.addEventListener('focus', onWindowFocus);
-    }, 1200);
+    }, 800);
 
     return () => {
       clearTimeout(attachTimer);
@@ -270,28 +260,32 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     };
   }, [currentView, paymentLaunchTime]);
 
-  // Automated Verification: Runs fast 1.8-second verification then generates live token automatically!
+  // Fast & Snappy Verification: 800ms
   useEffect(() => {
     if (currentView !== 'VERIFYING') return;
 
     const timer = setTimeout(() => {
       const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
       triggerPaymentSuccess(genTxn);
-    }, 1800);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [currentView]);
 
-  // Handle cancelled or failed payment
+  // Handle cancelled or failed payment (STRICT: Never generates a token!)
   const handlePaymentFailed = (customMsg) => {
+    if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
+    setShowSuccessPopup(false);
+    setLoading(false);
     setCurrentView('PAYMENT_FAILED');
-    setPaymentFailedError(customMsg || 'Payment complete nahi hua. Pehle payment karein, uske baad hi token generate hoga.');
+    setPaymentFailedError(customMsg || 'Payment cancel ya incomplete raha. Koi token generate nahi kiya gaya. Pehle payment complete karein.');
   };
 
-  // Launch Payment when user clicks Zomato "Place Order" button
+  // Launch Payment when user clicks "Place Order" button
   const handlePlaceOrderClick = () => {
     setError('');
     setPaymentFailedError('');
+    setHasReturnedFromApp(false);
 
     // 1. CASH AT COUNTER: Immediate direct placement
     if (selectedMethodId === 'CASH') {
@@ -327,11 +321,18 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     }
   };
 
+  // User explicitly confirms payment was done
+  const handleConfirmPaymentSuccess = () => {
+    setError('');
+    setCurrentView('VERIFYING');
+  };
+
   // Retry payment in Google Pay from failed screen
   const handleRetryPayment = () => {
     setError('');
     setPaymentFailedError('');
     setPaymentLaunchTime(Date.now());
+    setHasReturnedFromApp(false);
     setCurrentView('AWAITING_APP');
 
     const appDeepLink = getUpiUri(selectedMethodId);
@@ -351,6 +352,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const handleCancelPayment = () => {
     setCurrentView('SELECTION');
     setPaymentLaunchTime(null);
+    setHasReturnedFromApp(false);
     setPaymentFailedError('');
     setError('');
   };
@@ -381,32 +383,33 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       });
     } catch (_) {}
 
-    // Automatically generate token after showing popup for 1.2 seconds, and navigate to /my-orders!
+    // Automatically generate token after showing popup for 1 second, and navigate to /my-orders!
     autoPlaceTimerRef.current = setTimeout(() => {
       executeOrderPlacement(genTxn, 'PAID', 'UPI');
-    }, 1200);
+    }, 1000);
   };
 
   // Execute Order Placement & Token Generation
   const executeOrderPlacement = async (txnId = null, paymentStatus = 'PAID', paymentMethod = 'UPI') => {
-    if (!isAuthenticated) {
-      setError('Please log in or register before completing your order.');
-      setShowSuccessPopup(false);
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
+      const studentId = user?.id || user?._id || 'user-stu-1';
+      const studentName = user?.name || 'Ayush Pandey';
+      const studentRoll = user?.studentId || user?.enrollmentNumber || user?.rollNumber || 'BTET25O1039';
+      const studentDepartment = user?.department || 'Electronics and Telecommunication';
+      const studentEmail = user?.email || 'ayushpandey1603@gmail.com';
+      const studentPhone = user?.phone || '+91 98765 43210';
+
       const createdOrder = placeOrder({
-        studentId: user?.id || user?._id || 'user-stu-1',
-        studentName: user?.name || 'Ayush Pandey',
-        studentEmail: user?.email || 'ayushpandey1603@gmail.com',
-        studentRoll: user?.studentId || user?.enrollmentNumber || user?.rollNumber || 'BTET25O1039',
-        studentEnrollment: user?.studentId || user?.enrollmentNumber || user?.rollNumber || 'BTET25O1039',
-        studentDepartment: user?.department || 'Electronics and Telecommunication',
-        studentPhone: user?.phone || '+91 98765 43210',
+        studentId,
+        studentName,
+        studentEmail,
+        studentRoll,
+        studentEnrollment: studentRoll,
+        studentDepartment,
+        studentPhone,
         items: cartItems.map((item) => ({
           foodId: item.food._id || item.food.id,
           name: item.food.name,
@@ -442,6 +445,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       console.error('Order placement failed:', err);
       setError('Failed to place order. Please try again.');
       setShowSuccessPopup(false);
+      setCurrentView('SELECTION');
     } finally {
       setLoading(false);
     }
@@ -711,6 +715,27 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                   <p className="font-bold text-white">Automatic Payment Verification</p>
                   <p className="mt-0.5">Payment hote hi token apne aap generate ho jayega aur aap My Orders me pahunch jayenge.</p>
                 </div>
+              </div>
+
+              {/* Two Clear Choices for the Student */}
+              <div className="space-y-2 max-w-sm mx-auto pt-1">
+                <button
+                  type="button"
+                  onClick={handleConfirmPaymentSuccess}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Check className="w-5 h-5 stroke-[3]" />
+                  <span>Maine Payment Kar Diya (Generate Token)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePaymentFailed('Aapne payment cancel kar diya tha. Order place nahi hua aur token generate nahi kiya gaya.')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                >
+                  <XCircle className="w-4 h-4 text-rose-400" />
+                  <span>Payment Cancel Ho Gaya / Nahi Hua</span>
+                </button>
               </div>
 
               {/* Quick Options */}

@@ -147,12 +147,24 @@ export const DataProvider = ({ children }) => {
 
   const [inventoryItems, setInventoryItems] = useState(() => {
     const saved = localStorage.getItem('smart_canteen_inventory');
-    return saved ? JSON.parse(saved) : INITIAL_INVENTORY_ITEMS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+    }
+    return INITIAL_INVENTORY_ITEMS;
   });
 
   const [recipes, setRecipes] = useState(() => {
     const saved = localStorage.getItem('smart_canteen_recipes');
-    return saved ? JSON.parse(saved) : INITIAL_RECIPES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+    }
+    return INITIAL_RECIPES;
   });
 
   const [stockTransactions, setStockTransactions] = useState(() => {
@@ -465,6 +477,22 @@ export const DataProvider = ({ children }) => {
           setCategories((prev) => {
             if (JSON.stringify(prev) === JSON.stringify(cfg.categories)) return prev;
             return cfg.categories;
+          });
+        }
+
+        if (Array.isArray(cfg.inventoryItems) && cfg.inventoryItems.length > 0) {
+          setInventoryItems((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(cfg.inventoryItems)) return prev;
+            try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(cfg.inventoryItems)); } catch (_) {}
+            return cfg.inventoryItems;
+          });
+        }
+
+        if (Array.isArray(cfg.recipes) && cfg.recipes.length > 0) {
+          setRecipes((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(cfg.recipes)) return prev;
+            try { localStorage.setItem('smart_canteen_recipes', JSON.stringify(cfg.recipes)); } catch (_) {}
+            return cfg.recipes;
           });
         }
       });
@@ -1050,6 +1078,28 @@ export const DataProvider = ({ children }) => {
               localStorage.setItem('smart_canteen_categories', JSON.stringify(incomingCategories));
             } catch (_) {}
             return incomingCategories;
+          });
+        }
+
+        const incomingInv = cloudEvent.inventoryItems || incomingCfg?.inventoryItems;
+        if (Array.isArray(incomingInv) && incomingInv.length > 0) {
+          setInventoryItems((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(incomingInv)) return prev;
+            try {
+              localStorage.setItem('smart_canteen_inventory', JSON.stringify(incomingInv));
+            } catch (_) {}
+            return incomingInv;
+          });
+        }
+
+        const incomingRec = cloudEvent.recipes || incomingCfg?.recipes;
+        if (Array.isArray(incomingRec) && incomingRec.length > 0) {
+          setRecipes((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(incomingRec)) return prev;
+            try {
+              localStorage.setItem('smart_canteen_recipes', JSON.stringify(incomingRec));
+            } catch (_) {}
+            return incomingRec;
           });
         }
         return;
@@ -1833,18 +1883,21 @@ export const DataProvider = ({ children }) => {
   const addStock = (inventoryId, quantity, supplier, price, notes = '') => {
     const qtyNum = Number(quantity);
     let itemRef = null;
+    let nextInv = [];
 
-    setInventoryItems((prev) =>
-      prev.map((item) => {
-        if (item.id === inventoryId) {
+    setInventoryItems((prev) => {
+      nextInv = prev.map((item) => {
+        if (item.id === inventoryId || item._id === inventoryId) {
           const newQty = item.currentQuantity + qtyNum;
           const status = newQty > item.minimumStockLevel ? 'Optimal' : 'Low Stock';
           itemRef = { ...item, currentQuantity: newQty, status };
           return itemRef;
         }
         return item;
-      })
-    );
+      });
+      try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(nextInv)); } catch (_) {}
+      return nextInv;
+    });
 
     if (itemRef) {
       const tx = {
@@ -1860,6 +1913,14 @@ export const DataProvider = ({ children }) => {
       };
       setStockTransactions((prev) => [tx, ...prev]);
       logActivity('Canteen Admin', 'STOCK_ADDED', 'INVENTORY', `Added +${qtyNum} ${itemRef.unit} of ${itemRef.name}`);
+
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({ type: 'INVENTORY_UPDATED', inventoryId, inventoryItems: nextInv });
+        } catch (_) {}
+      }
+      publishOrderEvent({ type: 'INVENTORY_UPDATED', inventoryId, inventoryItems: nextInv });
+      broadcastCanteenConfig({ inventoryItems: nextInv });
     }
   };
 
@@ -1867,18 +1928,21 @@ export const DataProvider = ({ children }) => {
     const newQty = Number(newQuantity);
     let itemRef = null;
     let delta = 0;
+    let nextInv = [];
 
-    setInventoryItems((prev) =>
-      prev.map((item) => {
-        if (item.id === inventoryId) {
+    setInventoryItems((prev) => {
+      nextInv = prev.map((item) => {
+        if (item.id === inventoryId || item._id === inventoryId) {
           delta = newQty - item.currentQuantity;
           const status = newQty > item.minimumStockLevel ? 'Optimal' : 'Low Stock';
           itemRef = { ...item, currentQuantity: newQty, status };
           return itemRef;
         }
         return item;
-      })
-    );
+      });
+      try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(nextInv)); } catch (_) {}
+      return nextInv;
+    });
 
     if (itemRef) {
       const tx = {
@@ -1894,6 +1958,14 @@ export const DataProvider = ({ children }) => {
       };
       setStockTransactions((prev) => [tx, ...prev]);
       logActivity('Canteen Admin', 'STOCK_ADJUSTED', 'INVENTORY', `Adjusted ${itemRef.name} to ${newQty} ${itemRef.unit} (${reason})`);
+
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({ type: 'INVENTORY_UPDATED', inventoryId, inventoryItems: nextInv });
+        } catch (_) {}
+      }
+      publishOrderEvent({ type: 'INVENTORY_UPDATED', inventoryId, inventoryItems: nextInv });
+      broadcastCanteenConfig({ inventoryItems: nextInv });
     }
   };
 
@@ -1935,6 +2007,7 @@ export const DataProvider = ({ children }) => {
       } catch (_) {}
     }
     publishOrderEvent({ type: 'INVENTORY_CREATED', item: newItem, inventoryItems: updatedList });
+    broadcastCanteenConfig({ inventoryItems: updatedList });
 
     try {
       const res = await axios.post('/api/inventory', itemData);
@@ -1945,6 +2018,7 @@ export const DataProvider = ({ children }) => {
           try {
             localStorage.setItem('smart_canteen_inventory', JSON.stringify(final));
           } catch (_) {}
+          broadcastCanteenConfig({ inventoryItems: final });
           return final;
         });
         return saved;
@@ -1984,6 +2058,7 @@ export const DataProvider = ({ children }) => {
       } catch (_) {}
     }
     publishOrderEvent({ type: 'INVENTORY_UPDATED', inventoryId, updatedData, inventoryItems: updatedList });
+    broadcastCanteenConfig({ inventoryItems: updatedList });
 
     try {
       await axios.put(`/api/inventory/${inventoryId}`, updatedData);
@@ -2011,6 +2086,7 @@ export const DataProvider = ({ children }) => {
       } catch (_) {}
     }
     publishOrderEvent({ type: 'INVENTORY_DELETED', inventoryId, inventoryItems: updatedList });
+    broadcastCanteenConfig({ inventoryItems: updatedList });
 
     try {
       await axios.delete(`/api/inventory/${inventoryId}`);
@@ -2227,13 +2303,12 @@ export const DataProvider = ({ children }) => {
   // RECIPE MANAGEMENT
   // ==========================================
   const saveRecipe = (menuItemId, ingredients, instructions, prepTime) => {
-    const menuItem = menuItems.find((m) => m.id === menuItemId);
-    const existingIndex = recipes.findIndex((r) => r.menuItemId === menuItemId);
+    const menuItem = menuItems.find((m) => m.id === menuItemId || m._id === menuItemId);
 
     // Calculate approximate cost per plate
     let cost = 0;
     ingredients.forEach((ing) => {
-      const inv = inventoryItems.find((i) => i.id === ing.inventoryId);
+      const inv = inventoryItems.find((i) => i.id === ing.inventoryId || i._id === ing.inventoryId);
       if (inv && inv.purchasePrice) {
         cost += ing.quantity * inv.purchasePrice;
       }
@@ -2248,13 +2323,27 @@ export const DataProvider = ({ children }) => {
       estimatedCost: Number(cost.toFixed(2)),
     };
 
-    if (existingIndex > -1) {
-      setRecipes((prev) => prev.map((r) => (r.menuItemId === menuItemId ? newRecipe : r)));
-    } else {
-      setRecipes((prev) => [...prev, newRecipe]);
-    }
+    let updatedRecipes = [];
+    setRecipes((prev) => {
+      const exists = prev.some((r) => r.menuItemId === menuItemId);
+      updatedRecipes = exists
+        ? prev.map((r) => (r.menuItemId === menuItemId ? newRecipe : r))
+        : [...prev, newRecipe];
+      try {
+        localStorage.setItem('smart_canteen_recipes', JSON.stringify(updatedRecipes));
+      } catch (_) {}
+      return updatedRecipes;
+    });
 
     logActivity('Canteen Admin', 'RECIPE_SAVED', 'RECIPES', `Configured ingredient recipe formula for ${newRecipe.menuItemName}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'RECIPE_SAVED', recipe: newRecipe, recipes: updatedRecipes });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'RECIPE_SAVED', recipe: newRecipe, recipes: updatedRecipes });
+    broadcastCanteenConfig({ recipes: updatedRecipes });
   };
 
   const deleteRecipe = async (menuItemId) => {
@@ -2275,6 +2364,7 @@ export const DataProvider = ({ children }) => {
       } catch (_) {}
     }
     publishOrderEvent({ type: 'RECIPE_DELETED', menuItemId, recipes: updatedList });
+    broadcastCanteenConfig({ recipes: updatedList });
 
     try {
       await axios.delete(`/api/recipes/${menuItemId}`);
