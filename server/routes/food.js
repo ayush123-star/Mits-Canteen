@@ -103,7 +103,9 @@ router.post('/', protect, adminOnly, async (req, res) => {
     // Broadcast menu update via socket
     const io = req.app.get('socketio');
     if (io) {
+      io.emit('food:created', newItem);
       io.emit('menu:item_added', newItem);
+      io.emit('menu:updated', { action: 'created', item: newItem });
     }
 
     res.status(201).json({ success: true, data: newItem });
@@ -129,7 +131,9 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
 
     const io = req.app.get('socketio');
     if (io) {
+      io.emit('food:updated', updatedItem);
       io.emit('menu:item_updated', updatedItem);
+      io.emit('menu:updated', { action: 'updated', item: updatedItem });
     }
 
     res.json({ success: true, data: updatedItem });
@@ -152,11 +156,20 @@ router.patch('/:id/toggle-stock', protect, adminOnly, async (req, res) => {
 
     const io = req.app.get('socketio');
     if (io) {
-      io.emit('menu:stock_changed', {
+      io.emit('food:availabilityChanged', {
         id: item._id,
+        _id: item._id,
         isAvailable: item.isAvailable,
         name: item.name,
       });
+      io.emit('food:updated', item);
+      io.emit('menu:stock_changed', {
+        id: item._id,
+        _id: item._id,
+        isAvailable: item.isAvailable,
+        name: item.name,
+      });
+      io.emit('menu:updated', { action: 'stock_changed', item });
     }
 
     res.json({ success: true, data: item });
@@ -176,7 +189,9 @@ router.delete('/:id', protect, adminOnly, async (req, res) => {
 
     const io = req.app.get('socketio');
     if (io) {
-      io.emit('menu:item_deleted', { id: req.params.id });
+      io.emit('food:deleted', { id: req.params.id, _id: req.params.id, name: item.name });
+      io.emit('menu:item_deleted', { id: req.params.id, _id: req.params.id });
+      io.emit('menu:updated', { action: 'deleted', id: req.params.id });
     }
 
     res.json({ success: true, message: 'Food item deleted successfully' });

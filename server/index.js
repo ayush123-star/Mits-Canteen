@@ -23,6 +23,8 @@ const invitationRoutes = require('./routes/invitations');
 const feedbackRoutes = require('./routes/feedback');
 const auditLogRoutes = require('./routes/auditLogs');
 const webhookRoutes = require('./routes/webhook');
+const categoryRoutes = require('./routes/categories');
+const homepageRoutes = require('./routes/homepage');
 
 const app = express();
 const server = http.createServer(app);
@@ -60,6 +62,8 @@ app.use('/api/invitations', invitationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/homepage', homepageRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

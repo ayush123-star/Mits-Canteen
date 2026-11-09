@@ -74,6 +74,7 @@ router.patch('/:id/toggle-open', protect, adminOnly, async (req, res) => {
         isOpen: canteen.isOpen,
         status: canteen.status,
       });
+      io.emit('canteen:updated', canteen);
     }
 
     res.json({ success: true, message: `Canteen is now ${canteen.isOpen ? 'OPEN' : 'CLOSED'}`, data: canteen });
@@ -108,6 +109,7 @@ router.patch('/:id/payment-qr', protect, adminOnly, async (req, res) => {
         upiId: canteen.upiId,
         upiMerchantName: canteen.upiMerchantName,
       });
+      io.emit('canteen:updated', canteen);
     }
 
     res.json({

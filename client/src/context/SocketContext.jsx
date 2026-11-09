@@ -146,6 +146,77 @@ export const SocketProvider = ({ children }) => {
       setRushHourActive(Boolean(data?.isRushHourActive));
     });
 
+    // 10. REAL-TIME CMS: Food Item Events (Instant < 1s Synchronization)
+    const handleFoodCreated = (item) => {
+      console.log('[Socket.IO] food:created event:', item);
+      window.dispatchEvent(new CustomEvent('smartcanteen:food_created', { detail: item }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:menu_sync'));
+    };
+    socketInstance.on('food:created', handleFoodCreated);
+    socketInstance.on('menu:item_added', handleFoodCreated);
+
+    const handleFoodUpdated = (item) => {
+      console.log('[Socket.IO] food:updated event:', item);
+      window.dispatchEvent(new CustomEvent('smartcanteen:food_updated', { detail: item }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:menu_sync'));
+    };
+    socketInstance.on('food:updated', handleFoodUpdated);
+    socketInstance.on('menu:item_updated', handleFoodUpdated);
+
+    const handleStockChanged = (data) => {
+      console.log('[Socket.IO] food:availabilityChanged event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:food_stock_changed', { detail: data }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:menu_sync'));
+    };
+    socketInstance.on('food:availabilityChanged', handleStockChanged);
+    socketInstance.on('menu:stock_changed', handleStockChanged);
+
+    const handleFoodDeleted = (data) => {
+      console.log('[Socket.IO] food:deleted event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:food_deleted', { detail: data }));
+      window.dispatchEvent(new CustomEvent('smartcanteen:menu_sync'));
+    };
+    socketInstance.on('food:deleted', handleFoodDeleted);
+    socketInstance.on('menu:item_deleted', handleFoodDeleted);
+
+    socketInstance.on('menu:updated', (data) => {
+      console.log('[Socket.IO] menu:updated event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:menu_sync', { detail: data }));
+    });
+
+    // 11. REAL-TIME CMS: Categories Events
+    socketInstance.on('category:created', (cat) => {
+      console.log('[Socket.IO] category:created event:', cat);
+      window.dispatchEvent(new CustomEvent('smartcanteen:category_created', { detail: cat }));
+    });
+    socketInstance.on('category:updated', (cat) => {
+      console.log('[Socket.IO] category:updated event:', cat);
+      window.dispatchEvent(new CustomEvent('smartcanteen:category_updated', { detail: cat }));
+    });
+    socketInstance.on('category:deleted', (data) => {
+      console.log('[Socket.IO] category:deleted event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:category_deleted', { detail: data }));
+    });
+
+    // 12. REAL-TIME CMS: Homepage Cravings, Daily Offers & Banners Events
+    socketInstance.on('homepage:updated', (config) => {
+      console.log('[Socket.IO] homepage:updated event:', config);
+      window.dispatchEvent(new CustomEvent('smartcanteen:homepage_updated', { detail: config }));
+    });
+    socketInstance.on('offer:updated', (offers) => {
+      console.log('[Socket.IO] offer:updated event:', offers);
+      window.dispatchEvent(new CustomEvent('smartcanteen:offer_updated', { detail: offers }));
+    });
+
+    // 13. REAL-TIME CMS: Canteen Payment QR, UPI ID & Canteen Status Events
+    const handleCanteenUpdate = (canteen) => {
+      console.log('[Socket.IO] canteen:updated / payment_qr event:', canteen);
+      window.dispatchEvent(new CustomEvent('smartcanteen:canteen_config_updated', { detail: canteen }));
+    };
+    socketInstance.on('canteen:updated', handleCanteenUpdate);
+    socketInstance.on('canteen:payment_qr_updated', handleCanteenUpdate);
+    socketInstance.on('canteen:status_changed', handleCanteenUpdate);
+
     // Reconnection handling on browser online
     const handleOnline = () => {
       console.log('[Network] Browser came online, restoring socket & data...');

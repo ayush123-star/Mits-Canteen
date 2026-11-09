@@ -71,7 +71,7 @@ const canteenSchema = new mongoose.Schema({
   },
   upiMerchantName: {
     type: String,
-    default: 'Smart Campus Canteen',
+    default: 'Ayush Pandey',
   },
 }, {
   timestamps: true,

@@ -13,6 +13,8 @@ let canteenConfigCache = {
     cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
     featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'],
   },
+  menuItems: null,
+  categories: null,
   updatedAt: Date.now(),
 };
 
@@ -45,6 +47,8 @@ export default async function handler(req, res) {
         upiId: payload.upiId || canteenConfigCache.upiId,
         upiMerchantName: payload.upiMerchantName || payload.name || canteenConfigCache.upiMerchantName,
         homepageConfig: payload.homepageConfig !== undefined ? payload.homepageConfig : canteenConfigCache.homepageConfig,
+        menuItems: Array.isArray(payload.menuItems) ? payload.menuItems : canteenConfigCache.menuItems,
+        categories: Array.isArray(payload.categories) ? payload.categories : canteenConfigCache.categories,
         updatedAt: Date.now(),
       };
       return res.status(200).json({ success: true, config: canteenConfigCache });

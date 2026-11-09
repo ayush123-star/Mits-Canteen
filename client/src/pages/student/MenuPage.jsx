@@ -29,7 +29,7 @@ const CATEGORIES = [
 ];
 
 export const MenuPage = () => {
-  const { menuItems, canteens } = useData();
+  const { menuItems, canteens, categories } = useData();
   const { setIsCartOpen, totalItemCount, total } = useCart();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -38,6 +38,42 @@ export const MenuPage = () => {
   const [selectedFood, setSelectedFood] = useState(null);
 
   const activeCanteen = canteens[0] || { name: 'Main Campus Food Court', isOpen: true };
+
+  // Dynamically constructed Category Tabs from CMS database
+  const categoryTabs = useMemo(() => {
+    const base = [{ id: 'All', label: 'All Items', icon: Utensils }];
+    const rawList = categories && Array.isArray(categories) && categories.length > 0
+      ? categories
+      : [
+          { name: 'Breakfast' },
+          { name: 'Lunch' },
+          { name: 'Fast Food' },
+          { name: 'Snacks' },
+          { name: 'Beverages' },
+          { name: 'Combos' },
+        ];
+
+    const mapped = rawList.map((c) => {
+      const name = typeof c === 'string' ? c : (c.name || 'Category');
+      let IconComp = Utensils;
+      const lower = name.toLowerCase();
+      if (lower.includes('coffee') || lower.includes('beverage') || lower.includes('tea') || lower.includes('shake')) IconComp = Coffee;
+      else if (lower.includes('fast') || lower.includes('burger') || lower.includes('pizza') || lower.includes('maggi')) IconComp = Flame;
+      else if (lower.includes('snack') || lower.includes('sandwich') || lower.includes('samosa') || lower.includes('roll')) IconComp = Sandwich;
+      else if (lower.includes('combo') || lower.includes('thali') || lower.includes('special')) IconComp = Sparkles;
+      return { id: name, label: name, icon: IconComp };
+    });
+
+    const seen = new Set(['all']);
+    const unique = [];
+    for (const item of mapped) {
+      if (!seen.has(item.id.toLowerCase())) {
+        seen.add(item.id.toLowerCase());
+        unique.push(item);
+      }
+    }
+    return [...base, ...unique];
+  }, [categories]);
 
   // Filter & Sort logic
   const filteredFoods = useMemo(() => {
@@ -150,7 +186,7 @@ export const MenuPage = () => {
 
         {/* Category Pills Slider */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-2 border-t border-purple-500/20">
-          {CATEGORIES.map((cat) => {
+          {categoryTabs.map((cat) => {
             const Icon = cat.icon;
             const active = selectedCategory === cat.id;
             return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -14,14 +14,21 @@ import {
   Sparkles,
   AlertCircle,
   DollarSign,
-  X
+  X,
+  FolderPlus
 } from 'lucide-react';
-
-const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Fast Food', 'Snacks', 'Beverages', 'Combos'];
 
 export const MenuManagementPage = () => {
   const { user } = useAuth();
-  const { menuItems, addFoodItem, updateFoodItem, deleteFoodItem, toggleFoodStock } = useData();
+  const {
+    menuItems,
+    addFoodItem,
+    updateFoodItem,
+    deleteFoodItem,
+    toggleFoodStock,
+    categories,
+    addCategory,
+  } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -29,6 +36,16 @@ export const MenuManagementPage = () => {
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingFood, setEditingFood] = useState(null);
+  const [isAddCatModalOpen, setIsAddCatModalOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [catSuccessMsg, setCatSuccessMsg] = useState('');
+
+  // Dynamically computed categories from CMS database
+  const allCategoryNames = useMemo(() => {
+    const defaultList = ['Breakfast', 'Lunch', 'Fast Food', 'Snacks', 'Beverages', 'Combos'];
+    const fromState = (categories || []).map((c) => (typeof c === 'string' ? c : c.name)).filter(Boolean);
+    return ['All', ...new Set([...defaultList, ...fromState])];
+  }, [categories]);
 
   // Form State
   const initialForm = {
@@ -126,13 +143,28 @@ export const MenuManagementPage = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center gap-2 transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Add New Food Item
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setNewCatName('');
+              setCatSuccessMsg('');
+              setIsAddCatModalOpen(true);
+            }}
+            className="px-4 py-3 rounded-2xl bg-[#151C30] hover:bg-[#25334d] border border-purple-500/30 text-purple-200 font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <FolderPlus className="w-4 h-4 text-purple-400" />
+            Add Category
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center gap-2 transition-all shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Add New Food Item
+          </button>
+        </div>
       </div>
 
       {/* 2. Search & Category Filters */}
@@ -163,7 +195,7 @@ export const MenuManagementPage = () => {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="px-3.5 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/20 text-xs font-bold text-white focus:outline-none focus:border-[#7955E8] shrink-0"
           >
-            {CATEGORIES.map((c) => (
+            {allCategoryNames.map((c) => (
               <option key={c} value={c} className="bg-[#151C30] text-white">
                 {c === 'All' ? 'All Categories' : c}
               </option>
@@ -341,7 +373,7 @@ export const MenuManagementPage = () => {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#151C30] border border-purple-500/20 text-white font-bold focus:outline-none focus:border-[#7955E8]"
                   >
-                    {CATEGORIES.filter((c) => c !== 'All').map((c) => (
+                    {allCategoryNames.filter((c) => c !== 'All').map((c) => (
                       <option key={c} value={c} className="bg-[#151C30] text-white">
                         {c}
                       </option>
@@ -451,6 +483,85 @@ export const MenuManagementPage = () => {
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-extrabold shadow-md shadow-purple-500/30 transition-all"
                 >
                   {editingFood ? 'Update Food Dish' : 'Create & Publish Dish'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* 5. Add Category Modal */}
+      {isAddCatModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md bg-[#1C263A] rounded-3xl border border-purple-500/30 p-6 shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center">
+                  <FolderPlus className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Add New Food Category</h3>
+                  <p className="text-[11px] text-[#AAB3C5]">Real-time synchronization across User & Owner websites</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddCatModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-[#151C30] hover:bg-[#25334d] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {catSuccessMsg && (
+              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>{catSuccessMsg}</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newCatName.trim()) return;
+                await addCategory({ name: newCatName.trim() });
+                setCatSuccessMsg(`Category "${newCatName.trim()}" published live!`);
+                setTimeout(() => {
+                  setCatSuccessMsg('');
+                  setNewCatName('');
+                  setIsAddCatModalOpen(false);
+                }, 1200);
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <label className="font-bold text-[#AAB3C5] uppercase tracking-wider block mb-1.5">
+                  Category Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="e.g. South Indian, Chinese, Shakes, Desserts..."
+                  className="w-full px-4 py-3 rounded-2xl bg-[#151C30] border border-purple-500/30 text-white font-bold focus:outline-none focus:border-[#7955E8]"
+                  autoFocus
+                />
+              </div>
+
+              <div className="pt-2 border-t border-purple-500/20 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCatModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl font-bold text-[#AAB3C5] hover:text-white hover:bg-[#151C30] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:opacity-95 text-white font-extrabold shadow-md shadow-purple-500/30 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  Publish Category Live
                 </button>
               </div>
             </form>

@@ -571,9 +571,24 @@ export const broadcastCanteenConfig = (configData) => {
   // 2. Also publish to TOPIC_EVENTS (for active listeners)
   publishMqtt(TOPIC_EVENTS, payload, { qos: 1 });
 
-  // 3. HTTP sync to Vercel API
+  // 3. HTTP sync to Vercel API with full menu and category snapshot for cross-device consistency
   try {
-    axios.post(CENTRAL_CANTEEN_API, configData).catch((err) => {
+    let savedMenu = null;
+    let savedCategories = null;
+    try {
+      const rawMenu = localStorage.getItem('smart_canteen_menu');
+      if (rawMenu) savedMenu = JSON.parse(rawMenu);
+      const rawCat = localStorage.getItem('smart_canteen_categories');
+      if (rawCat) savedCategories = JSON.parse(rawCat);
+    } catch (_) {}
+
+    const postPayload = {
+      ...configData,
+      ...(savedMenu ? { menuItems: savedMenu } : {}),
+      ...(savedCategories ? { categories: savedCategories } : {}),
+    };
+
+    axios.post(CENTRAL_CANTEEN_API, postPayload).catch((err) => {
       console.debug('[RealtimeSync] Canteen config API notice:', err.message);
     });
   } catch (_) {}
@@ -600,7 +615,22 @@ export const broadcastHomepageConfig = (homepageConfig) => {
 
   // 3. HTTP sync to Vercel API
   try {
-    axios.post(CENTRAL_CANTEEN_API, { homepageConfig }).catch((err) => {
+    let savedMenu = null;
+    let savedCategories = null;
+    try {
+      const rawMenu = localStorage.getItem('smart_canteen_menu');
+      if (rawMenu) savedMenu = JSON.parse(rawMenu);
+      const rawCat = localStorage.getItem('smart_canteen_categories');
+      if (rawCat) savedCategories = JSON.parse(rawCat);
+    } catch (_) {}
+
+    const postPayload = {
+      homepageConfig,
+      ...(savedMenu ? { menuItems: savedMenu } : {}),
+      ...(savedCategories ? { categories: savedCategories } : {}),
+    };
+
+    axios.post(CENTRAL_CANTEEN_API, postPayload).catch((err) => {
       console.debug('[RealtimeSync] Homepage config API notice:', err.message);
     });
   } catch (_) {}

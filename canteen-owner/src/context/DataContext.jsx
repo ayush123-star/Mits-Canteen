@@ -125,6 +125,26 @@ export const DataProvider = ({ children }) => {
     return list.map((item) => ({ ...item, _id: item._id || item.id, id: item.id || item._id }));
   });
 
+  const DEFAULT_CATEGORIES = [
+    { id: 'cat-1', name: 'Breakfast', icon: 'SunMedium', displayOrder: 1 },
+    { id: 'cat-2', name: 'Lunch', icon: 'Utensils', displayOrder: 2 },
+    { id: 'cat-3', name: 'Fast Food', icon: 'Flame', displayOrder: 3 },
+    { id: 'cat-4', name: 'Snacks', icon: 'Cookie', displayOrder: 4 },
+    { id: 'cat-5', name: 'Beverages', icon: 'Coffee', displayOrder: 5 },
+    { id: 'cat-6', name: 'Combos', icon: 'Layers', displayOrder: 6 },
+  ];
+
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('smart_canteen_categories');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+    }
+    return DEFAULT_CATEGORIES;
+  });
+
   const [inventoryItems, setInventoryItems] = useState(() => {
     const saved = localStorage.getItem('smart_canteen_inventory');
     return saved ? JSON.parse(saved) : INITIAL_INVENTORY_ITEMS;
@@ -286,6 +306,11 @@ export const DataProvider = ({ children }) => {
 
     // 3. Cross-device MQTT & Cloud API broadcast (sub-100ms)
     broadcastHomepageConfig(updatedConfig);
+
+    // 4. Save to MongoDB backend and emit Socket.IO events
+    try {
+      axios.put('/api/homepage', updatedConfig).catch(() => {});
+    } catch (_) {}
   };
 
   const getTodayDiscount = () => {
@@ -308,10 +333,12 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     const syncBackendData = async () => {
       try {
-        const [canteenRes, foodRes, invRes, recRes, inviRes, feedRes, auditRes] =
+        const [canteenRes, foodRes, catRes, hpRes, invRes, recRes, inviRes, feedRes, auditRes] =
           await Promise.allSettled([
             axios.get('/api/canteens'),
             axios.get('/api/food'),
+            axios.get('/api/categories'),
+            axios.get('/api/homepage'),
             axios.get('/api/inventory'),
             axios.get('/api/recipes'),
             axios.get('/api/invitations'),
@@ -329,6 +356,24 @@ export const DataProvider = ({ children }) => {
             _id: item._id || item.id,
           }));
           setMenuItems(fetchedMenu);
+        }
+        if (catRes.status === 'fulfilled' && catRes.value.data?.success && catRes.value.data.data?.length > 0) {
+          setCategories(catRes.value.data.data);
+        }
+        if (hpRes.status === 'fulfilled' && hpRes.value.data?.success && hpRes.value.data.data) {
+          const hpData = hpRes.value.data.data;
+          setHomepageConfig((prev) => ({
+            ...prev,
+            ...hpData,
+            dailyDiscounts: {
+              ...prev.dailyDiscounts,
+              ...(hpData.dailyDiscounts || {}),
+            },
+            specialOfferBanner: {
+              ...prev.specialOfferBanner,
+              ...(hpData.specialOfferBanner || {}),
+            },
+          }));
         }
         if (invRes.status === 'fulfilled' && invRes.value.data?.success && invRes.value.data.data?.length > 0) {
           const fetchedInv = invRes.value.data.data.map((item) => ({
@@ -406,6 +451,20 @@ export const DataProvider = ({ children }) => {
               localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
             } catch (_) {}
             return merged;
+          });
+        }
+
+        if (Array.isArray(cfg.menuItems) && cfg.menuItems.length > 0) {
+          setMenuItems((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(cfg.menuItems)) return prev;
+            return cfg.menuItems;
+          });
+        }
+
+        if (Array.isArray(cfg.categories) && cfg.categories.length > 0) {
+          setCategories((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(cfg.categories)) return prev;
+            return cfg.categories;
           });
         }
       });
@@ -489,6 +548,129 @@ export const DataProvider = ({ children }) => {
       window.removeEventListener('smartcanteen:whatsapp_alert', handleWhatsAppAlert);
     };
   }, []);
+
+  // Real-time CMS Synchronization Listeners (Food items, categories, homepage cravings, canteen payment QR)
+  useEffect(() => {
+    const onFoodCreated = (e) => {
+      const item = e.detail;
+      if (!item) return;
+      const normalized = { ...item, id: item._id || item.id, _id: item._id || item.id };
+      setMenuItems((prev) => {
+        if (prev.some((i) => i.id === normalized.id || i._id === normalized._id)) {
+          return prev.map((i) => (i.id === normalized.id || i._id === normalized._id ? normalized : i));
+        }
+        return [normalized, ...prev];
+      });
+    };
+
+    const onFoodUpdated = (e) => {
+      const item = e.detail;
+      if (!item) return;
+      const normalized = { ...item, id: item._id || item.id, _id: item._id || item.id };
+      setMenuItems((prev) =>
+        prev.map((i) => (i.id === normalized.id || i._id === normalized._id ? { ...i, ...normalized } : i))
+      );
+    };
+
+    const onStockChanged = (e) => {
+      const data = e.detail;
+      if (!data) return;
+      const targetId = data.id || data._id;
+      setMenuItems((prev) =>
+        prev.map((i) => (i.id === targetId || i._id === targetId ? { ...i, isAvailable: data.isAvailable } : i))
+      );
+    };
+
+    const onFoodDeleted = (e) => {
+      const data = e.detail;
+      if (!data) return;
+      const targetId = data.id || data._id;
+      setMenuItems((prev) => prev.filter((i) => i.id !== targetId && i._id !== targetId));
+      setHomepageConfig((prev) => ({
+        ...prev,
+        featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== targetId),
+      }));
+    };
+
+    const onCategoryCreated = (e) => {
+      const cat = e.detail;
+      if (!cat) return;
+      setCategories((prev) => {
+        if (prev.some((c) => c.name === cat.name || c._id === cat._id)) return prev;
+        return [...prev, cat];
+      });
+    };
+
+    const onCategoryUpdated = (e) => {
+      const cat = e.detail;
+      if (!cat) return;
+      setCategories((prev) =>
+        prev.map((c) => (c._id === cat._id || c.id === cat.id || c.name === cat.name ? { ...c, ...cat } : c))
+      );
+    };
+
+    const onCategoryDeleted = (e) => {
+      const data = e.detail;
+      if (!data) return;
+      setCategories((prev) => prev.filter((c) => c._id !== data.id && c.id !== data.id && c.name !== data.name));
+    };
+
+    const onHomepageUpdated = (e) => {
+      const hp = e.detail;
+      if (!hp) return;
+      setHomepageConfig((prev) => ({ ...prev, ...hp }));
+    };
+
+    const onCanteenConfigUpdated = (e) => {
+      const canteenData = e.detail;
+      if (!canteenData) return;
+      setCanteens((prev) =>
+        prev.map((c) => {
+          if (c.id === canteenData.id || c._id === canteenData.id || c.id === 'canteen-1' || (!c.id && !c._id)) {
+            return {
+              ...c,
+              qrCodeImage: canteenData.qrCodeImage !== undefined ? canteenData.qrCodeImage : c.qrCodeImage,
+              upiId: canteenData.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+              upiMerchantName: canteenData.upiMerchantName || canteenData.name || c.upiMerchantName || 'Ayush Pandey',
+              isOpen: canteenData.isOpen !== undefined ? canteenData.isOpen : c.isOpen,
+              status: canteenData.status || c.status,
+            };
+          }
+          return c;
+        })
+      );
+    };
+
+    window.addEventListener('smartcanteen:food_created', onFoodCreated);
+    window.addEventListener('smartcanteen:food_updated', onFoodUpdated);
+    window.addEventListener('smartcanteen:food_stock_changed', onStockChanged);
+    window.addEventListener('smartcanteen:food_deleted', onFoodDeleted);
+    window.addEventListener('smartcanteen:category_created', onCategoryCreated);
+    window.addEventListener('smartcanteen:category_updated', onCategoryUpdated);
+    window.addEventListener('smartcanteen:category_deleted', onCategoryDeleted);
+    window.addEventListener('smartcanteen:homepage_updated', onHomepageUpdated);
+    window.addEventListener('smartcanteen:offer_updated', onHomepageUpdated);
+    window.addEventListener('smartcanteen:canteen_config_updated', onCanteenConfigUpdated);
+
+    return () => {
+      window.removeEventListener('smartcanteen:food_created', onFoodCreated);
+      window.removeEventListener('smartcanteen:food_updated', onFoodUpdated);
+      window.removeEventListener('smartcanteen:food_stock_changed', onStockChanged);
+      window.removeEventListener('smartcanteen:food_deleted', onFoodDeleted);
+      window.removeEventListener('smartcanteen:category_created', onCategoryCreated);
+      window.removeEventListener('smartcanteen:category_updated', onCategoryUpdated);
+      window.removeEventListener('smartcanteen:category_deleted', onCategoryDeleted);
+      window.removeEventListener('smartcanteen:homepage_updated', onHomepageUpdated);
+      window.removeEventListener('smartcanteen:offer_updated', onHomepageUpdated);
+      window.removeEventListener('smartcanteen:canteen_config_updated', onCanteenConfigUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('smart_canteen_categories', JSON.stringify(categories));
+    } catch (_) {}
+  }, [categories]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -726,6 +908,20 @@ export const DataProvider = ({ children }) => {
               localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
             } catch (_) {}
             return merged;
+          });
+        }
+
+        if (Array.isArray(cfg.menuItems) && cfg.menuItems.length > 0) {
+          setMenuItems((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(cfg.menuItems)) return prev;
+            return cfg.menuItems;
+          });
+        }
+
+        if (Array.isArray(cfg.categories) && cfg.categories.length > 0) {
+          setCategories((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(cfg.categories)) return prev;
+            return cfg.categories;
           });
         }
         return;
@@ -1455,89 +1651,191 @@ export const DataProvider = ({ children }) => {
   };
 
   // ==========================================
-  // MENU MANAGEMENT
+  // MENU & CATEGORY MANAGEMENT (REAL-TIME CMS)
   // ==========================================
-  const addFoodItem = (foodData) => {
+  const addFoodItem = async (foodData) => {
+    const tempId = 'food-' + Date.now();
     const newItem = {
       ...foodData,
-      id: 'food-' + Date.now(),
+      id: tempId,
+      _id: tempId,
       rating: 5.0,
       reviewCount: 0,
       isAvailable: true,
     };
+
     setMenuItems((prev) => {
       const next = [newItem, ...prev];
       try {
         localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
       } catch (_) {}
-      if (ordersBroadcastRef.current) {
-        try {
-          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
-        } catch (_) {}
-      }
-      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
       return next;
     });
+
     logActivity('Canteen Admin', 'FOOD_ADDED', 'MENU', `Added new dish: ${newItem.name} (₹${newItem.price})`);
+
+    // Broadcast instantly to all tabs & devices
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_CREATED', item: newItem });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'FOOD_CREATED', item: newItem });
+
+    // Save permanently to MongoDB backend & trigger Socket.IO emit
+    try {
+      const res = await axios.post('/api/food', foodData);
+      if (res.data?.data) {
+        const savedItem = { ...res.data.data, id: res.data.data._id, _id: res.data.data._id };
+        setMenuItems((prev) => {
+          const updated = prev.map((i) => (i.id === tempId ? savedItem : i));
+          try {
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
+        });
+        return savedItem;
+      }
+    } catch (err) {
+      console.warn('Backend food save notice (running optimistic):', err.message);
+    }
     return newItem;
   };
 
-  const updateFoodItem = (foodId, updatedData) => {
+  const updateFoodItem = async (foodId, updatedData) => {
     setMenuItems((prev) => {
-      const next = prev.map((item) => (item.id === foodId ? { ...item, ...updatedData } : item));
+      const next = prev.map((item) =>
+        item.id === foodId || item._id === foodId ? { ...item, ...updatedData } : item
+      );
       try {
         localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
       } catch (_) {}
-      if (ordersBroadcastRef.current) {
-        try {
-          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
-        } catch (_) {}
-      }
-      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
       return next;
     });
-    logActivity('Canteen Admin', 'FOOD_UPDATED', 'MENU', `Updated dish: ${updatedData.name}`);
+
+    logActivity('Canteen Admin', 'FOOD_UPDATED', 'MENU', `Updated dish: ${updatedData.name || foodId}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_UPDATED', foodId, updatedData });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'FOOD_UPDATED', foodId, updatedData });
+
+    try {
+      await axios.put(`/api/food/${foodId}`, updatedData);
+    } catch (err) {
+      console.warn('Backend food update notice (running optimistic):', err.message);
+    }
   };
 
-  const deleteFoodItem = (foodId) => {
-    const item = menuItems.find((i) => i.id === foodId);
+  const deleteFoodItem = async (foodId) => {
+    const item = menuItems.find((i) => i.id === foodId || i._id === foodId);
     setMenuItems((prev) => {
-      const next = prev.filter((i) => i.id !== foodId);
+      const next = prev.filter((i) => i.id !== foodId && i._id !== foodId);
       try {
         localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
       } catch (_) {}
-      if (ordersBroadcastRef.current) {
-        try {
-          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
-        } catch (_) {}
-      }
-      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
       return next;
     });
+
+    setHomepageConfig((prev) => ({
+      ...prev,
+      featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== foodId),
+    }));
+
     logActivity('Canteen Admin', 'FOOD_DELETED', 'MENU', `Removed dish: ${item?.name || foodId}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_DELETED', foodId });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'FOOD_DELETED', foodId });
+
+    try {
+      await axios.delete(`/api/food/${foodId}`);
+    } catch (err) {
+      console.warn('Backend food delete notice (running optimistic):', err.message);
+    }
   };
 
-  const toggleFoodStock = (foodId) => {
+  const toggleFoodStock = async (foodId) => {
+    let nextAvailable = true;
     setMenuItems((prev) => {
       const next = prev.map((item) => {
-        if (item.id === foodId) {
-          const nextState = !item.isAvailable;
-          logActivity('Canteen Admin', 'STOCK_TOGGLE', 'MENU', `Toggled ${item.name} to ${nextState ? 'In Stock' : 'Sold Out'}`);
-          return { ...item, isAvailable: nextState };
+        if (item.id === foodId || item._id === foodId) {
+          nextAvailable = !item.isAvailable;
+          logActivity('Canteen Admin', 'STOCK_TOGGLE', 'MENU', `Toggled ${item.name} to ${nextAvailable ? 'In Stock' : 'Sold Out'}`);
+          return { ...item, isAvailable: nextAvailable };
         }
         return item;
       });
       try {
         localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
       } catch (_) {}
-      if (ordersBroadcastRef.current) {
-        try {
-          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
-        } catch (_) {}
-      }
-      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
       return next;
     });
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_STOCK_CHANGED', foodId, isAvailable: nextAvailable });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'FOOD_STOCK_CHANGED', foodId, isAvailable: nextAvailable });
+
+    try {
+      await axios.patch(`/api/food/${foodId}/toggle-stock`);
+    } catch (err) {
+      console.warn('Backend stock toggle notice (running optimistic):', err.message);
+    }
+  };
+
+  const addCategory = async (catData) => {
+    const newCat = {
+      id: 'cat-' + Date.now(),
+      name: catData.name,
+      icon: catData.icon || 'Utensils',
+      description: catData.description || '',
+      displayOrder: catData.displayOrder || categories.length + 1,
+      isActive: true,
+    };
+
+    setCategories((prev) => [...prev, newCat]);
+    publishOrderEvent({ type: 'CATEGORY_CREATED', category: newCat });
+
+    try {
+      const res = await axios.post('/api/categories', catData);
+      if (res.data?.data) {
+        setCategories((prev) => prev.map((c) => (c.id === newCat.id ? res.data.data : c)));
+      }
+    } catch (err) {
+      console.warn('Backend category save notice:', err.message);
+    }
+  };
+
+  const updateCategory = async (catId, updatedData) => {
+    setCategories((prev) =>
+      prev.map((c) => (c._id === catId || c.id === catId ? { ...c, ...updatedData } : c))
+    );
+    publishOrderEvent({ type: 'CATEGORY_UPDATED', catId, updatedData });
+
+    try {
+      await axios.put(`/api/categories/${catId}`, updatedData);
+    } catch (err) {
+      console.warn('Backend category update notice:', err.message);
+    }
+  };
+
+  const deleteCategory = async (catId) => {
+    setCategories((prev) => prev.filter((c) => c._id !== catId && c.id !== catId));
+    publishOrderEvent({ type: 'CATEGORY_DELETED', catId });
+
+    try {
+      await axios.delete(`/api/categories/${catId}`);
+    } catch (err) {
+      console.warn('Backend category delete notice:', err.message);
+    }
   };
 
   // ==========================================
@@ -1722,6 +2020,11 @@ export const DataProvider = ({ children }) => {
       } catch (_) {}
     }
     broadcastCanteenConfig(updatedCanteenObj);
+
+    // Save to MongoDB backend and emit Socket.IO events
+    try {
+      axios.patch(`/api/canteens/${canteenId || 'canteen-1'}/payment-qr`, qrPayload).catch(() => {});
+    } catch (_) {}
   };
 
   const changeUserPassword = (userId, newPassword) => {
@@ -1759,6 +2062,10 @@ export const DataProvider = ({ children }) => {
       value={{
         users,
         canteens,
+        categories,
+        addCategory,
+        updateCategory,
+        deleteCategory,
         menuItems,
         inventoryItems,
         recipes,
