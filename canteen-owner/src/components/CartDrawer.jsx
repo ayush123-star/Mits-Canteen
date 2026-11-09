@@ -12,7 +12,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  UtensilsCrossed,
+  CheckCircle2
 } from 'lucide-react';
 
 export const CartDrawer = ({ onCheckoutClick }) => {
@@ -34,10 +36,33 @@ export const CartDrawer = ({ onCheckoutClick }) => {
     setPickupOption,
     scheduledTime,
     setScheduledTime,
+    orderNotes,
+    setOrderNotes,
   } = useCart();
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [couponSuccessMsg, setCouponSuccessMsg] = useState('');
+  const [cartOnionPref, setCartOnionPref] = useState('regular');
+  const [cartSpice, setCartSpice] = useState('medium');
+  const [customInstruction, setCustomInstruction] = useState('');
+
+  const handleUpdatePreferences = (onion, spice, custom) => {
+    setCartOnionPref(onion);
+    setCartSpice(spice);
+    setCustomInstruction(custom);
+
+    const parts = [];
+    if (onion === 'jain') parts.push('🚫 No Onion & Garlic (Jain)');
+    else parts.push('🧅 With Onion');
+    if (spice === 'mild') parts.push('🟢 Mild');
+    else if (spice === 'spicy') parts.push('🔥 Extra Spicy');
+    else parts.push('🟡 Medium Spice');
+    if (custom && custom.trim()) parts.push(custom.trim());
+
+    if (setOrderNotes) {
+      setOrderNotes(parts.join(' • '));
+    }
+  };
 
   if (!isCartOpen) return null;
 
@@ -205,6 +230,87 @@ export const CartDrawer = ({ onCheckoutClick }) => {
                     <option value="3:30 PM - Tea & Snack Break">☕ 3:30 PM - Evening Tea Break</option>
                     <option value="5:15 PM - End of Day Break">🎒 5:15 PM - End of Lectures</option>
                   </select>
+                </div>
+
+                {/* Kitchen Preparation Preferences & Notes */}
+                <div className="p-4 rounded-2xl bg-[#1C263A]/80 border border-purple-500/25 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <UtensilsCrossed className="w-3.5 h-3.5 text-purple-400" />
+                      Kitchen Preparation Preferences
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                      Tray Notes
+                    </span>
+                  </div>
+
+                  {/* Onion & Garlic Preference */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold text-slate-300">Onion & Garlic:</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdatePreferences('regular', cartSpice, customInstruction)}
+                        className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1 cursor-pointer ${
+                          cartOnionPref === 'regular'
+                            ? 'bg-purple-500/25 border-purple-400 text-white'
+                            : 'bg-[#151C30] border-purple-500/20 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>🧅 With Onion</span>
+                        {cartOnionPref === 'regular' && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdatePreferences('jain', cartSpice, customInstruction)}
+                        className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1 cursor-pointer ${
+                          cartOnionPref === 'jain'
+                            ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
+                            : 'bg-[#151C30] border-purple-500/20 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>🚫 No Onion / Jain</span>
+                        {cartOnionPref === 'jain' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Spice Level */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold text-slate-300">Spice Level:</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'mild', label: '🟢 Mild' },
+                        { id: 'medium', label: '🟡 Medium' },
+                        { id: 'spicy', label: '🔴 Spicy 🔥' },
+                      ].map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => handleUpdatePreferences(cartOnionPref, s.id, customInstruction)}
+                          className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all text-center cursor-pointer ${
+                            cartSpice === s.id
+                              ? 'bg-purple-500/25 border-purple-400 text-white'
+                              : 'bg-[#151C30] border-purple-500/20 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Kitchen Special Note Input */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-300">Special Instructions for Counter:</span>
+                    <input
+                      type="text"
+                      value={customInstruction}
+                      onChange={(e) => handleUpdatePreferences(cartOnionPref, cartSpice, e.target.value)}
+                      placeholder="e.g. Keep chutney separate, less oil, pack hot..."
+                      className="w-full text-xs px-3 py-2 rounded-xl bg-[#151C30] border border-purple-500/30 text-white placeholder-slate-500 focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
                 </div>
 
                 {/* Coupon Code Section */}

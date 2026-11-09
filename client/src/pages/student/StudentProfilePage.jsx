@@ -25,8 +25,6 @@ export const StudentProfilePage = () => {
   const { orders } = useData();
 
   const [phone, setPhone] = useState(user?.phone || '+91 90395 67623');
-  const [dietPref, setDietPref] = useState('Vegetarian');
-  const [spicePref, setSpicePref] = useState('Medium');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Filter orders strictly for the logged-in user
@@ -152,12 +150,12 @@ export const StudentProfilePage = () => {
         </div>
       </div>
 
-      {/* 3. Personal Profile Details & Preferences (Clean Single-Card Layout) */}
+      {/* 3. Personal Profile & Contact Details (Clean Single-Card Layout) */}
       <div className="bg-[#141A29] rounded-3xl border border-purple-500/25 shadow-xl p-6 sm:p-8 space-y-6">
         <div className="flex items-center justify-between pb-3 border-b border-purple-500/20">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <User className="w-5 h-5 text-purple-400" />
-            <span>Profile Details & Dining Preferences</span>
+            <span>Personal Profile & Contact Details</span>
           </h2>
           <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -168,7 +166,7 @@ export const StudentProfilePage = () => {
         {saveSuccess && (
           <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Profile preferences updated successfully!</span>
+            <span>Contact details updated successfully!</span>
           </div>
         )}
 
@@ -244,46 +242,13 @@ export const StudentProfilePage = () => {
             </div>
           </div>
 
-          {/* Food Preferences */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div>
-              <label className="text-xs font-bold text-slate-400 block mb-1 uppercase tracking-wider">
-                Dietary Preference
-              </label>
-              <select
-                value={dietPref}
-                onChange={(e) => setDietPref(e.target.value)}
-                className="w-full px-3 py-3 rounded-xl bg-[#0E1320] border border-purple-500/30 text-xs font-bold text-white focus:outline-none focus:border-purple-400 cursor-pointer"
-              >
-                <option value="Vegetarian">Pure Vegetarian (100% Veg)</option>
-                <option value="Jain">Jain (No Onion & Garlic)</option>
-                <option value="Vegan">Vegan (Plant-Based)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-400 block mb-1 uppercase tracking-wider">
-                Spice Tolerance
-              </label>
-              <select
-                value={spicePref}
-                onChange={(e) => setSpicePref(e.target.value)}
-                className="w-full px-3 py-3 rounded-xl bg-[#0E1320] border border-purple-500/30 text-xs font-bold text-white focus:outline-none focus:border-purple-400 cursor-pointer"
-              >
-                <option value="Mild">Mild / Low Spice</option>
-                <option value="Medium">Medium</option>
-                <option value="Spicy">Spicy & Hot 🔥</option>
-              </select>
-            </div>
-          </div>
-
           <button
             type="submit"
             className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer mt-4"
           >
             <span className="flex items-center justify-center gap-2">
               <Save className="w-4 h-4" />
-              Save Preferences
+              Save Contact Details
             </span>
           </button>
         </form>
