@@ -48,7 +48,10 @@ let canteenConfigCache = {
       minOrderValue: 99,
     },
   },
-  menuItems: Array.isArray(canonicalData.menuItems) ? canonicalData.menuItems : null,
+  deletedFoodIds: ['food-12'],
+  menuItems: Array.isArray(canonicalData.menuItems)
+    ? canonicalData.menuItems.filter((m) => m.id !== 'food-12' && m._id !== 'food-12')
+    : null,
   categories: DEFAULT_CATEGORIES,
   inventoryItems: Array.isArray(canonicalData.inventoryItems) ? canonicalData.inventoryItems : null,
   recipes: Array.isArray(canonicalData.recipes) ? canonicalData.recipes : null,
@@ -61,17 +64,24 @@ function loadDiskCache() {
       const content = fs.readFileSync(CACHE_FILE, 'utf-8');
       const data = JSON.parse(content);
       if (data && typeof data === 'object') {
+        const mergedDeleted = Array.from(new Set([...(canteenConfigCache.deletedFoodIds || []), ...(data.deletedFoodIds || [])]));
         canteenConfigCache = {
           ...canteenConfigCache,
           ...data,
+          deletedFoodIds: mergedDeleted,
           homepageConfig: {
             ...canteenConfigCache.homepageConfig,
             ...(data.homepageConfig || {}),
             featuredCravingsIds: Array.isArray(data.homepageConfig?.featuredCravingsIds)
-              ? data.homepageConfig.featuredCravingsIds
+              ? data.homepageConfig.featuredCravingsIds.filter((id) => !mergedDeleted.includes(id))
               : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
           },
         };
+        if (Array.isArray(canteenConfigCache.menuItems)) {
+          canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter(
+            (m) => !mergedDeleted.includes(m.id) && !mergedDeleted.includes(m._id)
+          );
+        }
       }
     }
   } catch (_) {}
@@ -133,9 +143,14 @@ export default async function handler(req, res) {
         };
       }
 
+      if (Array.isArray(payload.deletedFoodIds)) {
+        canteenConfigCache.deletedFoodIds = Array.from(new Set([...(canteenConfigCache.deletedFoodIds || []), ...payload.deletedFoodIds]));
+      }
+
       if (Array.isArray(payload.menuItems)) {
-        canteenConfigCache.menuItems = payload.menuItems;
-        const activeIds = new Set(payload.menuItems.map((m) => m.id || m._id));
+        const deletedSet = new Set(canteenConfigCache.deletedFoodIds || []);
+        canteenConfigCache.menuItems = payload.menuItems.filter((m) => !deletedSet.has(m.id) && !deletedSet.has(m._id));
+        const activeIds = new Set(canteenConfigCache.menuItems.map((m) => m.id || m._id));
         if (canteenConfigCache.homepageConfig?.featuredCravingsIds) {
           canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => activeIds.has(id));
         }
@@ -144,6 +159,7 @@ export default async function handler(req, res) {
       canteenConfigCache = {
         ...canteenConfigCache,
         ...payload,
+        deletedFoodIds: canteenConfigCache.deletedFoodIds,
         qrCodeImage: payload.qrCodeImage !== undefined ? payload.qrCodeImage : canteenConfigCache.qrCodeImage,
         upiId: payload.upiId || canteenConfigCache.upiId,
         upiMerchantName: payload.upiMerchantName || payload.name || canteenConfigCache.upiMerchantName,
@@ -158,11 +174,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
-    // DELETE: Delete a food item or inventory SKU from cache
+    // DELETE: Delete a food item or inventory SKU from cache permanently
     if (req.method === 'DELETE') {
       const foodId = req.query?.foodId || req.body?.foodId;
-      if (foodId && Array.isArray(canteenConfigCache.menuItems)) {
-        canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => m.id !== foodId && m._id !== foodId);
+      if (foodId) {
+        canteenConfigCache.deletedFoodIds = Array.from(new Set([...(canteenConfigCache.deletedFoodIds || []), foodId]));
+        if (Array.isArray(canteenConfigCache.menuItems)) {
+          canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => m.id !== foodId && m._id !== foodId);
+        }
         if (canteenConfigCache.homepageConfig?.featuredCravingsIds) {
           canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => id !== foodId);
         }
@@ -171,7 +190,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
-    // GET: Fetch current canteen config
+    // GET: Fetch current canteen config (Always filter out any deleted dishes)
+    if (Array.isArray(canteenConfigCache.menuItems) && Array.isArray(canteenConfigCache.deletedFoodIds)) {
+      const delSet = new Set(canteenConfigCache.deletedFoodIds);
+      canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => !delSet.has(m.id) && !delSet.has(m._id));
+    }
     return res.status(200).json({ success: true, config: canteenConfigCache });
   } catch (err) {
     return res.status(200).json({ success: true, config: canteenConfigCache });

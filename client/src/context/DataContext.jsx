@@ -120,9 +120,19 @@ export const DataProvider = ({ children }) => {
   });
 
   const [menuItems, setMenuItems] = useState(() => {
+    let deleted = ['food-12'];
+    try {
+      const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+      if (rawDel) {
+        const parsed = JSON.parse(rawDel);
+        if (Array.isArray(parsed)) deleted = Array.from(new Set([...deleted, ...parsed]));
+      }
+    } catch (_) {}
     const saved = localStorage.getItem('smart_canteen_menu');
     const list = saved ? JSON.parse(saved) : INITIAL_MENU_ITEMS;
-    return list.map((item) => ({ ...item, _id: item._id || item.id, id: item.id || item._id }));
+    return list
+      .filter((item) => !deleted.includes(item.id) && !deleted.includes(item._id))
+      .map((item) => ({ ...item, _id: item._id || item.id, id: item.id || item._id }));
   });
 
   const DEFAULT_CATEGORIES = [
@@ -486,10 +496,28 @@ export const DataProvider = ({ children }) => {
           });
         }
 
+        if (Array.isArray(cfg.deletedFoodIds) && cfg.deletedFoodIds.length > 0) {
+          try {
+            const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+            const localDel = rawDel ? JSON.parse(rawDel) : [];
+            const mergedDel = Array.from(new Set(['food-12', ...(Array.isArray(localDel) ? localDel : []), ...cfg.deletedFoodIds]));
+            localStorage.setItem('smart_canteen_deleted_food_ids', JSON.stringify(mergedDel));
+          } catch (_) {}
+        }
+
         if (Array.isArray(cfg.menuItems) && cfg.menuItems.length > 0) {
+          let curDeleted = ['food-12'];
+          try {
+            const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+            if (rawDel) curDeleted = Array.from(new Set([...curDeleted, ...(JSON.parse(rawDel) || [])]));
+          } catch (_) {}
+          const filteredMenu = cfg.menuItems.filter((m) => !curDeleted.includes(m.id) && !curDeleted.includes(m._id));
           setMenuItems((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(cfg.menuItems)) return prev;
-            return cfg.menuItems;
+            if (JSON.stringify(prev) === JSON.stringify(filteredMenu)) return prev;
+            try {
+              localStorage.setItem('smart_canteen_menu', JSON.stringify(filteredMenu));
+            } catch (_) {}
+            return filteredMenu;
           });
         }
 
@@ -1144,14 +1172,30 @@ export const DataProvider = ({ children }) => {
           });
         }
 
+        const incomingDeleted = cloudEvent.deletedFoodIds || incomingCfg?.deletedFoodIds;
+        if (Array.isArray(incomingDeleted) && incomingDeleted.length > 0) {
+          try {
+            const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+            const localDel = rawDel ? JSON.parse(rawDel) : [];
+            const mergedDel = Array.from(new Set(['food-12', ...(Array.isArray(localDel) ? localDel : []), ...incomingDeleted]));
+            localStorage.setItem('smart_canteen_deleted_food_ids', JSON.stringify(mergedDel));
+          } catch (_) {}
+        }
+
         const incomingMenu = cloudEvent.menuItems || incomingCfg?.menuItems;
         if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
+          let curDeleted = ['food-12'];
+          try {
+            const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+            if (rawDel) curDeleted = Array.from(new Set([...curDeleted, ...(JSON.parse(rawDel) || [])]));
+          } catch (_) {}
+          const cleanMenu = incomingMenu.filter((m) => !curDeleted.includes(m.id) && !curDeleted.includes(m._id));
           setMenuItems((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(incomingMenu)) return prev;
+            if (JSON.stringify(prev) === JSON.stringify(cleanMenu)) return prev;
             try {
-              localStorage.setItem('smart_canteen_menu', JSON.stringify(incomingMenu));
+              localStorage.setItem('smart_canteen_menu', JSON.stringify(cleanMenu));
             } catch (_) {}
-            return incomingMenu;
+            return cleanMenu;
           });
         }
 
@@ -2286,8 +2330,18 @@ export const DataProvider = ({ children }) => {
   const deleteFoodItem = async (foodId) => {
     const item = menuItems.find((i) => i.id === foodId || i._id === foodId);
     let updatedMenu = [];
+    let updatedDeleted = ['food-12', foodId];
+    try {
+      const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+      if (rawDel) {
+        const parsed = JSON.parse(rawDel);
+        if (Array.isArray(parsed)) updatedDeleted = Array.from(new Set([...updatedDeleted, ...parsed]));
+      }
+      localStorage.setItem('smart_canteen_deleted_food_ids', JSON.stringify(updatedDeleted));
+    } catch (_) {}
+
     setMenuItems((prev) => {
-      updatedMenu = prev.filter((i) => i.id !== foodId && i._id !== foodId);
+      updatedMenu = prev.filter((i) => i.id !== foodId && i._id !== foodId && !updatedDeleted.includes(i.id) && !updatedDeleted.includes(i._id));
       try {
         localStorage.setItem('smart_canteen_menu', JSON.stringify(updatedMenu));
       } catch (_) {}
@@ -2319,18 +2373,19 @@ export const DataProvider = ({ children }) => {
         ordersBroadcastRef.current.postMessage({
           type: 'FOOD_DELETED',
           foodId,
+          deletedFoodIds: updatedDeleted,
           menuItems: updatedMenu,
           homepageConfig: nextHp,
         });
       } catch (_) {}
     }
-    publishOrderEvent({ type: 'FOOD_DELETED', foodId, menuItems: updatedMenu, homepageConfig: nextHp });
-    broadcastCanteenConfig({ menuItems: updatedMenu, homepageConfig: nextHp });
+    publishOrderEvent({ type: 'FOOD_DELETED', foodId, deletedFoodIds: updatedDeleted, menuItems: updatedMenu, homepageConfig: nextHp });
+    broadcastCanteenConfig({ deletedFoodIds: updatedDeleted, menuItems: updatedMenu, homepageConfig: nextHp });
 
     try {
-      await axios.delete(`/api/food/${foodId}`);
+      await axios.delete(`/api/canteen-config?foodId=${foodId}`);
     } catch (err) {
-      console.warn('Backend food delete notice (running optimistic):', err.message);
+      console.warn('Backend food delete notice:', err.message);
     }
   };
 

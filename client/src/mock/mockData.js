@@ -370,22 +370,6 @@ export const INITIAL_MENU_ITEMS = [
     reviewCount: 180,
     tags: ['Heavy Breakfast', 'Punjabi'],
   },
-  {
-    id: 'food-12',
-    name: 'Crispy Peri Peri French Fries (Jumbo)',
-    description: 'Golden skin-on potato fries tossed in fiery African peri peri seasoning. Served with creamy garlic dip.',
-    price: 65,
-    category: 'Fast Food',
-    isVeg: true,
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=600&auto=format&fit=crop&q=80',
-    preparationTime: 5,
-    calories: 350,
-    counter: 1,
-    rating: 4.7,
-    reviewCount: 115,
-    tags: ['Crunchy', 'Spicy'],
-  },
 ];
 
 export const INITIAL_INVENTORY_ITEMS = [

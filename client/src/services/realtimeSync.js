@@ -577,9 +577,17 @@ export const broadcastCanteenConfig = (configData) => {
   let savedInventory = null;
   let savedRecipes = null;
   let savedHp = null;
+  let savedDeleted = ['food-12'];
   try {
+    const rawDel = localStorage.getItem('smart_canteen_deleted_food_ids');
+    if (rawDel) savedDeleted = Array.from(new Set([...savedDeleted, ...(JSON.parse(rawDel) || [])]));
     const rawMenu = localStorage.getItem('smart_canteen_menu');
-    if (rawMenu) savedMenu = JSON.parse(rawMenu);
+    if (rawMenu) {
+      const parsedMenu = JSON.parse(rawMenu);
+      if (Array.isArray(parsedMenu)) {
+        savedMenu = parsedMenu.filter((m) => !savedDeleted.includes(m.id) && !savedDeleted.includes(m._id));
+      }
+    }
     const rawCat = localStorage.getItem('smart_canteen_categories');
     if (rawCat) savedCategories = JSON.parse(rawCat);
     const rawInv = localStorage.getItem('smart_canteen_inventory');
@@ -591,6 +599,7 @@ export const broadcastCanteenConfig = (configData) => {
   } catch (_) {}
 
   const postPayload = {
+    deletedFoodIds: savedDeleted,
     ...(savedHp ? { homepageConfig: savedHp } : {}),
     ...configData,
     ...(savedMenu ? { menuItems: savedMenu } : {}),
