@@ -22,13 +22,14 @@ import {
   normalizeOrder,
   isMockOrder,
   broadcastCanteenConfig,
+  broadcastHomepageConfig,
   fetchRemoteCanteenConfig,
 } from '../services/realtimeSync';
 
 export const DEFAULT_HOMEPAGE_CONFIG = {
   cravingsTitle: 'Popular Campus Cravings',
   cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
-  featuredCravingsIds: [], // If empty, auto-displays top rated items
+  featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'], // Default to 4 top rated campus dishes
   dailyDiscounts: {
     Monday: { percent: 10, title: 'Monday Kickstart', active: true },
     Tuesday: { percent: 15, title: 'Tasty Tuesday Feast', active: true },
@@ -207,7 +208,7 @@ export const DataProvider = ({ children }) => {
     if (!saved) return DEFAULT_HOMEPAGE_CONFIG;
     try {
       const parsed = JSON.parse(saved);
-      return {
+      const baseConfig = {
         ...DEFAULT_HOMEPAGE_CONFIG,
         ...parsed,
         dailyDiscounts: {
@@ -219,6 +220,19 @@ export const DataProvider = ({ children }) => {
           ...(parsed.specialOfferBanner || {}),
         },
       };
+
+      // Auto-heal stale localStorage (e.g. if laptop only had 1 dish saved previously)
+      const existingIds = Array.isArray(baseConfig.featuredCravingsIds) ? baseConfig.featuredCravingsIds : [];
+      if (existingIds.length < 4) {
+        const defaults = ['food-1', 'food-2', 'food-3', 'food-5'];
+        const filled = [...existingIds, ...defaults.filter((id) => !existingIds.includes(id))].slice(0, 4);
+        baseConfig.featuredCravingsIds = filled;
+        try {
+          localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
+        } catch (_) {}
+      }
+
+      return baseConfig;
     } catch {
       return DEFAULT_HOMEPAGE_CONFIG;
     }
@@ -238,7 +252,10 @@ export const DataProvider = ({ children }) => {
           ...(newConfig.specialOfferBanner || {}),
         },
       };
-      localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(updated));
+      try {
+        localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(updated));
+      } catch (_) {}
+      broadcastHomepageConfig(updated);
       return updated;
     });
   };
@@ -311,7 +328,7 @@ export const DataProvider = ({ children }) => {
 
     syncBackendData();
 
-    // Fetch and apply latest canteen payment QR & config across all domains
+    // Fetch and apply latest canteen payment QR, UPI config & homepage cravings across all domains
     fetchRemoteCanteenConfig().then((cfg) => {
       if (cfg && (cfg.qrCodeImage || cfg.upiId)) {
         setCanteens((prev) => {
@@ -330,6 +347,27 @@ export const DataProvider = ({ children }) => {
             localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
           } catch (_) {}
           return next;
+        });
+      }
+
+      if (cfg && cfg.homepageConfig) {
+        setHomepageConfig((prev) => {
+          const merged = {
+            ...prev,
+            ...cfg.homepageConfig,
+            dailyDiscounts: {
+              ...prev.dailyDiscounts,
+              ...(cfg.homepageConfig.dailyDiscounts || {}),
+            },
+            specialOfferBanner: {
+              ...prev.specialOfferBanner,
+              ...(cfg.homepageConfig.specialOfferBanner || {}),
+            },
+          };
+          try {
+            localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
         });
       }
     });
@@ -546,25 +584,49 @@ export const DataProvider = ({ children }) => {
         return;
       }
 
-      if (type === 'CANTEEN_CONFIG_SYNC' && (cloudEvent.config || cloudEvent.canteen)) {
+      if (type === 'CANTEEN_CONFIG_SYNC') {
         const incomingCfg = cloudEvent.config || cloudEvent.canteen;
-        setCanteens((prev) => {
-          const next = prev.map((c) => {
-            if (c.id === incomingCfg.id || c._id === incomingCfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
-              return {
-                ...c,
-                qrCodeImage: incomingCfg.qrCodeImage !== undefined ? incomingCfg.qrCodeImage : c.qrCodeImage,
-                upiId: incomingCfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
-                upiMerchantName: incomingCfg.upiMerchantName || incomingCfg.name || c.upiMerchantName || 'Ayush Pandey',
-              };
-            }
-            return c;
+        if (incomingCfg && (incomingCfg.qrCodeImage !== undefined || incomingCfg.upiId)) {
+          setCanteens((prev) => {
+            const next = prev.map((c) => {
+              if (c.id === incomingCfg.id || c._id === incomingCfg.id || (!c.id && !c._id) || c.id === 'canteen-1') {
+                return {
+                  ...c,
+                  qrCodeImage: incomingCfg.qrCodeImage !== undefined ? incomingCfg.qrCodeImage : c.qrCodeImage,
+                  upiId: incomingCfg.upiId || c.upiId || 'pandeyayush1603-1@okicici',
+                  upiMerchantName: incomingCfg.upiMerchantName || incomingCfg.name || c.upiMerchantName || 'Ayush Pandey',
+                };
+              }
+              return c;
+            });
+            try {
+              localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
+            } catch (_) {}
+            return next;
           });
-          try {
-            localStorage.setItem('smart_canteen_canteens', JSON.stringify(next));
-          } catch (_) {}
-          return next;
-        });
+        }
+
+        const incomingHp = cloudEvent.homepageConfig || incomingCfg?.homepageConfig;
+        if (incomingHp) {
+          setHomepageConfig((prev) => {
+            const merged = {
+              ...prev,
+              ...incomingHp,
+              dailyDiscounts: {
+                ...prev.dailyDiscounts,
+                ...(incomingHp.dailyDiscounts || {}),
+              },
+              specialOfferBanner: {
+                ...prev.specialOfferBanner,
+                ...(incomingHp.specialOfferBanner || {}),
+              },
+            };
+            try {
+              localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
+            } catch (_) {}
+            return merged;
+          });
+        }
         return;
       }
 

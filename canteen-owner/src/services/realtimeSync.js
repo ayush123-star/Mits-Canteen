@@ -104,12 +104,13 @@ const getMqttClient = () => {
             } catch (_) {}
           });
         } else if (topic === TOPIC_CANTEEN_CONFIG) {
-          // Retained/instant canteen config & payment QR sync
+          // Retained/instant canteen config, payment QR, and homepage cravings sync
           subscribers.forEach((callback) => {
             try {
               callback({
                 type: 'CANTEEN_CONFIG_SYNC',
                 config: data,
+                homepageConfig: data.homepageConfig,
                 timestamp: data.timestamp || Date.now(),
               });
             } catch (_) {}
@@ -568,6 +569,29 @@ export const broadcastCanteenConfig = (configData) => {
   try {
     axios.post(CENTRAL_CANTEEN_API, configData).catch((err) => {
       console.debug('[RealtimeSync] Canteen config API notice:', err.message);
+    });
+  } catch (_) {}
+};
+
+/**
+ * Broadcasts updated homepage cravings & offers configuration across all student devices
+ */
+export const broadcastHomepageConfig = (homepageConfig) => {
+  if (!homepageConfig || typeof homepageConfig !== 'object') return;
+
+  const payload = {
+    homepageConfig,
+    emitterId: getClientInstanceId(),
+    timestamp: Date.now(),
+  };
+
+  // 1. MQTT publish with retain: true (so all student devices get it instantly!)
+  publishMqtt(TOPIC_CANTEEN_CONFIG, payload, { retain: true, qos: 1 });
+
+  // 2. HTTP sync to Vercel API
+  try {
+    axios.post(CENTRAL_CANTEEN_API, { homepageConfig }).catch((err) => {
+      console.debug('[RealtimeSync] Homepage config API notice:', err.message);
     });
   } catch (_) {}
 };

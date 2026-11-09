@@ -7,6 +7,11 @@ let canteenConfigCache = {
   upiId: 'pandeyayush1603-1@okicici',
   upiMerchantName: 'Ayush Pandey',
   qrCodeImage: '',
+  homepageConfig: {
+    cravingsTitle: 'Popular Campus Cravings',
+    cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
+    featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'],
+  },
   updatedAt: Date.now(),
 };
 
@@ -33,6 +38,7 @@ export default async function handler(req, res) {
         qrCodeImage: payload.qrCodeImage !== undefined ? payload.qrCodeImage : canteenConfigCache.qrCodeImage,
         upiId: payload.upiId || canteenConfigCache.upiId,
         upiMerchantName: payload.upiMerchantName || payload.name || canteenConfigCache.upiMerchantName,
+        homepageConfig: payload.homepageConfig !== undefined ? payload.homepageConfig : canteenConfigCache.homepageConfig,
         updatedAt: Date.now(),
       };
       return res.status(200).json({ success: true, config: canteenConfigCache });

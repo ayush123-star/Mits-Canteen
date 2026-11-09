@@ -46,14 +46,28 @@ export const HomePage = () => {
   const todayDiscount = getTodayDiscount ? getTodayDiscount() : { day: 'Today', percent: 15, title: 'Campus Special Offer', promoCode: 'CAMPUSDAY' };
 
   // Dynamic Popular Items: Owner selected dishes or fallback to top rated items
+  // Always guarantees at least 4 items so that laptop (4-col grid) and mobile display 4 dishes consistently
   const popularItems = useMemo(() => {
+    const all = menuItems || [];
+    let selected = [];
+
     if (homepageConfig?.featuredCravingsIds && homepageConfig.featuredCravingsIds.length > 0) {
-      const selected = homepageConfig.featuredCravingsIds
-        .map((id) => (menuItems || []).find((m) => (m._id || m.id) === id))
+      selected = homepageConfig.featuredCravingsIds
+        .map((id) => all.find((m) => (m._id || m.id) === id))
         .filter(Boolean);
-      if (selected.length > 0) return selected;
     }
-    return (menuItems || []).filter((item) => item.rating >= 4.7).slice(0, 4);
+
+    if (selected.length < 4) {
+      const selectedIds = new Set(selected.map((item) => item._id || item.id));
+      const remainingTop = all
+        .filter((item) => !selectedIds.has(item._id || item.id))
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+      const needed = 4 - selected.length;
+      selected = [...selected, ...remainingTop.slice(0, needed)];
+    }
+
+    return selected.slice(0, 8);
   }, [menuItems, homepageConfig?.featuredCravingsIds]);
 
   return (

@@ -30,7 +30,11 @@ export const HomepageManagerPage = () => {
   const [cravingsSubtitle, setCravingsSubtitle] = useState(
     homepageConfig?.cravingsSubtitle || 'Top rated and most ordered items across campus this week.'
   );
-  const [selectedIds, setSelectedIds] = useState(homepageConfig?.featuredCravingsIds || []);
+  const [selectedIds, setSelectedIds] = useState(
+    homepageConfig?.featuredCravingsIds && homepageConfig.featuredCravingsIds.length >= 4
+      ? homepageConfig.featuredCravingsIds
+      : ['food-1', 'food-2', 'food-3', 'food-5']
+  );
 
   const [dailyDiscounts, setDailyDiscounts] = useState(
     homepageConfig?.dailyDiscounts || {
