@@ -88,9 +88,9 @@ export function App() {
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="menu" element={<MenuManagementPage />} />
-                    <Route path="inventory" element={<InventoryPage />} />
-                    <Route path="recipes" element={<RecipeManagementPage />} />
-                    <Route path="stock-history" element={<StockHistoryPage />} />
+                    <Route path="inventory" element={<Navigate to="/admin/menu" replace />} />
+                    <Route path="recipes" element={<Navigate to="/admin/menu" replace />} />
+                    <Route path="stock-history" element={<Navigate to="/admin/menu" replace />} />
                     <Route path="payments" element={<PaymentsManagementPage />} />
                     <Route path="reports" element={<AdminReportsPage />} />
                     <Route path="settings" element={<CanteenSettingsPage />} />
@@ -110,9 +110,9 @@ export function App() {
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="menu" element={<MenuManagementPage />} />
-                    <Route path="inventory" element={<InventoryPage />} />
-                    <Route path="recipes" element={<RecipeManagementPage />} />
-                    <Route path="stock-history" element={<StockHistoryPage />} />
+                    <Route path="inventory" element={<Navigate to="/admin/menu" replace />} />
+                    <Route path="recipes" element={<Navigate to="/admin/menu" replace />} />
+                    <Route path="stock-history" element={<Navigate to="/admin/menu" replace />} />
                     <Route path="payments" element={<PaymentsManagementPage />} />
                     <Route path="reports" element={<AdminReportsPage />} />
                     <Route path="settings" element={<CanteenSettingsPage />} />

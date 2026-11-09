@@ -67,9 +67,6 @@ export const AdminLayout = () => {
   const navItems = [
     { label: 'Live Orders Queue', path: '/admin/dashboard', icon: Clock, badge: pendingOrdersCount },
     { label: 'Menu Catalog', path: '/admin/menu', icon: Layers },
-    { label: 'Raw Materials & Stock', path: '/admin/inventory', icon: BookOpen, badge: lowStockCount, badgeColor: 'bg-purple-600' },
-    { label: 'Recipe Studio', path: '/admin/recipes', icon: UtensilsCrossed },
-    { label: 'Stock History Ledger', path: '/admin/stock-history', icon: History },
     { label: 'Cravings & Day Offers', path: '/admin/homepage-manager', icon: Flame, badge: 'Home', badgeColor: 'bg-gradient-to-r from-[#7955E8] to-[#526DFF]' },
     { label: 'Customer Feedback', path: '/admin/feedback', icon: MessageSquare, badge: feedbackList?.length || 0, badgeColor: 'bg-emerald-600' },
     { label: 'Cash & Online Payments', path: '/admin/payments', icon: DollarSign },
@@ -364,20 +361,15 @@ export const AdminLayout = () => {
           </Link>
 
           <Link
-            to="/admin/inventory"
+            to="/admin/homepage-manager"
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
-              isActive('/admin/inventory')
+              isActive('/admin/homepage-manager')
                 ? 'text-white bg-purple-600/30 font-black shadow-inner border border-purple-500/30'
                 : 'text-[#AAB3C5] hover:text-white font-semibold'
             }`}
           >
-            <div className="relative">
-              <BookOpen className="w-4 h-4 mb-0.5" />
-              {lowStockCount > 0 && (
-                <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-purple-400" />
-              )}
-            </div>
-            <span className="text-[10px] leading-tight">Stock</span>
+            <Flame className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px] leading-tight">Cravings</span>
           </Link>
 
           <Link
