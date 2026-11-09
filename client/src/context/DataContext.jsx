@@ -26,10 +26,14 @@ import {
   fetchRemoteCanteenConfig,
 } from '../services/realtimeSync';
 
+export const HOMEPAGE_CONFIG_VERSION = 3;
+export const CANONICAL_FEATURED_CRAVINGS = ['food-1', 'food-2', 'food-3', 'food-5'];
+
 export const DEFAULT_HOMEPAGE_CONFIG = {
+  configVersion: HOMEPAGE_CONFIG_VERSION,
   cravingsTitle: 'Popular Campus Cravings',
   cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
-  featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'], // Default to 4 top rated campus dishes
+  featuredCravingsIds: CANONICAL_FEATURED_CRAVINGS, // Default to 4 top rated campus dishes
   dailyDiscounts: {
     Monday: { percent: 10, title: 'Monday Kickstart', active: true },
     Tuesday: { percent: 15, title: 'Tasty Tuesday Feast', active: true },
@@ -221,12 +225,16 @@ export const DataProvider = ({ children }) => {
         },
       };
 
-      // Auto-heal stale localStorage (e.g. if laptop only had 1 dish saved previously)
-      const existingIds = Array.isArray(baseConfig.featuredCravingsIds) ? baseConfig.featuredCravingsIds : [];
-      if (existingIds.length < 4) {
-        const defaults = ['food-1', 'food-2', 'food-3', 'food-5'];
-        const filled = [...existingIds, ...defaults.filter((id) => !existingIds.includes(id))].slice(0, 4);
-        baseConfig.featuredCravingsIds = filled;
+      // Ensure exact cross-device synchronization:
+      // If version is older or featuredCravingsIds diverged/stale, reset to canonical dishes
+      if (!parsed.configVersion || parsed.configVersion < HOMEPAGE_CONFIG_VERSION) {
+        baseConfig.configVersion = HOMEPAGE_CONFIG_VERSION;
+        baseConfig.featuredCravingsIds = [...CANONICAL_FEATURED_CRAVINGS];
+        try {
+          localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
+        } catch (_) {}
+      } else if (!Array.isArray(baseConfig.featuredCravingsIds) || baseConfig.featuredCravingsIds.length < 4) {
+        baseConfig.featuredCravingsIds = [...CANONICAL_FEATURED_CRAVINGS];
         try {
           localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
         } catch (_) {}
@@ -243,6 +251,7 @@ export const DataProvider = ({ children }) => {
       const updated = {
         ...prev,
         ...newConfig,
+        configVersion: Date.now(),
         dailyDiscounts: {
           ...prev.dailyDiscounts,
           ...(newConfig.dailyDiscounts || {}),

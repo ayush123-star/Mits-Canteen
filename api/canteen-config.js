@@ -8,6 +8,7 @@ let canteenConfigCache = {
   upiMerchantName: 'Ayush Pandey',
   qrCodeImage: '',
   homepageConfig: {
+    configVersion: 3,
     cravingsTitle: 'Popular Campus Cravings',
     cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
     featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'],

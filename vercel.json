@@ -3,6 +3,10 @@
   "outputDirectory": "client/dist",
   "rewrites": [
     {
+      "source": "/api/canteen-config",
+      "destination": "/api/canteen-config.js"
+    },
+    {
       "source": "/api/orders/:id/status",
       "destination": "/api/orders"
     },

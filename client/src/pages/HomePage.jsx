@@ -5,6 +5,7 @@ import { FoodDetailModal } from '../components/FoodDetailModal';
 import { useCart } from '../context/CartContext';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { INITIAL_MENU_ITEMS } from '../mock/mockData';
 import { MitsCampusHeroVideo } from '../components/common/MitsCampusHeroVideo';
 import { HomepageCravingsModal } from '../components/admin/HomepageCravingsModal';
 import { LiveCanteenTicker } from '../components/common/LiveCanteenTicker';
@@ -45,17 +46,17 @@ export const HomePage = () => {
 
   const todayDiscount = getTodayDiscount ? getTodayDiscount() : { day: 'Today', percent: 15, title: 'Campus Special Offer', promoCode: 'CAMPUSDAY' };
 
-  // Dynamic Popular Items: Owner selected dishes or fallback to top rated items
-  // Always guarantees at least 4 items so that laptop (4-col grid) and mobile display 4 dishes consistently
+  // Dynamic Popular Items: Canonical 4 dishes (Double Cheese Burger, Masala Dosa, Deluxe Thali, Cold Coffee)
+  // or Owner-customized dishes. Guaranteed 100% identical on Laptop and Mobile.
   const popularItems = useMemo(() => {
-    const all = menuItems || [];
-    let selected = [];
+    const all = (menuItems && menuItems.length > 0) ? menuItems : INITIAL_MENU_ITEMS;
+    const targetIds = (homepageConfig?.featuredCravingsIds && homepageConfig.featuredCravingsIds.length >= 4)
+      ? homepageConfig.featuredCravingsIds
+      : ['food-1', 'food-2', 'food-3', 'food-5'];
 
-    if (homepageConfig?.featuredCravingsIds && homepageConfig.featuredCravingsIds.length > 0) {
-      selected = homepageConfig.featuredCravingsIds
-        .map((id) => all.find((m) => (m._id || m.id) === id))
-        .filter(Boolean);
-    }
+    let selected = targetIds
+      .map((id) => all.find((m) => (m._id || m.id) === id) || INITIAL_MENU_ITEMS.find((m) => m.id === id))
+      .filter(Boolean);
 
     if (selected.length < 4) {
       const selectedIds = new Set(selected.map((item) => item._id || item.id));
@@ -67,7 +68,7 @@ export const HomePage = () => {
       selected = [...selected, ...remainingTop.slice(0, needed)];
     }
 
-    return selected.slice(0, 8);
+    return selected.slice(0, 4);
   }, [menuItems, homepageConfig?.featuredCravingsIds]);
 
   return (
