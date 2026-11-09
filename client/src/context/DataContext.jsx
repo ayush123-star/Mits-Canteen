@@ -1685,6 +1685,8 @@ export const DataProvider = ({ children }) => {
       assignedCounter: 1, // Single Express Counter (MITS Canteen)
       scheduledPickupTime: orderData.scheduledPickupTime || 'ASAP (Immediate ~8m)',
       estimatedPrepMinutes: 8,
+      orderNotes: orderData.orderNotes || '',
+      specialInstructions: orderData.specialInstructions || '',
       whatsappOptIn: orderData.whatsappOptIn !== undefined ? orderData.whatsappOptIn : true,
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       stockDeducted: false,
@@ -1698,7 +1700,8 @@ export const DataProvider = ({ children }) => {
     // Trigger Automated WhatsApp Alert: Order Placed (if opted in)
     if (newOrder.whatsappOptIn !== false) {
       const itemsSummary = (newOrder.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ');
-      const placedMsg = `🎉 *MITS Canteen — Order Placed!*\n\nHello *${newOrder.studentName || 'Student'}*!\nYour order has been placed successfully!\n\n🎫 *Token Number:* #${newOrder.tokenNumber}\n🍽️ *Items:* ${itemsSummary}\n💰 *Total Amount:* ₹${newOrder.finalAmount}\n⏳ *Estimated Wait:* ~8 Minutes\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nThank you! 🚀`;
+      const prepNote = newOrder.orderNotes ? `\n📌 *Kitchen Instructions:* ${newOrder.orderNotes}` : '';
+      const placedMsg = `🎉 *MITS Canteen — Order Placed!*\n\nHello *${newOrder.studentName || 'Student'}*!\nYour order has been placed successfully!\n\n🎫 *Token Number:* #${newOrder.tokenNumber}\n🍽️ *Items:* ${itemsSummary}${prepNote}\n💰 *Total Amount:* ₹${newOrder.finalAmount}\n⏳ *Estimated Wait:* ~8 Minutes\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nThank you! 🚀`;
       const cleanPhone = String(newOrder.studentPhone || '9876543210').replace(/\D/g, '');
       const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(placedMsg)}`;

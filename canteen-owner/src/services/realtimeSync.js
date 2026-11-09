@@ -230,6 +230,7 @@ export const sanitizeOrderForBroadcast = (ord) => {
     rejectionReason: ord.rejectionReason,
     cancellationReason: ord.cancellationReason,
     specialInstructions: ord.specialInstructions,
+    orderNotes: ord.orderNotes || '',
   };
 };
 

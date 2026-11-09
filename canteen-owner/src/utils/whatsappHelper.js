@@ -35,7 +35,13 @@ export const formatOrderWhatsAppMessage = (order) => {
   if (!order) return '';
 
   const itemsList = (order.items || [])
-    .map((item, idx) => `  ${idx + 1}. *${item.quantity}x ${item.name}* (₹${(item.price || 0) * (item.quantity || 1)})`)
+    .map((item, idx) => {
+      let line = `  ${idx + 1}. *${item.quantity}x ${item.name}* (₹${(item.price || 0) * (item.quantity || 1)})`;
+      if (item.specialInstructions) {
+        line += `\n     ↳ ⚠️ _Prep:_ ${item.specialInstructions}`;
+      }
+      return line;
+    })
     .join('\n');
 
   const customerName = order.studentName || 'Student';
@@ -48,14 +54,19 @@ export const formatOrderWhatsAppMessage = (order) => {
   const paymentStatus = order.paymentStatus || 'PAID';
   const slot = order.scheduledPickupTime || 'ASAP (Immediate)';
 
+  const kitchenNotesSection = order.orderNotes
+    ? `\n⚠️ *KITCHEN INSTRUCTIONS / TRAY NOTES:*\n👉 *${order.orderNotes}*\n`
+    : '';
+
   return (
     `🛎️ *MITS CANTEEN — NEW ORDER RECEIVED!* 🛎️\n\n` +
     `🎫 *Token Number:* *#${token}*\n` +
     `👤 *Customer:* ${customerName}\n` +
     `📞 *Customer Phone:* ${customerPhone}\n` +
     `🏫 *Dept / ID:* ${customerDept} (${customerRoll})\n\n` +
-    `🍽️ *Items Ordered:*\n${itemsList || '  • Food item'}\n\n` +
-    `💰 *Total Amount:* *₹${amount}*\n` +
+    `🍽️ *Items Ordered:*\n${itemsList || '  • Food item'}\n` +
+    kitchenNotesSection +
+    `\n💰 *Total Amount:* *₹${amount}*\n` +
     `💳 *Payment Method:* ${payment} (${paymentStatus})\n` +
     `⏰ *Pickup Slot:* ${slot}\n` +
     `📍 *Pickup Counter:* MITS Main Canteen (Counter)\n\n` +

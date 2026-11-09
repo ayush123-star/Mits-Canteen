@@ -257,6 +257,12 @@ export const AdminDashboard = () => {
               <p className="text-[11px] text-purple-100 line-clamp-2">
                 {(newOrderAlert.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ') || '1x Campus Food Item'}
               </p>
+              {newOrderAlert.orderNotes && (
+                <div className="mt-1.5 p-1.5 rounded-lg bg-black/40 border border-amber-400/50 text-[11px] text-amber-200 font-bold flex items-center gap-1.5">
+                  <span className="text-amber-400 shrink-0">⚠️</span>
+                  <span className="truncate">Kitchen: <strong className="text-white">{newOrderAlert.orderNotes}</strong></span>
+                </div>
+              )}
               <div className="flex items-center gap-2 pt-1 text-[10px]">
                 <span className={`px-2 py-0.5 rounded-md font-bold ${
                   newOrderAlert.paymentStatus === 'PAID' || newOrderAlert.paymentStatus === 'Completed' || newOrderAlert.paymentMethod === 'UPI'
@@ -617,25 +623,44 @@ export const AdminDashboard = () => {
                   </div>
 
                   {/* Items list */}
-                  <div className="py-2.5 sm:py-3 space-y-1.5 border-b border-purple-500/20">
+                  <div className="py-2.5 sm:py-3 space-y-2 border-b border-purple-500/20">
                     {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-5 h-5 rounded-md bg-[#151C30] border border-purple-500/20 font-black text-[10px] sm:text-[11px] text-purple-300 flex items-center justify-center shrink-0">
-                            {item.quantity}x
-                          </span>
-                          <span className="font-extrabold text-white truncate">{item.name}</span>
-                          {item.specialInstructions && (
-                            <span className="text-[10px] text-amber-300 italic truncate max-w-[120px]">({item.specialInstructions})</span>
-                          )}
+                      <div key={idx} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-5 h-5 rounded-md bg-[#151C30] border border-purple-500/20 font-black text-[10px] sm:text-[11px] text-purple-300 flex items-center justify-center shrink-0">
+                              {item.quantity}x
+                            </span>
+                            <span className="font-extrabold text-white truncate">{item.name}</span>
+                          </div>
+                          <span className="font-bold text-[#AAB3C5] shrink-0 ml-2">₹{(item.price || 50) * item.quantity}</span>
                         </div>
-                        <span className="font-bold text-[#AAB3C5] shrink-0 ml-2">₹{(item.price || 50) * item.quantity}</span>
+                        {item.specialInstructions && (
+                          <div className="ml-7 p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] text-amber-300 font-bold flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 font-black">
+                              Chef Alert
+                            </span>
+                            <span className="text-white leading-tight">{item.specialInstructions}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
+
+                    {/* Overall Order / Tray Kitchen Preferences */}
                     {order.orderNotes && (
-                      <p className="text-[10px] sm:text-[11px] text-purple-200 bg-[#151C30] p-1.5 rounded-lg italic border border-purple-500/20">
-                        Special Instructions: {order.orderNotes}
-                      </p>
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/15 border-2 border-amber-500/40 text-xs shadow-sm">
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <span>⚠️</span> Customer Kitchen Instructions:
+                          </span>
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 border border-amber-400/30">
+                            High Priority
+                          </span>
+                        </div>
+                        <p className="text-white font-black text-xs leading-snug">
+                          {order.orderNotes}
+                        </p>
+                      </div>
                     )}
                   </div>
 
@@ -777,7 +802,8 @@ export const AdminDashboard = () => {
         const readyTimeObj = new Date(Date.now() + customPrepMinutes * 60 * 1000);
         const readyTimeStr = readyTimeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const itemsSummary = (acceptModalOrder.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ');
-        const previewWhatsAppText = `🎉 *MITS Canteen Alert*\n\nHello *${acceptModalOrder.studentName || 'Student'}*!\nYour food order *#${acceptModalOrder.tokenNumber}* has been *ACCEPTED* by MITS Canteen! 👨‍🍳\n\n⏳ *Estimated Preparation Time:* ~${customPrepMinutes} Minutes\n⏰ *Expected Ready By:* ${readyTimeStr}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}\n\nOur kitchen has started preparing your food fresh. You will receive another message as soon as your order is ready for pickup! 🚀`;
+        const prepNotesText = acceptModalOrder.orderNotes ? `\n📌 *Kitchen Instructions:* ${acceptModalOrder.orderNotes}` : '';
+        const previewWhatsAppText = `🎉 *MITS Canteen Alert*\n\nHello *${acceptModalOrder.studentName || 'Student'}*!\nYour food order *#${acceptModalOrder.tokenNumber}* has been *ACCEPTED* by MITS Canteen! 👨‍🍳\n\n⏳ *Estimated Preparation Time:* ~${customPrepMinutes} Minutes\n⏰ *Expected Ready By:* ${readyTimeStr}\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n🍽️ *Items:* ${itemsSummary}${prepNotesText}\n\nOur kitchen has started preparing your food fresh according to your preferences. You will receive another message as soon as your order is ready for pickup! 🚀`;
         const whatsappWebLink = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(previewWhatsAppText)}`;
 
         return (
@@ -806,6 +832,34 @@ export const AdminDashboard = () => {
                   <XCircle className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Kitchen Preparation Instructions Box */}
+              {(acceptModalOrder.orderNotes || acceptModalOrder.items?.some(i => i.specialInstructions)) && (
+                <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                      <span>⚠️</span> Customer Cooking Instructions
+                    </span>
+                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-500/40">
+                      Check Before Cooking
+                    </span>
+                  </div>
+
+                  {acceptModalOrder.orderNotes && (
+                    <div className="text-xs">
+                      <span className="text-[10px] font-bold text-amber-300 uppercase block">Tray Customizations:</span>
+                      <p className="text-white font-black text-xs mt-0.5">{acceptModalOrder.orderNotes}</p>
+                    </div>
+                  )}
+
+                  {acceptModalOrder.items?.filter(i => i.specialInstructions).map((item, idx) => (
+                    <div key={idx} className="text-xs border-t border-amber-500/20 pt-1.5 mt-1.5">
+                      <span className="text-[10px] font-bold text-amber-300 uppercase block">{item.name}:</span>
+                      <p className="text-white font-bold mt-0.5">{item.specialInstructions}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Prep Time Selector */}
               <div>
@@ -958,14 +1012,32 @@ export const AdminDashboard = () => {
               </p>
             </div>
 
-            <div className="bg-[#151C30] p-3 rounded-xl sm:rounded-2xl text-left text-xs space-y-1 border border-purple-500/20 max-h-36 overflow-y-auto">
+            <div className="bg-[#151C30] p-3 sm:p-3.5 rounded-xl sm:rounded-2xl text-left text-xs space-y-2 border border-purple-500/20 max-h-48 overflow-y-auto">
               <span className="font-bold text-white block">Ordered Food:</span>
               {verifiedTokenModal.items.map((i, idx) => (
-                <div key={idx} className="flex justify-between text-[#AAB3C5]">
-                  <span>{i.quantity}x {i.name}</span>
-                  <span className="font-bold text-white">₹{(i.price || 50) * i.quantity}</span>
+                <div key={idx} className="space-y-0.5">
+                  <div className="flex justify-between text-[#AAB3C5]">
+                    <span className="font-medium text-white">{i.quantity}x {i.name}</span>
+                    <span className="font-bold text-purple-300">₹{(i.price || 50) * i.quantity}</span>
+                  </div>
+                  {i.specialInstructions && (
+                    <p className="text-[11px] text-amber-300 font-semibold pl-3 border-l-2 border-amber-400/40">
+                      ↳ {i.specialInstructions}
+                    </p>
+                  )}
                 </div>
               ))}
+
+              {verifiedTokenModal.orderNotes && (
+                <div className="mt-2 pt-2 border-t border-purple-500/20 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
+                  <span className="text-[10px] font-black uppercase text-amber-400 block">
+                    ⚠️ Verified Cooking Specs:
+                  </span>
+                  <span className="text-xs text-white font-extrabold block mt-0.5">
+                    {verifiedTokenModal.orderNotes}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 pt-2">

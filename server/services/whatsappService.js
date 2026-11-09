@@ -525,7 +525,13 @@ const notifyOwnerNewOrder = async (order) => {
 
     const targetPhone = formatPhoneNumber(rawOwnerPhone);
     const itemsList = (order.items || [])
-      .map((i, idx) => `  ${idx + 1}. *${i.quantity}x ${i.name}* (₹${(i.price || 0) * (i.quantity || 1)})`)
+      .map((i, idx) => {
+        let line = `  ${idx + 1}. *${i.quantity}x ${i.name}* (₹${(i.price || 0) * (i.quantity || 1)})`;
+        if (i.specialInstructions) {
+          line += `\n     ↳ ⚠️ _Prep:_ ${i.specialInstructions}`;
+        }
+        return line;
+      })
       .join('\n');
 
     const customerName = order.studentName || 'Student';
@@ -538,14 +544,19 @@ const notifyOwnerNewOrder = async (order) => {
     const paymentStatus = order.paymentStatus || 'PAID';
     const slot = order.scheduledPickupTime || 'ASAP (Immediate)';
 
+    const kitchenNotesSection = order.orderNotes
+      ? `\n⚠️ *KITCHEN INSTRUCTIONS / TRAY PREFERENCES:*\n👉 *${order.orderNotes}*\n`
+      : '';
+
     const messageText = 
       `🛎️ *MITS CANTEEN — NEW ORDER RECEIVED!* 🛎️\n\n` +
       `🎫 *Token Number:* *#${token}*\n` +
       `👤 *Customer:* ${customerName}\n` +
       `📞 *Customer Phone:* ${customerPhone}\n` +
       `🏫 *Dept / ID:* ${customerDept} (${customerRoll})\n\n` +
-      `🍽️ *Items Ordered:*\n${itemsList || '  • Campus meal'}\n\n` +
-      `💰 *Total Amount:* *₹${amount}*\n` +
+      `🍽️ *Items Ordered:*\n${itemsList || '  • Campus meal'}\n` +
+      kitchenNotesSection +
+      `\n💰 *Total Amount:* *₹${amount}*\n` +
       `💳 *Payment:* ${payment} (${paymentStatus})\n` +
       `⏰ *Pickup Slot:* ${slot}\n` +
       `📍 *Pickup Counter:* MITS Main Canteen (Counter)\n\n` +

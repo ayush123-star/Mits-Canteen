@@ -107,19 +107,32 @@ export const TokenPickupPass = ({ order, onClose }) => {
           </div>
 
           {/* Items breakdown summary */}
-          <div className="text-left bg-[#151C30] p-3 sm:p-3.5 rounded-2xl border border-purple-500/20 text-xs space-y-1">
+          <div className="text-left bg-[#151C30] p-3 sm:p-3.5 rounded-2xl border border-purple-500/20 text-xs space-y-2">
             <div className="flex justify-between font-bold text-white pb-1 border-b border-purple-500/20">
               <span>Items Ordered:</span>
               <span className="text-purple-300">Total: ₹{order.finalAmount}</span>
             </div>
             {order.items?.map((it, idx) => (
-              <div key={idx} className="flex justify-between text-[#AAB3C5] text-[11px]">
-                <span>
-                  {it.quantity}x {it.name}
-                </span>
-                <span>₹{it.price * it.quantity}</span>
+              <div key={idx} className="space-y-0.5">
+                <div className="flex justify-between text-[#AAB3C5] text-[11px]">
+                  <span>
+                    {it.quantity}x {it.name}
+                  </span>
+                  <span className="font-bold text-white">₹{it.price * it.quantity}</span>
+                </div>
+                {it.specialInstructions && (
+                  <p className="text-[10px] text-amber-300 font-semibold pl-2 border-l-2 border-amber-400/40">
+                    Prep: {it.specialInstructions}
+                  </p>
+                )}
               </div>
             ))}
+            {order.orderNotes && (
+              <div className="pt-1.5 border-t border-purple-500/20 text-[11px] text-amber-300">
+                <span className="text-[10px] uppercase font-bold text-amber-400 block">Kitchen Instructions:</span>
+                <span className="text-white font-bold">{order.orderNotes}</span>
+              </div>
+            )}
           </div>
 
           {/* Print / Save Trigger */}

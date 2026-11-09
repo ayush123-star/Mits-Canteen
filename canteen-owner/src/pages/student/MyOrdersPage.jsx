@@ -466,27 +466,38 @@ export const MyOrdersPage = () => {
                     Ordered Dishes
                   </span>
                   <div className="divide-y divide-purple-500/10">
-                    {order.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="py-2 flex items-center justify-between text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-md bg-[#151C30] text-purple-300 border border-purple-500/20 font-extrabold flex items-center justify-center text-[11px]">
-                            {item.quantity}x
-                          </span>
-                          <span className="font-bold text-white">{item.name}</span>
-                          {item.specialInstructions && (
-                            <span className="text-[11px] text-[#AAB3C5] italic">
-                              ({item.specialInstructions})
+                    {(order.items || []).map((item, idx) => (
+                      <div key={idx} className="py-2 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-[#151C30] text-purple-300 border border-purple-500/20 font-extrabold flex items-center justify-center text-[11px]">
+                              {item.quantity}x
                             </span>
-                          )}
+                            <span className="font-bold text-white">{item.name}</span>
+                          </div>
+                          <span className="font-bold text-white">
+                            ₹{(item.price || 50) * item.quantity}
+                          </span>
                         </div>
-                        <span className="font-bold text-white">
-                          ₹{(item.price || 50) * item.quantity}
-                        </span>
+                        {item.specialInstructions && (
+                          <div className="ml-7 text-[11px] text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 inline-block">
+                            Prep: {item.specialInstructions}
+                          </div>
+                        )}
                       </div>
                     ))}
+                    {order.orderNotes && (
+                      <div className="py-2 text-xs">
+                        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
+                            Kitchen Instructions:
+                          </span>
+                          <span className="text-white font-bold text-xs mt-0.5 block">
+                            {order.orderNotes}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
