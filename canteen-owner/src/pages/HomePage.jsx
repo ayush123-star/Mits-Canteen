@@ -88,12 +88,14 @@ export const HomePage = () => {
               <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
                 {/* Official College Badge */}
                 <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#151C30]/90 border border-purple-500/30 text-white text-[11px] sm:text-xs font-black tracking-wide shadow-2xl backdrop-blur-md max-w-full">
-                  <img
-                    src="/assets/campus/mits-logo.png"
-                    alt="MITS Gwalior"
-                    className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0"
-                    onError={(e) => { e.target.src = '/images/mits/mits-logo.png'; }}
-                  />
+                  <div className="w-5 h-5 rounded-md bg-white p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                    <img
+                      src="/images/mits/mits-logo.png"
+                      alt="MITS Gwalior"
+                      className="w-full h-full object-contain"
+                      onError={(e) => { e.target.src = '/assets/campus/mits-logo.png'; }}
+                    />
+                  </div>
                   <span className="text-purple-300 shrink-0">MITS GWALIOR</span>
                   <span className="text-slate-500 shrink-0">&bull;</span>
                   <span className="text-[#AAB3C5] truncate">Main Canteen Counter</span>

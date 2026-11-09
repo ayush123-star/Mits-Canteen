@@ -84,14 +84,14 @@ export const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             
             {/* 1. Left: MITS Crest Logo & Brand Name */}
-            <Link to="/" className="flex items-center gap-2 group shrink-0">
-              <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 border border-purple-500/30 p-1 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform duration-300 overflow-hidden shrink-0">
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-lg shadow-purple-500/20 border border-purple-500/40 group-hover:scale-105 transition-transform duration-300 overflow-hidden shrink-0">
                 <img
-                  src="/assets/campus/mits-logo.png"
+                  src="/images/mits/mits-logo.png"
                   alt="MITS Gwalior Logo"
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    e.target.src = '/images/mits/mits-logo.png';
+                    e.target.src = '/assets/campus/mits-logo.png';
                   }}
                 />
               </div>
