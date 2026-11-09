@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
-import { AestheticThemePicker } from './AestheticThemePicker';
 import {
   UtensilsCrossed,
   ShoppingBag,
@@ -213,8 +212,16 @@ export const Navbar = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               </button>
 
-              {/* Aesthetic Theme Selector */}
-              <AestheticThemePicker />
+              {/* Clean Dark/Light Mode Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="p-2 rounded-xl bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/20 text-[#AAB3C5] hover:text-white transition-all cursor-pointer shadow-xs active:scale-95"
+                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                aria-label="Toggle Theme"
+              >
+                {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-purple-400" />}
+              </button>
 
               {/* Food Cart Drawer Trigger */}
               <button
@@ -646,14 +653,13 @@ export const Navbar = () => {
             {/* 4. THEME & SIGN OUT FOOTER */}
             <div className="pt-2 border-t border-purple-500/20 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <AestheticThemePicker />
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-[#151C30] text-slate-200 border border-purple-500/20"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-[#151C30] hover:bg-[#1C263A] text-slate-200 border border-purple-500/20 transition-colors"
                 >
                   {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-purple-400" />}
-                  <span>{isDark ? 'Light' : 'Dark'}</span>
+                  <span>{isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}</span>
                 </button>
               </div>
 

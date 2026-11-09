@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FoodCard } from '../../components/FoodCard';
 import { FoodDetailModal } from '../../components/FoodDetailModal';
 import { useData } from '../../context/DataContext';
@@ -32,8 +33,19 @@ export const MenuPage = () => {
   const { menuItems, canteens, categories } = useData();
   const { setIsCartOpen, totalItemCount, total } = useCart();
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const urlCategory = searchParams.get('category') || 'All';
+  const urlSearch = searchParams.get('search') || '';
+
+  const [selectedCategory, setSelectedCategory] = useState(urlCategory);
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
+
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat) setSelectedCategory(cat);
+    const q = searchParams.get('search');
+    if (q !== null) setSearchQuery(q);
+  }, [searchParams]);
   const [sortBy, setSortBy] = useState('popular');
   const [selectedFood, setSelectedFood] = useState(null);
 
