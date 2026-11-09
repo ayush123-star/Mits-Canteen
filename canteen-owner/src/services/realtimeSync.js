@@ -557,6 +557,9 @@ export const broadcastCanteenConfig = (configData) => {
   if (!configData || typeof configData !== 'object') return;
 
   const payload = {
+    type: 'CANTEEN_CONFIG_SYNC',
+    config: configData,
+    canteen: configData,
     ...configData,
     emitterId: getClientInstanceId(),
     timestamp: Date.now(),
@@ -565,7 +568,10 @@ export const broadcastCanteenConfig = (configData) => {
   // 1. MQTT publish with retain: true (so all new student visitors get it instantly!)
   publishMqtt(TOPIC_CANTEEN_CONFIG, payload, { retain: true, qos: 1 });
 
-  // 2. HTTP sync to Vercel API
+  // 2. Also publish to TOPIC_EVENTS (for active listeners)
+  publishMqtt(TOPIC_EVENTS, payload, { qos: 1 });
+
+  // 3. HTTP sync to Vercel API
   try {
     axios.post(CENTRAL_CANTEEN_API, configData).catch((err) => {
       console.debug('[RealtimeSync] Canteen config API notice:', err.message);
@@ -580,6 +586,7 @@ export const broadcastHomepageConfig = (homepageConfig) => {
   if (!homepageConfig || typeof homepageConfig !== 'object') return;
 
   const payload = {
+    type: 'CANTEEN_CONFIG_SYNC',
     homepageConfig,
     emitterId: getClientInstanceId(),
     timestamp: Date.now(),
@@ -588,7 +595,10 @@ export const broadcastHomepageConfig = (homepageConfig) => {
   // 1. MQTT publish with retain: true (so all student devices get it instantly!)
   publishMqtt(TOPIC_CANTEEN_CONFIG, payload, { retain: true, qos: 1 });
 
-  // 2. HTTP sync to Vercel API
+  // 2. Also publish to TOPIC_EVENTS (for active listeners)
+  publishMqtt(TOPIC_EVENTS, payload, { qos: 1 });
+
+  // 3. HTTP sync to Vercel API
   try {
     axios.post(CENTRAL_CANTEEN_API, { homepageConfig }).catch((err) => {
       console.debug('[RealtimeSync] Homepage config API notice:', err.message);

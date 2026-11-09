@@ -225,15 +225,14 @@ export const DataProvider = ({ children }) => {
         },
       };
 
-      // Ensure exact cross-device synchronization:
-      // If version is older or featuredCravingsIds diverged/stale, reset to canonical dishes
+      // Ensure valid cravings array
       if (!parsed.configVersion || parsed.configVersion < HOMEPAGE_CONFIG_VERSION) {
         baseConfig.configVersion = HOMEPAGE_CONFIG_VERSION;
         baseConfig.featuredCravingsIds = [...CANONICAL_FEATURED_CRAVINGS];
         try {
           localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
         } catch (_) {}
-      } else if (!Array.isArray(baseConfig.featuredCravingsIds) || baseConfig.featuredCravingsIds.length < 4) {
+      } else if (!Array.isArray(baseConfig.featuredCravingsIds)) {
         baseConfig.featuredCravingsIds = [...CANONICAL_FEATURED_CRAVINGS];
         try {
           localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
@@ -247,8 +246,9 @@ export const DataProvider = ({ children }) => {
   });
 
   const updateHomepageConfig = (newConfig) => {
+    let updatedConfig = null;
     setHomepageConfig((prev) => {
-      const updated = {
+      updatedConfig = {
         ...prev,
         ...newConfig,
         configVersion: Date.now(),
@@ -262,11 +262,28 @@ export const DataProvider = ({ children }) => {
         },
       };
       try {
-        localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(updated));
+        localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(updatedConfig));
       } catch (_) {}
-      broadcastHomepageConfig(updated);
-      return updated;
+      return updatedConfig;
     });
+
+    if (updatedConfig) {
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({
+            type: 'HOMEPAGE_CONFIG_UPDATED',
+            homepageConfig: updatedConfig,
+            timestamp: Date.now(),
+          });
+        } catch (_) {}
+      }
+      window.dispatchEvent(
+        new CustomEvent('smartcanteen:homepage_config_sync', {
+          detail: { homepageConfig: updatedConfig },
+        })
+      );
+      broadcastHomepageConfig(updatedConfig);
+    }
   };
 
   const getTodayDiscount = () => {
@@ -546,7 +563,16 @@ export const DataProvider = ({ children }) => {
       ordersBroadcastRef.current = channel;
 
       channel.onmessage = (event) => {
-        const { type, orders: incomingOrders, newOrder } = event.data || {};
+        const {
+          type,
+          orders: incomingOrders,
+          newOrder,
+          homepageConfig: incomingHp,
+          canteen: incomingCanteen,
+          canteens: incomingCanteens,
+          menuItems: incomingMenu,
+        } = event.data || {};
+
         if (incomingOrders && Array.isArray(incomingOrders)) {
           setOrders((prev) => {
             if (JSON.stringify(prev) === JSON.stringify(incomingOrders)) return prev;
@@ -555,6 +581,19 @@ export const DataProvider = ({ children }) => {
         }
         if (type === 'NEW_ORDER' && newOrder) {
           playNotificationSound('new_order');
+        }
+        if (incomingHp) {
+          setHomepageConfig((prev) => ({ ...prev, ...incomingHp }));
+        }
+        if (incomingCanteens && Array.isArray(incomingCanteens)) {
+          setCanteens(incomingCanteens);
+        } else if (incomingCanteen) {
+          setCanteens((prev) =>
+            prev.map((c) => (c.id === incomingCanteen.id || c.id === 'canteen-1' ? { ...c, ...incomingCanteen } : c))
+          );
+        }
+        if (incomingMenu && Array.isArray(incomingMenu)) {
+          setMenuItems(incomingMenu);
         }
       };
     }
@@ -574,10 +613,43 @@ export const DataProvider = ({ children }) => {
           console.debug('Storage sync error:', err);
         }
       }
+      if (e.key === 'smart_canteen_homepage_config' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === 'object') {
+            setHomepageConfig((prev) => ({ ...prev, ...parsed }));
+          }
+        } catch (_) {}
+      }
+      if (e.key === 'smart_canteen_canteens' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setCanteens(parsed);
+          }
+        } catch (_) {}
+      }
+      if (e.key === 'smart_canteen_menu' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setMenuItems(parsed);
+          }
+        } catch (_) {}
+      }
     };
     window.addEventListener('storage', handleStorage);
 
-    // C. Real-Time Cloud SSE Stream for Cross-Device Synchronization
+    // C. Local DOM event for homepage config
+    const handleHpEvent = (e) => {
+      const data = e.detail?.homepageConfig;
+      if (data) {
+        setHomepageConfig((prev) => ({ ...prev, ...data }));
+      }
+    };
+    window.addEventListener('smartcanteen:homepage_config_sync', handleHpEvent);
+
+    // D. Real-Time Cloud SSE Stream for Cross-Device Synchronization
     const unsubscribeCloud = subscribeToOrderEvents((cloudEvent) => {
       const { type, orders: incomingOrders, newOrder, orderId, newStatus, updatedOrder } = cloudEvent || {};
 
@@ -636,6 +708,36 @@ export const DataProvider = ({ children }) => {
             return merged;
           });
         }
+        return;
+      }
+
+      if (type === 'HOMEPAGE_CONFIG_UPDATED' && cloudEvent.homepageConfig) {
+        setHomepageConfig((prev) => {
+          const merged = {
+            ...prev,
+            ...cloudEvent.homepageConfig,
+            dailyDiscounts: {
+              ...prev.dailyDiscounts,
+              ...(cloudEvent.homepageConfig.dailyDiscounts || {}),
+            },
+            specialOfferBanner: {
+              ...prev.specialOfferBanner,
+              ...(cloudEvent.homepageConfig.specialOfferBanner || {}),
+            },
+          };
+          try {
+            localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
+          } catch (_) {}
+          return merged;
+        });
+        return;
+      }
+
+      if (type === 'MENU_SYNC' && Array.isArray(cloudEvent.menuItems)) {
+        setMenuItems(cloudEvent.menuItems);
+        try {
+          localStorage.setItem('smart_canteen_menu', JSON.stringify(cloudEvent.menuItems));
+        } catch (_) {}
         return;
       }
 
@@ -819,6 +921,7 @@ export const DataProvider = ({ children }) => {
       isMounted = false;
       clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('smartcanteen:homepage_config_sync', handleHpEvent);
       if (unsubscribeCloud) unsubscribeCloud();
       if (ordersBroadcastRef.current) {
         ordersBroadcastRef.current.close();
@@ -1342,35 +1445,79 @@ export const DataProvider = ({ children }) => {
       reviewCount: 0,
       isAvailable: true,
     };
-    setMenuItems((prev) => [newItem, ...prev]);
+    setMenuItems((prev) => {
+      const next = [newItem, ...prev];
+      try {
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+      } catch (_) {}
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
+        } catch (_) {}
+      }
+      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
+      return next;
+    });
     logActivity('Canteen Admin', 'FOOD_ADDED', 'MENU', `Added new dish: ${newItem.name} (₹${newItem.price})`);
     return newItem;
   };
 
   const updateFoodItem = (foodId, updatedData) => {
-    setMenuItems((prev) =>
-      prev.map((item) => (item.id === foodId ? { ...item, ...updatedData } : item))
-    );
+    setMenuItems((prev) => {
+      const next = prev.map((item) => (item.id === foodId ? { ...item, ...updatedData } : item));
+      try {
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+      } catch (_) {}
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
+        } catch (_) {}
+      }
+      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
+      return next;
+    });
     logActivity('Canteen Admin', 'FOOD_UPDATED', 'MENU', `Updated dish: ${updatedData.name}`);
   };
 
   const deleteFoodItem = (foodId) => {
     const item = menuItems.find((i) => i.id === foodId);
-    setMenuItems((prev) => prev.filter((i) => i.id !== foodId));
+    setMenuItems((prev) => {
+      const next = prev.filter((i) => i.id !== foodId);
+      try {
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+      } catch (_) {}
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
+        } catch (_) {}
+      }
+      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
+      return next;
+    });
     logActivity('Canteen Admin', 'FOOD_DELETED', 'MENU', `Removed dish: ${item?.name || foodId}`);
   };
 
   const toggleFoodStock = (foodId) => {
-    setMenuItems((prev) =>
-      prev.map((item) => {
+    setMenuItems((prev) => {
+      const next = prev.map((item) => {
         if (item.id === foodId) {
           const nextState = !item.isAvailable;
           logActivity('Canteen Admin', 'STOCK_TOGGLE', 'MENU', `Toggled ${item.name} to ${nextState ? 'In Stock' : 'Sold Out'}`);
           return { ...item, isAvailable: nextState };
         }
         return item;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+      } catch (_) {}
+      if (ordersBroadcastRef.current) {
+        try {
+          ordersBroadcastRef.current.postMessage({ type: 'MENU_SYNC', menuItems: next });
+        } catch (_) {}
+      }
+      publishOrderEvent({ type: 'MENU_SYNC', menuItems: next });
+      return next;
+    });
   };
 
   // ==========================================

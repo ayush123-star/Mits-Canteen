@@ -32,7 +32,12 @@ export default async function handler(req, res) {
   try {
     // POST, PATCH, PUT: Update canteen config / payment QR
     if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
-      const payload = req.body || {};
+      let payload = req.body || {};
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch (_) {}
+      }
       canteenConfigCache = {
         ...canteenConfigCache,
         ...payload,

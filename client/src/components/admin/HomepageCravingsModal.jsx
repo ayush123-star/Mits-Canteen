@@ -34,10 +34,18 @@ export const HomepageCravingsModal = ({ isOpen, onClose }) => {
     homepageConfig?.cravingsSubtitle || 'Top rated and most ordered items across campus this week.'
   );
   const [selectedIds, setSelectedIds] = useState(
-    homepageConfig?.featuredCravingsIds && homepageConfig.featuredCravingsIds.length >= 4
-      ? homepageConfig.featuredCravingsIds
-      : ['food-1', 'food-2', 'food-3', 'food-5']
+    homepageConfig?.featuredCravingsIds || ['food-1', 'food-2', 'food-3', 'food-5']
   );
+
+  React.useEffect(() => {
+    if (homepageConfig) {
+      if (homepageConfig.cravingsTitle) setCravingsTitle(homepageConfig.cravingsTitle);
+      if (homepageConfig.cravingsSubtitle) setCravingsSubtitle(homepageConfig.cravingsSubtitle);
+      if (Array.isArray(homepageConfig.featuredCravingsIds)) setSelectedIds(homepageConfig.featuredCravingsIds);
+      if (homepageConfig.dailyDiscounts) setDailyDiscounts(homepageConfig.dailyDiscounts);
+      if (homepageConfig.specialOfferBanner) setBannerConfig(homepageConfig.specialOfferBanner);
+    }
+  }, [homepageConfig]);
 
   const [dailyDiscounts, setDailyDiscounts] = useState(
     homepageConfig?.dailyDiscounts || {

@@ -46,18 +46,26 @@ export const HomePage = () => {
 
   const todayDiscount = getTodayDiscount ? getTodayDiscount() : { day: 'Today', percent: 15, title: 'Campus Special Offer', promoCode: 'CAMPUSDAY' };
 
-  // Dynamic Popular Items: Canonical 4 dishes (Double Cheese Burger, Masala Dosa, Deluxe Thali, Cold Coffee)
-  // or Owner-customized dishes. Guaranteed 100% identical on Laptop and Mobile.
+  // Dynamic Popular Items: Owner-selected dishes (strictly prioritized) + top-rated items to fill a 4-card grid.
+  // Whenever Canteen Owner selects/changes any dishes, they immediately reflect here across all devices!
   const popularItems = useMemo(() => {
     const all = (menuItems && menuItems.length > 0) ? menuItems : INITIAL_MENU_ITEMS;
-    const targetIds = (homepageConfig?.featuredCravingsIds && homepageConfig.featuredCravingsIds.length >= 4)
-      ? homepageConfig.featuredCravingsIds
-      : ['food-1', 'food-2', 'food-3', 'food-5'];
 
-    let selected = targetIds
-      .map((id) => all.find((m) => (m._id || m.id) === id) || INITIAL_MENU_ITEMS.find((m) => m.id === id))
-      .filter(Boolean);
+    // 1. If owner has selected ANY dishes, prioritize those exact dishes in selected order
+    let selected = [];
+    if (homepageConfig?.featuredCravingsIds && Array.isArray(homepageConfig.featuredCravingsIds) && homepageConfig.featuredCravingsIds.length > 0) {
+      selected = homepageConfig.featuredCravingsIds
+        .map((id) => all.find((m) => (m._id || m.id) === id) || INITIAL_MENU_ITEMS.find((m) => m.id === id))
+        .filter(Boolean);
+    } else {
+      // Canonical fallback if owner hasn't configured any cravings
+      selected = ['food-1', 'food-2', 'food-3', 'food-5']
+        .map((id) => all.find((m) => (m._id || m.id) === id) || INITIAL_MENU_ITEMS.find((m) => m.id === id))
+        .filter(Boolean);
+    }
 
+    // 2. If fewer than 4 dishes were chosen, fill remaining slots with highest rated items
+    // (excluding items already selected) so layout is always balanced and full
     if (selected.length < 4) {
       const selectedIds = new Set(selected.map((item) => item._id || item.id));
       const remainingTop = all
@@ -68,7 +76,7 @@ export const HomePage = () => {
       selected = [...selected, ...remainingTop.slice(0, needed)];
     }
 
-    return selected.slice(0, 4);
+    return selected.slice(0, 8);
   }, [menuItems, homepageConfig?.featuredCravingsIds]);
 
   return (
