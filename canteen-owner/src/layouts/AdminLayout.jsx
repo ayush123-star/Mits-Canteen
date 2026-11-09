@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { AestheticThemePicker } from '../components/AestheticThemePicker';
 import {
   UtensilsCrossed,
   Clock,
@@ -293,6 +294,9 @@ export const AdminLayout = () => {
               <span className="hidden md:inline">Privacy:</span>
               <span className="hidden sm:inline">{privacyMode ? 'ON' : 'OFF'}</span>
             </button>
+
+            {/* Aesthetic Theme Selector */}
+            <AestheticThemePicker compact />
 
             {/* Quick Screen Lock Button */}
             <button

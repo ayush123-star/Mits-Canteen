@@ -10,6 +10,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Google Identity Services (Official GIS OAuth 2.0 SDK) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('mits_theme') || 'dark';
+          var savedPreset = localStorage.getItem('mits_theme_preset') || 'sunset-ember';
+          if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          document.documentElement.setAttribute('data-theme-preset', savedPreset);
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#F8FAFC] text-[#0B132B] font-sans antialiased selection:bg-orange-500 selection:text-white">
     <div id="root"></div>

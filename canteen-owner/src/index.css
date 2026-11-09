@@ -601,3 +601,186 @@ html.light ::-webkit-scrollbar-thumb {
     animation: none !important;
   }
 }
+
+/* =======================================================
+   AESTHETIC UNIQUE THEME SYSTEM (DARK & LUXE STYLES)
+   ======================================================= */
+
+/* 1. DEFAULT / SUNSET EMBER (Obsidian Velvet + Radiant Sunset Flame) */
+html.dark:not([data-theme-preset]),
+html.dark[data-theme-preset="sunset-ember"] {
+  --theme-bg-main: #08090D;
+  --theme-bg-panel: #0F121C;
+  --theme-bg-card: #151825;
+  --theme-accent-gradient: linear-gradient(135deg, #FF4565 0%, #FF7844 55%, #FFA834 100%);
+  --theme-accent-color: #FF8566;
+  --theme-accent-glow: rgba(255, 69, 101, 0.4);
+}
+
+html.dark:not([data-theme-preset]) body,
+html.dark[data-theme-preset="sunset-ember"] body,
+html.dark:not([data-theme-preset]) [class*="bg-[#0B1020]"]:not(.dark-surface-locked),
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
+  background-color: #08090D !important;
+}
+
+html.dark:not([data-theme-preset]) [class*="bg-[#151C30]"]:not(.dark-surface-locked),
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
+  background-color: #0F121C !important;
+  border-color: rgba(255, 94, 98, 0.15) !important;
+}
+
+html.dark:not([data-theme-preset]) [class*="bg-[#1C263A]"]:not(.dark-surface-locked),
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked) {
+  background-color: #151825 !important;
+  border-color: rgba(255, 94, 98, 0.18) !important;
+}
+
+html.dark:not([data-theme-preset]) [class*="border-purple-500"],
+html.dark[data-theme-preset="sunset-ember"] [class*="border-purple-500"] {
+  border-color: rgba(255, 94, 98, 0.22) !important;
+}
+
+html.dark:not([data-theme-preset]) button[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="sunset-ember"] button[class*="from-[#7955E8]"],
+html.dark:not([data-theme-preset]) a[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="sunset-ember"] a[class*="from-[#7955E8]"],
+html.dark:not([data-theme-preset]) span[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="sunset-ember"] span[class*="from-[#7955E8]"],
+html.dark:not([data-theme-preset]) .btn-mits,
+html.dark[data-theme-preset="sunset-ember"] .btn-mits {
+  background-image: linear-gradient(135deg, #FF4565 0%, #FF7844 55%, #FFA834 100%) !important;
+  box-shadow: 0 4px 22px -2px rgba(255, 69, 101, 0.45) !important;
+}
+
+html.dark:not([data-theme-preset]) button[class*="from-[#7955E8]"]:hover,
+html.dark[data-theme-preset="sunset-ember"] button[class*="from-[#7955E8]"]:hover,
+html.dark:not([data-theme-preset]) a[class*="from-[#7955E8]"]:hover,
+html.dark[data-theme-preset="sunset-ember"] a[class*="from-[#7955E8]"]:hover,
+html.dark:not([data-theme-preset]) .btn-mits:hover,
+html.dark[data-theme-preset="sunset-ember"] .btn-mits:hover {
+  background-image: linear-gradient(135deg, #FF2B4F 0%, #FF662A 55%, #FF991A 100%) !important;
+  box-shadow: 0 8px 32px -2px rgba(255, 69, 101, 0.65) !important;
+}
+
+html.dark:not([data-theme-preset]) [class*="text-purple-300"],
+html.dark[data-theme-preset="sunset-ember"] [class*="text-purple-300"],
+html.dark:not([data-theme-preset]) [class*="text-purple-400"],
+html.dark[data-theme-preset="sunset-ember"] [class*="text-purple-400"] {
+  color: #FF8566 !important;
+}
+
+html.dark:not([data-theme-preset]) [class*="text-purple-200"],
+html.dark[data-theme-preset="sunset-ember"] [class*="text-purple-200"] {
+  color: #FFA585 !important;
+}
+
+html.dark:not([data-theme-preset]) [class*="bg-purple-500/20"],
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-purple-500/20"],
+html.dark:not([data-theme-preset]) [class*="bg-purple-500/10"],
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-purple-500/10"],
+html.dark:not([data-theme-preset]) [class*="bg-purple-500/15"],
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-purple-500/15"] {
+  background-color: rgba(255, 94, 98, 0.16) !important;
+  color: #FFA085 !important;
+  border-color: rgba(255, 94, 98, 0.3) !important;
+}
+
+/* 2. CYBER AURORA (Electric Violet & Neon Magenta) */
+html.dark[data-theme-preset="cyber-aurora"] body,
+html.dark[data-theme-preset="cyber-aurora"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
+  background-color: #090812 !important;
+}
+html.dark[data-theme-preset="cyber-aurora"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
+  background-color: #110E20 !important;
+  border-color: rgba(168, 85, 247, 0.2) !important;
+}
+html.dark[data-theme-preset="cyber-aurora"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked) {
+  background-color: #18142E !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+}
+html.dark[data-theme-preset="cyber-aurora"] [class*="border-purple-500"] {
+  border-color: rgba(168, 85, 247, 0.28) !important;
+}
+html.dark[data-theme-preset="cyber-aurora"] button[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="cyber-aurora"] a[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="cyber-aurora"] span[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="cyber-aurora"] .btn-mits {
+  background-image: linear-gradient(135deg, #8B5CF6 0%, #D946EF 50%, #06B6D4 100%) !important;
+  box-shadow: 0 4px 22px -2px rgba(139, 92, 246, 0.45) !important;
+}
+html.dark[data-theme-preset="cyber-aurora"] [class*="text-purple-300"],
+html.dark[data-theme-preset="cyber-aurora"] [class*="text-purple-400"] {
+  color: #C084FC !important;
+}
+html.dark[data-theme-preset="cyber-aurora"] [class*="bg-purple-500/20"] {
+  background-color: rgba(168, 85, 247, 0.18) !important;
+  color: #D8B4FE !important;
+  border-color: rgba(168, 85, 247, 0.35) !important;
+}
+
+/* 3. MATCHA LUXE (Smoked Jade & Cyber Mint) */
+html.dark[data-theme-preset="emerald-matcha"] body,
+html.dark[data-theme-preset="emerald-matcha"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
+  background-color: #060C0A !important;
+}
+html.dark[data-theme-preset="emerald-matcha"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
+  background-color: #0C1814 !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+html.dark[data-theme-preset="emerald-matcha"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked) {
+  background-color: #12241E !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+html.dark[data-theme-preset="emerald-matcha"] [class*="border-purple-500"] {
+  border-color: rgba(16, 185, 129, 0.28) !important;
+}
+html.dark[data-theme-preset="emerald-matcha"] button[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="emerald-matcha"] a[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="emerald-matcha"] span[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="emerald-matcha"] .btn-mits {
+  background-image: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%) !important;
+  box-shadow: 0 4px 22px -2px rgba(16, 185, 129, 0.45) !important;
+}
+html.dark[data-theme-preset="emerald-matcha"] [class*="text-purple-300"],
+html.dark[data-theme-preset="emerald-matcha"] [class*="text-purple-400"] {
+  color: #34D399 !important;
+}
+html.dark[data-theme-preset="emerald-matcha"] [class*="bg-purple-500/20"] {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  color: #6EE7B7 !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* 4. ROYAL CAVIAR (Deep Onyx & 24K Saffron Gold) */
+html.dark[data-theme-preset="royal-gold"] body,
+html.dark[data-theme-preset="royal-gold"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
+  background-color: #090805 !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
+  background-color: #14120A !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked) {
+  background-color: #1E1A10 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="border-purple-500"] {
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+html.dark[data-theme-preset="royal-gold"] button[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="royal-gold"] a[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="royal-gold"] span[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="royal-gold"] .btn-mits {
+  background-image: linear-gradient(135deg, #D97706 0%, #F59E0B 50%, #FCD34D 100%) !important;
+  box-shadow: 0 4px 22px -2px rgba(245, 158, 11, 0.45) !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="text-purple-300"],
+html.dark[data-theme-preset="royal-gold"] [class*="text-purple-400"] {
+  color: #FBBF24 !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="bg-purple-500/20"] {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #FDE047 !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}

@@ -5,6 +5,20 @@
     <link rel="icon" type="image/png" href="/images/mits/mits-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MITS Canteen — Owner & Kitchen Operations Console</title>
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('mits_theme') || 'dark';
+          var savedPreset = localStorage.getItem('mits_theme_preset') || 'sunset-ember';
+          if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          document.documentElement.setAttribute('data-theme-preset', savedPreset);
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#0B1020] text-white">
     <div id="root"></div>

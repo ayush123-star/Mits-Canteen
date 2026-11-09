@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
+import { AestheticThemePicker } from './AestheticThemePicker';
 import {
   UtensilsCrossed,
   ShoppingBag,
@@ -212,20 +213,8 @@ export const Navbar = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               </button>
 
-              {/* Functional Light / Dark Mode Toggle Button */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="w-8 h-8 rounded-full bg-[#151C30] hover:bg-[#1C263A] border border-purple-500/25 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs"
-                title={isDark ? "Switch to Light Academic Theme" : "Switch to MITS AMS Dark Theme"}
-                aria-label="Toggle Theme Mode"
-              >
-                {isDark ? (
-                  <Sun className="w-4 h-4 text-amber-300 hover:text-amber-200 transition-transform hover:rotate-45" />
-                ) : (
-                  <Moon className="w-4 h-4 text-[#7955E8] hover:text-[#526DFF] transition-transform hover:-rotate-12" />
-                )}
-              </button>
+              {/* Aesthetic Theme Selector */}
+              <AestheticThemePicker />
 
               {/* Food Cart Drawer Trigger */}
               <button
@@ -655,15 +644,18 @@ export const Navbar = () => {
             </div>
 
             {/* 4. THEME & SIGN OUT FOOTER */}
-            <div className="pt-2 border-t border-purple-500/20 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-[#151C30] text-slate-200 border border-purple-500/20"
-              >
-                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-purple-400" />}
-                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-              </button>
+            <div className="pt-2 border-t border-purple-500/20 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <AestheticThemePicker />
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-[#151C30] text-slate-200 border border-purple-500/20"
+                >
+                  {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-purple-400" />}
+                  <span>{isDark ? 'Light' : 'Dark'}</span>
+                </button>
+              </div>
 
               {isAuthenticated && (
                 <button
