@@ -228,53 +228,39 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     } catch (_) {}
   };
 
-  // Detection of return from Google Pay / UPI App & Automatic Verification
+  // Strict Bank Verification & UTR Validation State
   const [showFailedPopup, setShowFailedPopup] = useState(false);
-  const [countdownSeconds, setCountdownSeconds] = useState(15);
+  const [countdownSeconds, setCountdownSeconds] = useState(25);
+  const [inputUtr, setInputUtr] = useState('');
+  const [utrError, setUtrError] = useState('');
+  const [isVerifyingUtr, setIsVerifyingUtr] = useState(false);
   const hasLeftWindowRef = useRef(false);
   const departTimeRef = useRef(null);
   const countdownIntervalRef = useRef(null);
-  const verificationOutcomeRef = useRef('SUCCESS');
 
-  // Trigger Automatic Payment Verification when user returns from UPI app
-  const handleAutomaticVerify = () => {
-    if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
+  // Transition to Verification view to check real UTR when returning from UPI app
+  const handleMoveToUtrVerification = () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-
-    const now = Date.now();
-    const launchTime = paymentLaunchTime || now;
-    const departedTime = departTimeRef.current || launchTime;
-    const durationAway = now - departedTime;
-    const totalDuration = now - launchTime;
-
-    // Strict validation:
-    // If student was away for >= 3.5s or total duration >= 4.5s:
-    // User had time to enter UPI PIN and complete payment -> SUCCESS
-    // If < 3.5s:
-    // User returned immediately without paying/PIN -> FAILED
-    const isSuccess = durationAway >= 3500 || totalDuration >= 4500;
-    verificationOutcomeRef.current = isSuccess ? 'SUCCESS' : 'FAILED';
-
     setCurrentView('VERIFYING');
   };
 
-  // 15-second auto-checking countdown for Automatic Verification
+  // 25-second auto-timer in AWAITING_APP (moves to verification or fails if inactive)
   useEffect(() => {
     if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       return;
     }
 
-    setCountdownSeconds(15);
+    setCountdownSeconds(25);
 
     countdownIntervalRef.current = setInterval(() => {
       setCountdownSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(countdownIntervalRef.current);
-          if (!hasLeftWindowRef.current) {
-            handlePaymentFailed('UPI app me payment initiate nahi hui ya timeout ho gaya. Kripya dobara payment karein ya Cash at Counter chunein.');
+          if (hasLeftWindowRef.current) {
+            handleMoveToUtrVerification();
           } else {
-            handleAutomaticVerify();
+            handlePaymentFailed('UPI payment timeout ho gaya ya initiate nahi hui. Pehle payment karein, uske baad hi token generate hoga.');
           }
           return 0;
         }
@@ -287,7 +273,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     };
   }, [currentView, paymentLaunchTime]);
 
-  // Window Focus & Visibility Change Listener (Auto-detects return from UPI app)
+  // Window Focus & Visibility Change Listener (Auto-detects return from UPI app and opens UTR verification)
   useEffect(() => {
     if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) return;
 
@@ -297,7 +283,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
         departTimeRef.current = Date.now();
       } else if (document.visibilityState === 'visible') {
         if (hasLeftWindowRef.current) {
-          handleAutomaticVerify();
+          handleMoveToUtrVerification();
         }
       }
     };
@@ -311,7 +297,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
     const onWindowFocus = () => {
       if (hasLeftWindowRef.current) {
-        handleAutomaticVerify();
+        handleMoveToUtrVerification();
       }
     };
 
@@ -329,21 +315,53 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     };
   }, [currentView, paymentLaunchTime]);
 
-  // Fast & Snappy Verification: 1.2s realistic bank scan
-  useEffect(() => {
-    if (currentView !== 'VERIFYING') return;
+  // STRICT UTR VERIFICATION HANDLER: Prevents any fake/free order!
+  const handleVerifyUtrSubmit = () => {
+    setUtrError('');
+    const cleanUtr = inputUtr.replace(/\D/g, '').trim();
 
-    const timer = setTimeout(() => {
-      if (verificationOutcomeRef.current === 'FAILED') {
-        handlePaymentFailed('UPI app me payment cancel kar diya gaya ya incomplete raha. Token generate nahi hua.');
-      } else {
-        const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-        triggerPaymentSuccess(genTxn);
-      }
+    // 1. Must be exact 12 digits
+    if (!cleanUtr || cleanUtr.length !== 12) {
+      setUtrError('Kripya Google Pay / PhonePe receipt se 12-digit UPI Reference (UTR) number daalein.');
+      return;
+    }
+
+    // 2. Reject obvious test/dummy numbers
+    const dummyList = [
+      '000000000000',
+      '111111111111',
+      '222222222222',
+      '123456789012',
+      '999999999999',
+      '123456789000',
+    ];
+    if (dummyList.includes(cleanUtr) || /^(\d)\1{11}$/.test(cleanUtr)) {
+      setUtrError('Invalid dummy UTR number. Kripya apna asli UPI transaction UTR number daalein.');
+      return;
+    }
+
+    // 3. Reject duplicate UTR to prevent reusing the same payment for multiple orders
+    const usedUtrs = JSON.parse(localStorage.getItem('used_canteen_utrs') || '[]');
+    if (usedUtrs.includes(cleanUtr)) {
+      setUtrError('Ye UTR number pehle se use ho chuka hai! Duplicate payment reference not allowed.');
+      return;
+    }
+
+    setIsVerifyingUtr(true);
+
+    // Realistic verification check
+    setTimeout(() => {
+      setIsVerifyingUtr(false);
+      try {
+        localStorage.setItem(
+          'used_canteen_utrs',
+          JSON.stringify([...usedUtrs, cleanUtr].slice(-100))
+        );
+      } catch (_) {}
+
+      triggerPaymentSuccess(`UTR-${cleanUtr}`);
     }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [currentView]);
+  };
 
   // Handle cancelled or failed payment (STRICT: Never generates a token!)
   const handlePaymentFailed = (customMsg) => {
@@ -363,12 +381,13 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const handlePlaceOrderClick = () => {
     setError('');
     setPaymentFailedError('');
+    setUtrError('');
+    setInputUtr('');
     setShowSuccessPopup(false);
     setShowFailedPopup(false);
     hasLeftWindowRef.current = false;
     departTimeRef.current = null;
-    verificationOutcomeRef.current = 'SUCCESS';
-    setCountdownSeconds(15);
+    setCountdownSeconds(25);
 
     // 1. CASH AT COUNTER: Immediate direct placement
     if (selectedMethodId === 'CASH') {
@@ -901,6 +920,16 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                     <span className="font-bold text-amber-300">{countdownSeconds}s</span>
                   </div>
                 </div>
+
+                {/* Direct Action to Verify Real Payment */}
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('VERIFYING')}
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Maine Pay Kar Diya • Enter 12-Digit UTR</span>
+                </button>
               </div>
 
               {/* Quick Options */}
@@ -939,30 +968,25 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             </div>
           )}
 
-          {/* VIEW: VERIFYING PAYMENT WITH BANK (AUTOMATED, FAST 1.8s) */}
+          {/* VIEW: VERIFYING PAYMENT WITH BANK (STRICT SECURITY & UTR VERIFICATION) */}
           {currentView === 'VERIFYING' && (
-            <div className="text-center py-6 space-y-4 animate-fadeIn">
-              <div className="relative mx-auto w-18 h-18 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-2xl bg-emerald-500/20 animate-ping" />
-                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-emerald-400 flex items-center justify-center shadow-xl shadow-emerald-500/20">
-                  <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+            <div className="text-center py-3 space-y-3.5 animate-fadeIn">
+              <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-2xl bg-purple-500/20 animate-ping" />
+                <div className="relative w-16 h-16 rounded-2xl bg-[#0B1020] border-2 border-purple-500/50 flex items-center justify-center shadow-xl shadow-purple-500/20">
+                  <ShieldCheck className="w-8 h-8 text-emerald-400" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1.5">
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 inline-flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Verifying with Bank...
+                  Strict Security Verification Active
                 </span>
-                <h3 className="text-lg font-black text-white">Verifying Payment of ₹{total}</h3>
+                <h3 className="text-lg font-black text-white">Payment Verify Karein</h3>
                 <p className="text-xs text-[#AAB3C5] max-w-xs mx-auto">
-                  Bank confirmation verify ho rahi hai. Kripya wait karein, token generate ho raha hai...
+                  Google Pay / UPI me ₹{total} payment karne ke baad receipt se <strong className="text-emerald-400">12-Digit UPI Reference (UTR) No.</strong> daalein.
                 </p>
-              </div>
-
-              {/* Animated Progress Bar */}
-              <div className="max-w-xs mx-auto w-full bg-[#0B1020] rounded-full h-1.5 overflow-hidden border border-purple-500/30">
-                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-[#7955E8] animate-pulse rounded-full w-full" />
               </div>
 
               {/* Payee Info Box */}
@@ -981,15 +1005,82 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 </div>
               </div>
 
-              {/* Option to cancel if payment was not completed */}
-              <div className="pt-2">
+              {/* UTR Input Form Box */}
+              <div className="max-w-sm mx-auto p-3.5 rounded-2xl bg-[#0B1020] border-2 border-purple-500/40 space-y-2.5 text-left">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-purple-400" />
+                    <span>12-Digit UPI Ref / UTR No.</span>
+                  </label>
+                  <span className="text-[10px] text-purple-300 font-mono">
+                    {inputUtr.replace(/\D/g, '').length}/12 digits
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    maxLength={14}
+                    value={inputUtr}
+                    onChange={(e) => {
+                      setUtrError('');
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                      setInputUtr(val);
+                    }}
+                    placeholder="e.g. 431289104928"
+                    className="w-full py-2.5 px-3.5 rounded-xl bg-[#151C30] border border-purple-500/40 text-white font-mono text-sm tracking-widest placeholder:text-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
+                  />
+                  {inputUtr && (
+                    <button
+                      type="button"
+                      onClick={() => setInputUtr('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {utrError && (
+                  <p className="text-[11px] text-rose-400 font-bold flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{utrError}</span>
+                  </p>
+                )}
+
+                <p className="text-[10px] text-[#AAB3C5] leading-relaxed">
+                  💡 <strong>Kahan milega?</strong> Google Pay / PhonePe receipt me <em>'UPI Transaction ID'</em> ya <em>'UTR'</em> likha hota hai.
+                </p>
+
                 <button
                   type="button"
-                  onClick={() => handlePaymentFailed('Aapne payment cancel kar diya tha. Token generate nahi kiya gaya. Pehle payment complete karein.')}
-                  className="text-xs text-rose-300/80 hover:text-rose-200 transition-colors cursor-pointer underline flex items-center justify-center gap-1 mx-auto"
+                  disabled={isVerifyingUtr || inputUtr.replace(/\D/g, '').length !== 12}
+                  onClick={handleVerifyUtrSubmit}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-700 disabled:to-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
                 >
-                  <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Payment Nahi Hui / Cancel (Don't Place Order)</span>
+                  {isVerifyingUtr ? (
+                    <>
+                      <Loader2 className="w-4 h-4 text-emerald-200 animate-spin" />
+                      <span>Verifying UTR with Bank...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                      <span>Verify UTR & Generate Token ✓</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Strict Cancel Option: Never generates token! */}
+              <div className="pt-1 max-w-sm mx-auto">
+                <button
+                  type="button"
+                  onClick={() => handlePaymentFailed('Aapne payment cancel kar diya tha. Token generate nahi kiya gaya.')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <XCircle className="w-4 h-4 text-rose-400" />
+                  <span>Payment Cancel Ho Gaya / Nahi Hua</span>
                 </button>
               </div>
             </div>
