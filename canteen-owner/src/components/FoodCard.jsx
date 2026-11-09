@@ -27,7 +27,7 @@ export const FoodCard = ({ food, onSelect }) => {
   return (
     <SpotlightCard
       onClick={() => onSelect && onSelect(food)}
-      spotlightColor="rgba(255, 120, 68, 0.22)"
+      spotlightColor="rgba(245, 158, 11, 0.25)"
       className="group relative bg-[#131622]/90 backdrop-blur-2xl rounded-2xl sm:rounded-3xl overflow-hidden border border-purple-500/25 hover:border-purple-400/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/40 transition-all duration-300 flex flex-col cursor-pointer card-3d transform-gpu hover:-translate-y-1.5"
     >
       {/* Image Container - Responsive Height */}

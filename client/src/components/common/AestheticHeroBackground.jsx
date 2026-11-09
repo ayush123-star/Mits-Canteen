@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 export const AestheticHeroBackground = ({
   className = '',
-  overlayClass = 'bg-gradient-to-t from-[#08090D] via-[#08090D]/85 to-transparent',
+  overlayClass = 'bg-gradient-to-t from-[#0A0804] via-[#0A0804]/85 to-transparent',
   children,
 }) => {
   const canvasRef = useRef(null);
@@ -14,7 +14,7 @@ export const AestheticHeroBackground = ({
   const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
   const [burstCount, setBurstCount] = useState(0);
 
-  // Theme-aware particle & ambient palette
+  // Theme-aware particle & ambient palette (Default: Imperial 24K Saffron Gold)
   const getThemePalette = () => {
     switch (preset) {
       case 'cyber-aurora':
@@ -35,17 +35,7 @@ export const AestheticHeroBackground = ({
           glow2: 'rgba(16, 185, 129, 0.22)',
           glow3: 'rgba(52, 211, 153, 0.18)',
         };
-      case 'royal-gold':
-        return {
-          primary: '#D97706',
-          secondary: '#F59E0B',
-          accent: '#FCD34D',
-          glow1: 'rgba(217, 119, 6, 0.28)',
-          glow2: 'rgba(245, 158, 11, 0.24)',
-          glow3: 'rgba(252, 211, 77, 0.18)',
-        };
       case 'sunset-ember':
-      default:
         return {
           primary: '#FF4565',
           secondary: '#FF7844',
@@ -53,6 +43,16 @@ export const AestheticHeroBackground = ({
           glow1: 'rgba(255, 69, 101, 0.32)',
           glow2: 'rgba(255, 120, 68, 0.25)',
           glow3: 'rgba(255, 168, 52, 0.20)',
+        };
+      case 'royal-gold':
+      default:
+        return {
+          primary: '#D97706',
+          secondary: '#F59E0B',
+          accent: '#FCD34D',
+          glow1: 'rgba(217, 119, 6, 0.36)',
+          glow2: 'rgba(245, 158, 11, 0.30)',
+          glow3: 'rgba(252, 211, 77, 0.24)',
         };
     }
   };
