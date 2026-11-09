@@ -14,14 +14,14 @@ export const AestheticCursorGlow = () => {
   const getGlowColor = () => {
     switch (preset) {
       case 'cyber-aurora':
-        return 'rgba(139, 92, 246, 0.10)';
+        return 'rgba(139, 92, 246, 0.08)';
       case 'emerald-matcha':
-        return 'rgba(16, 185, 129, 0.10)';
-      case 'sunset-ember':
-        return 'rgba(255, 94, 98, 0.10)';
+        return 'rgba(16, 185, 129, 0.08)';
       case 'royal-gold':
+        return 'rgba(245, 158, 11, 0.08)';
+      case 'sunset-ember':
       default:
-        return 'rgba(245, 158, 11, 0.14)';
+        return 'rgba(255, 94, 98, 0.09)';
     }
   };
 

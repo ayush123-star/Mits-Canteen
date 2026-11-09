@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #0A0804;
-  --bg-secondary: #17130A;
-  --bg-card: #211B0E;
-  --accent-purple: #F59E0B;
-  --accent-blue: #D97706;
+  --bg-primary: #0B1020;
+  --bg-secondary: #151C30;
+  --bg-card: #1C263A;
+  --accent-purple: #7955E8;
+  --accent-blue: #526DFF;
   --text-main: #FFFFFF;
-  --text-muted: #E2D3B8;
-  --border-subtle: rgba(245, 158, 11, 0.25);
+  --text-muted: #AAB3C5;
+  --border-subtle: rgba(121, 85, 232, 0.2);
 }
 
 html.light {
@@ -27,7 +27,7 @@ html.light {
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #0A0804;
+    background-color: #0B1020;
     color: #FFFFFF;
     overflow-x: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
@@ -606,104 +606,8 @@ html.light ::-webkit-scrollbar-thumb {
    AESTHETIC UNIQUE THEME SYSTEM (DARK & LUXE STYLES)
    ======================================================= */
 
-/* 1. DEFAULT / ROYAL GOLD LUXE (Deep Imperial Onyx & 24K Saffron Gold) */
+/* 1. DEFAULT / SUNSET EMBER (Obsidian Velvet + Radiant Sunset Flame) */
 html.dark:not([data-theme-preset]),
-html.dark[data-theme-preset="royal-gold"] {
-  --theme-bg-main: #0A0804;
-  --theme-bg-panel: #141108;
-  --theme-bg-card: #1D180C;
-  --theme-accent-gradient: linear-gradient(135deg, #B45309 0%, #D97706 30%, #F59E0B 70%, #FCD34D 100%);
-  --theme-accent-color: #FBBF24;
-  --theme-accent-glow: rgba(245, 158, 11, 0.45);
-}
-
-html.dark:not([data-theme-preset]) body,
-html.dark[data-theme-preset="royal-gold"] body {
-  background-color: #0A0804 !important;
-  background-image: 
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(245, 158, 11, 0.20), transparent 75%),
-    radial-gradient(ellipse 70% 50% at 90% 60%, rgba(217, 119, 6, 0.10), transparent 60%),
-    radial-gradient(ellipse 60% 60% at 10% 40%, rgba(252, 211, 77, 0.08), transparent 50%) !important;
-  background-attachment: fixed !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="bg-[#0B1020]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="royal-gold"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
-  background-color: #0C0A05 !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="bg-[#151C30]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="royal-gold"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
-  background-color: #17130A !important;
-  border-color: rgba(245, 158, 11, 0.22) !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="bg-[#1C263A]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="royal-gold"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked),
-html.dark:not([data-theme-preset]) [class*="bg-[#131622]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="royal-gold"] [class*="bg-[#131622]"]:not(.dark-surface-locked),
-html.dark:not([data-theme-preset]) [class*="bg-[#141724]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="royal-gold"] [class*="bg-[#141724]"]:not(.dark-surface-locked) {
-  background-color: #211B0E !important;
-  border-color: rgba(245, 158, 11, 0.28) !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="border-purple-500"],
-html.dark[data-theme-preset="royal-gold"] [class*="border-purple-500"] {
-  border-color: rgba(245, 158, 11, 0.28) !important;
-}
-
-html.dark:not([data-theme-preset]) button[class*="from-[#7955E8]"],
-html.dark[data-theme-preset="royal-gold"] button[class*="from-[#7955E8]"],
-html.dark:not([data-theme-preset]) a[class*="from-[#7955E8]"],
-html.dark[data-theme-preset="royal-gold"] a[class*="from-[#7955E8]"],
-html.dark:not([data-theme-preset]) span[class*="from-[#7955E8]"],
-html.dark[data-theme-preset="royal-gold"] span[class*="from-[#7955E8]"],
-html.dark:not([data-theme-preset]) .btn-mits,
-html.dark[data-theme-preset="royal-gold"] .btn-mits {
-  background-image: linear-gradient(135deg, #B45309 0%, #D97706 30%, #F59E0B 70%, #FCD34D 100%) !important;
-  box-shadow: 0 4px 22px -2px rgba(245, 158, 11, 0.45) !important;
-}
-
-html.dark:not([data-theme-preset]) button[class*="from-[#7955E8]"]:hover,
-html.dark[data-theme-preset="royal-gold"] button[class*="from-[#7955E8]"]:hover,
-html.dark:not([data-theme-preset]) a[class*="from-[#7955E8]"]:hover,
-html.dark[data-theme-preset="royal-gold"] a[class*="from-[#7955E8]"]:hover,
-html.dark:not([data-theme-preset]) .btn-mits:hover,
-html.dark[data-theme-preset="royal-gold"] .btn-mits:hover {
-  background-image: linear-gradient(135deg, #92400E 0%, #B45309 30%, #D97706 70%, #F59E0B 100%) !important;
-  box-shadow: 0 8px 32px -2px rgba(245, 158, 11, 0.65) !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="text-purple-300"],
-html.dark[data-theme-preset="royal-gold"] [class*="text-purple-300"],
-html.dark:not([data-theme-preset]) [class*="text-purple-400"],
-html.dark[data-theme-preset="royal-gold"] [class*="text-purple-400"] {
-  color: #FBBF24 !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="text-purple-200"],
-html.dark[data-theme-preset="royal-gold"] [class*="text-purple-200"] {
-  color: #FDE68A !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="bg-purple-500/20"],
-html.dark[data-theme-preset="royal-gold"] [class*="bg-purple-500/20"],
-html.dark:not([data-theme-preset]) [class*="bg-purple-500/10"],
-html.dark[data-theme-preset="royal-gold"] [class*="bg-purple-500/10"],
-html.dark:not([data-theme-preset]) [class*="bg-purple-500/15"],
-html.dark[data-theme-preset="royal-gold"] [class*="bg-purple-500/15"] {
-  background-color: rgba(245, 158, 11, 0.18) !important;
-  color: #FDE047 !important;
-  border-color: rgba(245, 158, 11, 0.35) !important;
-}
-
-html.dark:not([data-theme-preset]) [class*="text-purple-500"],
-html.dark[data-theme-preset="royal-gold"] [class*="text-purple-500"] {
-  color: #F59E0B !important;
-}
-
-/* 2. SUNSET EMBER (Obsidian Velvet + Radiant Sunset Flame) */
 html.dark[data-theme-preset="sunset-ember"] {
   --theme-bg-main: #08090D;
   --theme-bg-panel: #0F121C;
@@ -713,60 +617,76 @@ html.dark[data-theme-preset="sunset-ember"] {
   --theme-accent-glow: rgba(255, 69, 101, 0.4);
 }
 
+html.dark:not([data-theme-preset]) body,
 html.dark[data-theme-preset="sunset-ember"] body,
+html.dark:not([data-theme-preset]) [class*="bg-[#0B1020]"]:not(.dark-surface-locked),
 html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
   background-color: #08090D !important;
 }
 
+html.dark:not([data-theme-preset]) [class*="bg-[#151C30]"]:not(.dark-surface-locked),
 html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
   background-color: #0F121C !important;
   border-color: rgba(255, 94, 98, 0.15) !important;
 }
 
-html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#131622]"]:not(.dark-surface-locked),
-html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#141724]"]:not(.dark-surface-locked) {
+html.dark:not([data-theme-preset]) [class*="bg-[#1C263A]"]:not(.dark-surface-locked),
+html.dark[data-theme-preset="sunset-ember"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked) {
   background-color: #151825 !important;
   border-color: rgba(255, 94, 98, 0.18) !important;
 }
 
+html.dark:not([data-theme-preset]) [class*="border-purple-500"],
 html.dark[data-theme-preset="sunset-ember"] [class*="border-purple-500"] {
   border-color: rgba(255, 94, 98, 0.22) !important;
 }
 
+html.dark:not([data-theme-preset]) button[class*="from-[#7955E8]"],
 html.dark[data-theme-preset="sunset-ember"] button[class*="from-[#7955E8]"],
+html.dark:not([data-theme-preset]) a[class*="from-[#7955E8]"],
 html.dark[data-theme-preset="sunset-ember"] a[class*="from-[#7955E8]"],
+html.dark:not([data-theme-preset]) span[class*="from-[#7955E8]"],
 html.dark[data-theme-preset="sunset-ember"] span[class*="from-[#7955E8]"],
+html.dark:not([data-theme-preset]) .btn-mits,
 html.dark[data-theme-preset="sunset-ember"] .btn-mits {
   background-image: linear-gradient(135deg, #FF4565 0%, #FF7844 55%, #FFA834 100%) !important;
   box-shadow: 0 4px 22px -2px rgba(255, 69, 101, 0.45) !important;
 }
 
+html.dark:not([data-theme-preset]) button[class*="from-[#7955E8]"]:hover,
 html.dark[data-theme-preset="sunset-ember"] button[class*="from-[#7955E8]"]:hover,
+html.dark:not([data-theme-preset]) a[class*="from-[#7955E8]"]:hover,
 html.dark[data-theme-preset="sunset-ember"] a[class*="from-[#7955E8]"]:hover,
+html.dark:not([data-theme-preset]) .btn-mits:hover,
 html.dark[data-theme-preset="sunset-ember"] .btn-mits:hover {
   background-image: linear-gradient(135deg, #FF2B4F 0%, #FF662A 55%, #FF991A 100%) !important;
   box-shadow: 0 8px 32px -2px rgba(255, 69, 101, 0.65) !important;
 }
 
+html.dark:not([data-theme-preset]) [class*="text-purple-300"],
 html.dark[data-theme-preset="sunset-ember"] [class*="text-purple-300"],
+html.dark:not([data-theme-preset]) [class*="text-purple-400"],
 html.dark[data-theme-preset="sunset-ember"] [class*="text-purple-400"] {
   color: #FF8566 !important;
 }
 
+html.dark:not([data-theme-preset]) [class*="text-purple-200"],
 html.dark[data-theme-preset="sunset-ember"] [class*="text-purple-200"] {
   color: #FFA585 !important;
 }
 
+html.dark:not([data-theme-preset]) [class*="bg-purple-500/20"],
 html.dark[data-theme-preset="sunset-ember"] [class*="bg-purple-500/20"],
+html.dark:not([data-theme-preset]) [class*="bg-purple-500/10"],
 html.dark[data-theme-preset="sunset-ember"] [class*="bg-purple-500/10"],
+html.dark:not([data-theme-preset]) [class*="bg-purple-500/15"],
 html.dark[data-theme-preset="sunset-ember"] [class*="bg-purple-500/15"] {
   background-color: rgba(255, 94, 98, 0.16) !important;
   color: #FFA085 !important;
   border-color: rgba(255, 94, 98, 0.3) !important;
 }
 
-/* 3. CYBER AURORA (Electric Violet & Neon Magenta) */
+/* 2. CYBER AURORA (Electric Violet & Neon Magenta) */
 html.dark[data-theme-preset="cyber-aurora"] body,
 html.dark[data-theme-preset="cyber-aurora"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
   background-color: #090812 !important;
@@ -830,6 +750,39 @@ html.dark[data-theme-preset="emerald-matcha"] [class*="bg-purple-500/20"] {
   background-color: rgba(16, 185, 129, 0.18) !important;
   color: #6EE7B7 !important;
   border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* 4. ROYAL CAVIAR (Deep Onyx & 24K Saffron Gold) */
+html.dark[data-theme-preset="royal-gold"] body,
+html.dark[data-theme-preset="royal-gold"] [class*="bg-[#0B1020]"]:not(.dark-surface-locked) {
+  background-color: #090805 !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="bg-[#151C30]"]:not(.dark-surface-locked) {
+  background-color: #14120A !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="bg-[#1C263A]"]:not(.dark-surface-locked) {
+  background-color: #1E1A10 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="border-purple-500"] {
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+html.dark[data-theme-preset="royal-gold"] button[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="royal-gold"] a[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="royal-gold"] span[class*="from-[#7955E8]"],
+html.dark[data-theme-preset="royal-gold"] .btn-mits {
+  background-image: linear-gradient(135deg, #D97706 0%, #F59E0B 50%, #FCD34D 100%) !important;
+  box-shadow: 0 4px 22px -2px rgba(245, 158, 11, 0.45) !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="text-purple-300"],
+html.dark[data-theme-preset="royal-gold"] [class*="text-purple-400"] {
+  color: #FBBF24 !important;
+}
+html.dark[data-theme-preset="royal-gold"] [class*="bg-purple-500/20"] {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #FDE047 !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
 }
 
 /* ========================================================
@@ -926,8 +879,8 @@ html.dark[data-theme-preset="emerald-matcha"] [class*="bg-purple-500/20"] {
 
 .cyber-grid-horizon {
   background-image: 
-    linear-gradient(to right, rgba(245, 158, 11, 0.09) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(245, 158, 11, 0.09) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
   animation: cyberGridDrift 5s linear infinite;
 }

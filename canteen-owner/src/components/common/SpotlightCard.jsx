@@ -9,7 +9,7 @@ import React, { useRef, useState } from 'react';
 export const SpotlightCard = ({
   children,
   className = '',
-  spotlightColor = 'rgba(245, 158, 11, 0.22)',
+  spotlightColor = 'rgba(255, 120, 68, 0.16)',
   onClick,
   ...props
 }) => {

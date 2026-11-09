@@ -2,17 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export const THEME_PRESETS = [
   {
-    id: 'royal-gold',
-    name: 'Imperial Gold',
-    emoji: '👑',
-    tagline: '24K Saffron Amber & Royal Obsidian Gold',
-    primary: '#D97706',
-    secondary: '#F59E0B',
-    accent: '#FCD34D',
-    bg: '#0A0804',
-    previewGradient: 'from-[#D97706] via-[#F59E0B] to-[#FCD34D]',
-  },
-  {
     id: 'sunset-ember',
     name: 'Sunset Ember',
     emoji: '🔥',
@@ -45,6 +34,17 @@ export const THEME_PRESETS = [
     bg: '#060B08',
     previewGradient: 'from-[#059669] via-[#10B981] to-[#34D399]',
   },
+  {
+    id: 'royal-gold',
+    name: 'Royal Caviar',
+    emoji: '👑',
+    tagline: 'Deep Onyx & 24K Saffron Gold',
+    primary: '#D97706',
+    secondary: '#F59E0B',
+    accent: '#FCD34D',
+    bg: '#0A0906',
+    previewGradient: 'from-[#D97706] via-[#F59E0B] to-[#FCD34D]',
+  },
 ];
 
 const ThemeContext = createContext();
@@ -57,13 +57,11 @@ export const ThemeProvider = ({ children }) => {
     return 'dark';
   });
 
-  // Aesthetic Preset: 'royal-gold' | 'sunset-ember' | 'cyber-aurora' | 'emerald-matcha'
+  // Aesthetic Preset: 'sunset-ember' | 'cyber-aurora' | 'emerald-matcha' | 'royal-gold'
   const [preset, setPreset] = useState(() => {
     const saved = localStorage.getItem('mits_theme_preset');
-    if (saved === 'royal-gold') return 'royal-gold';
-    if (!saved || saved === 'sunset-ember') return 'royal-gold';
-    if (THEME_PRESETS.some((p) => p.id === saved)) return saved;
-    return 'royal-gold'; // Default aesthetic theme
+    if (saved && THEME_PRESETS.some((p) => p.id === saved)) return saved;
+    return 'sunset-ember'; // Default aesthetic theme
   });
 
   useEffect(() => {

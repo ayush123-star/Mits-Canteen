@@ -79,7 +79,7 @@ export const HomePage = () => {
       {/* 1. HERO SECTION WITH UNIQUE AESTHETIC CULINARY TECH ANIMATION */}
       <section className="relative overflow-hidden bg-[#08090D] text-white dark-surface">
         <AestheticHeroBackground
-          overlayClass="bg-gradient-to-t from-[#0A0804] via-[#0A0804]/85 to-transparent"
+          overlayClass="bg-gradient-to-t from-[#08090D] via-[#08090D]/85 to-transparent"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[85vh] lg:min-h-[90vh] flex items-center py-12 lg:py-20 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
@@ -230,7 +230,7 @@ export const HomePage = () => {
       {/* 2. LIVE ORDER STATUS TICKER BAR */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20">
         <SpotlightCard
-          spotlightColor="rgba(245, 158, 11, 0.24)"
+          spotlightColor="rgba(255, 120, 68, 0.20)"
           className="bg-[#141724]/90 backdrop-blur-2xl rounded-3xl p-5 shadow-2xl border border-purple-500/25 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-purple-500/20"
         >
           <div className="flex items-center gap-4">
@@ -519,7 +519,7 @@ export const HomePage = () => {
             return (
               <SpotlightCard
                 key={idx}
-                spotlightColor="rgba(245, 158, 11, 0.25)"
+                spotlightColor="rgba(255, 120, 68, 0.22)"
                 className="relative bg-[#141724]/90 backdrop-blur-2xl rounded-3xl p-4 sm:p-5 border border-purple-500/25 hover:border-purple-400/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/40 transition-all duration-300 card-3d group flex flex-col justify-between overflow-hidden transform-gpu hover:-translate-y-1.5"
               >
                 <div>
@@ -614,7 +614,7 @@ export const HomePage = () => {
             ].map((review, i) => (
               <SpotlightCard
                 key={i}
-                spotlightColor="rgba(245, 158, 11, 0.20)"
+                spotlightColor="rgba(255, 120, 68, 0.18)"
                 className="bg-[#141724]/90 backdrop-blur-2xl rounded-3xl p-6 border border-purple-500/25 hover:border-purple-400/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/30 card-3d flex flex-col justify-between transition-all duration-300 transform-gpu hover:-translate-y-1"
               >
                 <div>
