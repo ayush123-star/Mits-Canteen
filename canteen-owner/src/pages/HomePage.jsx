@@ -14,6 +14,7 @@ import { FloatingFoodBadges } from '../components/common/FloatingFoodBadges';
 import { TiltCard } from '../components/common/TiltCard';
 import { BorderBeam } from '../components/common/BorderBeam';
 import { CampusVibeFab } from '../components/common/CampusVibeFab';
+import { SpotlightCard } from '../components/common/SpotlightCard';
 import {
   UtensilsCrossed,
   Clock,
@@ -33,7 +34,9 @@ import {
   MapPin,
   SlidersHorizontal,
   Settings,
-  Percent
+  Percent,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export const HomePage = () => {
@@ -41,8 +44,17 @@ export const HomePage = () => {
   const { user, isAdmin } = useAuth();
   const [selectedFood, setSelectedFood] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const { setIsCartOpen } = useCart();
   const navigate = useNavigate();
+
+  const handleCopyPromo = (code) => {
+    try {
+      navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2200);
+    } catch (_) {}
+  };
 
   const todayDiscount = getTodayDiscount ? getTodayDiscount() : { day: 'Today', percent: 15, title: 'Campus Special Offer', promoCode: 'CAMPUSDAY' };
 
@@ -215,7 +227,10 @@ export const HomePage = () => {
 
       {/* 2. LIVE ORDER STATUS TICKER BAR */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20">
-        <div className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl p-5 shadow-2xl border border-purple-500/25 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-purple-500/20">
+        <SpotlightCard
+          spotlightColor="rgba(255, 120, 68, 0.20)"
+          className="bg-[#141724]/90 backdrop-blur-2xl rounded-3xl p-5 shadow-2xl border border-purple-500/25 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-purple-500/20"
+        >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-300 flex items-center justify-center font-bold shrink-0 border border-purple-500/30">
               <Zap className="w-6 h-6" />
@@ -245,7 +260,7 @@ export const HomePage = () => {
               <p className="text-xs text-[#AAB3C5]">Pay seamlessly via UPI apps or pay cash at the counter.</p>
             </div>
           </div>
-        </div>
+        </SpotlightCard>
       </section>
 
       {/* 3. POPULAR FOOD ITEMS SECTION (Strictly reflects owner's chosen cravings dishes) */}
@@ -390,9 +405,21 @@ export const HomePage = () => {
               </h3>
               <p className="text-sm text-slate-300 max-w-xl">
                 Canteen Owner Scheduled Offer: Use promo code{' '}
-                <span className="font-mono font-extrabold bg-slate-950 border border-purple-500/40 px-2 py-0.5 rounded-lg text-purple-300">
-                  {todayDiscount.promoCode || 'CAMPUSDAY'}
-                </span>{' '}
+                <button
+                  type="button"
+                  onClick={() => handleCopyPromo(todayDiscount.promoCode || 'CAMPUSDAY')}
+                  className="font-mono font-extrabold bg-[#0B0D14] hover:bg-[#151926] border border-purple-500/40 hover:border-purple-400 px-3 py-1 rounded-xl text-purple-300 hover:text-white transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm group active:scale-95"
+                  title="Click to copy coupon code"
+                >
+                  <span>{todayDiscount.promoCode || 'CAMPUSDAY'}</span>
+                  {copiedCode ? (
+                    <span className="text-emerald-400 flex items-center gap-1 text-[11px] font-sans font-bold">
+                      <Check className="w-3.5 h-3.5" /> Copied!
+                    </span>
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-purple-400 group-hover:text-white" />
+                  )}
+                </button>{' '}
                 at checkout on orders above ₹{todayDiscount.minOrderValue || 99} for instant {todayDiscount.percent}% student savings!
               </p>
               <div className="pt-2 flex flex-wrap gap-3">
@@ -488,9 +515,10 @@ export const HomePage = () => {
           ].map((card, idx) => {
             const Icon = card.icon;
             return (
-              <div
+              <SpotlightCard
                 key={idx}
-                className="relative bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl p-4 sm:p-5 border border-purple-500/25 shadow-xl hover:shadow-2xl hover:shadow-purple-900/30 hover:border-purple-500/40 transition-all duration-300 card-3d group flex flex-col justify-between overflow-hidden"
+                spotlightColor="rgba(255, 120, 68, 0.22)"
+                className="relative bg-[#141724]/90 backdrop-blur-2xl rounded-3xl p-4 sm:p-5 border border-purple-500/25 hover:border-purple-400/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/40 transition-all duration-300 card-3d group flex flex-col justify-between overflow-hidden transform-gpu hover:-translate-y-1.5"
               >
                 <div>
                   {/* Photo Container According to Step Role */}
@@ -543,7 +571,7 @@ export const HomePage = () => {
                     &rarr;
                   </span>
                 </div>
-              </div>
+              </SpotlightCard>
             );
           })}
         </div>
@@ -582,9 +610,10 @@ export const HomePage = () => {
                 rating: 5,
               },
             ].map((review, i) => (
-              <div
+              <SpotlightCard
                 key={i}
-                className="bg-[#1C263A]/85 backdrop-blur-xl rounded-3xl p-6 border border-purple-500/20 shadow-xl card-3d flex flex-col justify-between"
+                spotlightColor="rgba(255, 120, 68, 0.18)"
+                className="bg-[#141724]/90 backdrop-blur-2xl rounded-3xl p-6 border border-purple-500/25 hover:border-purple-400/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/30 card-3d flex flex-col justify-between transition-all duration-300 transform-gpu hover:-translate-y-1"
               >
                 <div>
                   <div className="flex gap-1 text-amber-400 mb-3">
@@ -600,7 +629,7 @@ export const HomePage = () => {
                   <h4 className="text-xs font-black text-white">{review.name}</h4>
                   <p className="text-[10px] text-purple-300">{review.branch}</p>
                 </div>
-              </div>
+              </SpotlightCard>
             ))}
           </div>
         </div>

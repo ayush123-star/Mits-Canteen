@@ -6,6 +6,7 @@ import { CartProvider } from './context/CartContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal';
+import { AestheticCursorGlow } from './components/common/AestheticCursorGlow';
 
 // Layout
 import { AdminLayout } from './layouts/AdminLayout';
@@ -14,9 +15,6 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { OwnerLoginPage } from './pages/auth/OwnerLoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { MenuManagementPage } from './pages/admin/MenuManagementPage';
-import { InventoryPage } from './pages/admin/InventoryPage';
-import { RecipeManagementPage } from './pages/admin/RecipeManagementPage';
-import { StockHistoryPage } from './pages/admin/StockHistoryPage';
 import { PaymentsManagementPage } from './pages/admin/PaymentsManagementPage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { CanteenSettingsPage } from './pages/admin/CanteenSettingsPage';
@@ -60,6 +58,9 @@ export function App() {
           <DataProvider>
             <AuthProvider>
               <CartProvider>
+                {/* Global Ambient Cursor Spotlight for desktop users */}
+                <AestheticCursorGlow />
+
                 <ChangePasswordModal />
 
                 <Routes>
@@ -88,9 +89,10 @@ export function App() {
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="menu" element={<MenuManagementPage />} />
-                    <Route path="inventory" element={<Navigate to="/admin/menu" replace />} />
-                    <Route path="recipes" element={<Navigate to="/admin/menu" replace />} />
-                    <Route path="stock-history" element={<Navigate to="/admin/menu" replace />} />
+                    <Route path="stock" element={<Navigate to="/menu" replace />} />
+                    <Route path="inventory" element={<Navigate to="/menu" replace />} />
+                    <Route path="recipes" element={<Navigate to="/menu" replace />} />
+                    <Route path="stock-history" element={<Navigate to="/menu" replace />} />
                     <Route path="payments" element={<PaymentsManagementPage />} />
                     <Route path="reports" element={<AdminReportsPage />} />
                     <Route path="settings" element={<CanteenSettingsPage />} />
@@ -110,6 +112,7 @@ export function App() {
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="menu" element={<MenuManagementPage />} />
+                    <Route path="stock" element={<Navigate to="/admin/menu" replace />} />
                     <Route path="inventory" element={<Navigate to="/admin/menu" replace />} />
                     <Route path="recipes" element={<Navigate to="/admin/menu" replace />} />
                     <Route path="stock-history" element={<Navigate to="/admin/menu" replace />} />

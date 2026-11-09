@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
+import { SpotlightCard } from '../../components/common/SpotlightCard';
 import {
   Flame,
   Calendar,
@@ -297,10 +298,11 @@ export const HomepageManagerPage = () => {
               const isSelected = selectedIds.includes(foodId);
 
               return (
-                <div
+                <SpotlightCard
                   key={foodId}
+                  spotlightColor={isSelected ? "rgba(121, 85, 232, 0.35)" : "rgba(255, 120, 68, 0.2)"}
                   onClick={() => handleToggleFoodItem(foodId)}
-                  className={`p-4 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none ${
+                  className={`p-4 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none transform-gpu hover:-translate-y-1 ${
                     isSelected
                       ? 'bg-purple-500/15 border-[#7955E8] shadow-lg shadow-purple-500/20'
                       : 'bg-[#1C263A]/85 border-purple-500/20 hover:border-purple-500/40'
@@ -341,7 +343,7 @@ export const HomepageManagerPage = () => {
                       <span className="text-xs font-bold text-amber-300">★ {food.rating || 4.8}</span>
                     </div>
                   </div>
-                </div>
+                </SpotlightCard>
               );
             })}
           </div>

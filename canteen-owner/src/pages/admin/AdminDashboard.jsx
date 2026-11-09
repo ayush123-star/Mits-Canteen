@@ -6,6 +6,7 @@ import { useSocket } from '../../context/SocketContext';
 import { playNotificationSound } from '../../utils/audio';
 import { sendBrowserNotification } from '../../utils/browserNotifications';
 import { OrderStatusStepper } from '../../components/OrderStatusStepper';
+import { SpotlightCard } from '../../components/common/SpotlightCard';
 import {
   Clock,
   CheckCircle2,
@@ -333,7 +334,10 @@ export const AdminDashboard = () => {
       {/* 2. Stat Metric Cards (6 Dedicated Cards matching exact specifications) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
         {/* Card 1: Today's Total Orders */}
-        <div className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl">
+        <SpotlightCard
+          spotlightColor="rgba(255, 120, 68, 0.2)"
+          className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl"
+        >
           <p className="text-[10px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">Today's Total Orders</p>
           <div className="flex items-center justify-between mt-1">
             <span className="text-xl sm:text-2xl font-black text-white">{totalOrdersToday}</span>
@@ -341,10 +345,11 @@ export const AdminDashboard = () => {
               📊
             </span>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Card 2: Pending Orders */}
-        <div
+        <SpotlightCard
+          spotlightColor="rgba(239, 68, 68, 0.25)"
           className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-purple-500/50 transition-all"
           onClick={() => setStatusFilter('NEW')}
         >
@@ -355,10 +360,11 @@ export const AdminDashboard = () => {
               🔔
             </span>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Card 3: Preparing Orders */}
-        <div
+        <SpotlightCard
+          spotlightColor="rgba(59, 130, 246, 0.25)"
           className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-blue-500/50 transition-all"
           onClick={() => setStatusFilter('PREPARING')}
         >
@@ -369,10 +375,11 @@ export const AdminDashboard = () => {
               👨‍🍳
             </span>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Card 4: Ready for Pickup */}
-        <div
+        <SpotlightCard
+          spotlightColor="rgba(16, 185, 129, 0.25)"
           className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all"
           onClick={() => setStatusFilter('READY')}
         >
@@ -383,10 +390,11 @@ export const AdminDashboard = () => {
               📦
             </span>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Card 5: Completed Orders */}
-        <div
+        <SpotlightCard
+          spotlightColor="rgba(20, 184, 166, 0.25)"
           className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl cursor-pointer hover:border-teal-500/50 transition-all"
           onClick={() => setStatusFilter('COMPLETED')}
         >
@@ -397,16 +405,19 @@ export const AdminDashboard = () => {
               ✅
             </span>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Card 6: Today's Revenue */}
-        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-xl shadow-purple-500/30">
+        <SpotlightCard
+          spotlightColor="rgba(168, 85, 247, 0.35)"
+          className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white shadow-xl shadow-purple-500/30"
+        >
           <p className="text-[10px] font-bold text-purple-200 uppercase tracking-wider truncate">Today's Revenue</p>
           <div className="flex items-center justify-between mt-1">
             <span className="text-xl sm:text-2xl font-black privacy-sensitive" title="Hover to view (Protected by Privacy Shield)">₹{totalRevenueToday}</span>
             <DollarSign className="w-5 h-5 text-purple-200" />
           </div>
-        </div>
+        </SpotlightCard>
       </div>
 
       {/* 3. Filters Bar (6 Dedicated Sections + All History) */}

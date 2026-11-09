@@ -34,7 +34,7 @@ import {
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
-  const { canteens, toggleCanteenStatus, orders, inventoryItems, feedbackList } = useData();
+  const { canteens, toggleCanteenStatus, orders, feedbackList } = useData();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rushHour, setRushHour] = useState(false);
   
@@ -61,7 +61,6 @@ export const AdminLayout = () => {
     canteens.find((c) => c.id === 'canteen-1') ||
     canteens[0] || { id: 'canteen-1', name: 'MITS Main Canteen', isOpen: true };
   const pendingOrdersCount = orders.filter((o) => ['Placed', 'Accepted', 'Preparing'].includes(o.status)).length;
-  const lowStockCount = inventoryItems.filter((i) => i.currentQuantity <= i.minimumStockLevel).length;
 
   const isActive = (path) => location.pathname === path;
 

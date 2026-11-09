@@ -1,7 +1,8 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { Clock, Flame, Heart, Plus, Minus, Star, AlertCircle } from 'lucide-react';
+import { Clock, Flame, Heart, Plus, Minus, Star, AlertCircle, Sparkles } from 'lucide-react';
+import { SpotlightCard } from './common/SpotlightCard';
 
 export const FoodCard = ({ food, onSelect }) => {
   const { cartItems, addToCart, updateQuantity } = useCart();
@@ -24,9 +25,10 @@ export const FoodCard = ({ food, onSelect }) => {
   };
 
   return (
-    <div
+    <SpotlightCard
       onClick={() => onSelect && onSelect(food)}
-      className="group relative bg-[#1C263A]/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl overflow-hidden border border-purple-500/20 shadow-xl hover:shadow-2xl hover:shadow-purple-900/30 hover:border-purple-500/40 transition-all duration-300 flex flex-col cursor-pointer card-3d"
+      spotlightColor="rgba(255, 120, 68, 0.22)"
+      className="group relative bg-[#131622]/90 backdrop-blur-2xl rounded-2xl sm:rounded-3xl overflow-hidden border border-purple-500/25 hover:border-purple-400/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/40 transition-all duration-300 flex flex-col cursor-pointer card-3d transform-gpu hover:-translate-y-1.5"
     >
       {/* Image Container - Responsive Height */}
       <div className="relative h-40 sm:h-48 w-full overflow-hidden bg-[#151C30]">
@@ -169,6 +171,6 @@ export const FoodCard = ({ food, onSelect }) => {
           )}
         </div>
       </div>
-    </div>
+    </SpotlightCard>
   );
 };

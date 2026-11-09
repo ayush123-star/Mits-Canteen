@@ -7,6 +7,7 @@ import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal';
 import { GlobalVoiceCallingAnnouncer } from './components/common/GlobalVoiceCallingAnnouncer';
+import { AestheticCursorGlow } from './components/common/AestheticCursorGlow';
 
 // Layouts
 import { StudentLayout } from './layouts/StudentLayout';
@@ -90,6 +91,9 @@ export function App() {
           <DataProvider>
             <AuthProvider>
               <CartProvider>
+                {/* Global Ambient Cursor Spotlight for desktop users */}
+                <AestheticCursorGlow />
+
                 {/* Global Audio Chime & Speech Announcer across all pages */}
                 <GlobalVoiceCallingAnnouncer />
 
@@ -156,6 +160,7 @@ export function App() {
                   <Route index element={<AdminDashboard />} />
                   <Route path="dashboard" element={<AdminDashboard />} />
                   <Route path="menu" element={<MenuManagementPage />} />
+                  <Route path="stock" element={<Navigate to="/admin/menu" replace />} />
                   <Route path="inventory" element={<Navigate to="/admin/menu" replace />} />
                   <Route path="recipes" element={<Navigate to="/admin/menu" replace />} />
                   <Route path="stock-history" element={<Navigate to="/admin/menu" replace />} />
@@ -178,6 +183,7 @@ export function App() {
                   <Route index element={<AdminDashboard />} />
                   <Route path="dashboard" element={<AdminDashboard />} />
                   <Route path="menu" element={<MenuManagementPage />} />
+                  <Route path="stock" element={<Navigate to="/canteen-owner/menu" replace />} />
                   <Route path="inventory" element={<Navigate to="/canteen-owner/menu" replace />} />
                   <Route path="recipes" element={<Navigate to="/canteen-owner/menu" replace />} />
                   <Route path="stock-history" element={<Navigate to="/canteen-owner/menu" replace />} />

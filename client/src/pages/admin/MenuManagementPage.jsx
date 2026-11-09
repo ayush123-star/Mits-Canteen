@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { SpotlightCard } from '../../components/common/SpotlightCard';
 import {
   Layers,
   Plus,
@@ -244,8 +245,96 @@ export const MenuManagementPage = () => {
         </div>
       </div>
 
-      {/* 3. Food Items Table */}
-      <div className="bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl overflow-hidden">
+      {/* 3A. Mobile Food Cards View (Phones & Small Tablets) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:hidden">
+        {filteredFoods.map((food) => {
+          const foodId = food.id || food._id;
+          return (
+            <SpotlightCard
+              key={foodId}
+              spotlightColor="rgba(255, 120, 68, 0.2)"
+              className="bg-[#141724]/90 backdrop-blur-2xl rounded-2xl p-4 border border-purple-500/25 shadow-xl flex flex-col justify-between gap-3"
+            >
+              <div className="flex gap-3">
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[#151C30] border border-purple-500/20 shrink-0">
+                  <img
+                    src={food.image}
+                    alt={food.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute top-1 left-1 w-3.5 h-3.5 rounded-xs flex items-center justify-center border border-emerald-500 bg-white/90 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                  </span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-black text-white text-sm truncate">{food.name}</h4>
+                    <span className="text-sm font-black text-white shrink-0">₹{food.price}</span>
+                  </div>
+                  <p className="text-[11px] text-[#AAB3C5] line-clamp-2 mt-0.5 leading-snug">
+                    {food.description}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#151C30] border border-purple-500/20 text-purple-300">
+                      {food.category}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-[#151C30] text-[#AAB3C5]">
+                      {food.preparationTime || 7}m prep
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-[#7955E8] bg-purple-500/10 border border-purple-500/25">
+                      C{food.counter || 1}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Footer: Quick In-Stock Switch + Action Buttons */}
+              <div className="flex items-center justify-between pt-2.5 border-t border-purple-500/15">
+                <button
+                  type="button"
+                  onClick={() => toggleFoodStock(foodId, user?.name || 'Admin')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                    food.isAvailable
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}
+                  title="Toggle stock availability"
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      food.isAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
+                    }`}
+                  ></span>
+                  {food.isAvailable ? 'In Stock' : 'Sold Out'}
+                </button>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(food)}
+                    className="p-2 rounded-xl text-[#AAB3C5] hover:text-[#7955E8] bg-[#151C30] hover:bg-purple-500/15 border border-purple-500/20 transition-colors"
+                    title="Edit Item"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(food)}
+                    className="p-2 rounded-xl text-[#AAB3C5] hover:text-red-400 bg-[#151C30] hover:bg-red-500/15 border border-purple-500/20 transition-colors"
+                    title="Delete Item"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </SpotlightCard>
+          );
+        })}
+      </div>
+
+      {/* 3B. Desktop Food Items Table */}
+      <div className="hidden md:block bg-[#1C263A]/90 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#151C30]/80 text-[#AAB3C5] font-extrabold uppercase tracking-wider border-b border-purple-500/20">
