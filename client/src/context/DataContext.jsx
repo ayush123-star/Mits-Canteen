@@ -19,6 +19,7 @@ import {
   subscribeToOrderEvents,
   fetchRecentCloudEvents,
   generateUniqueToken,
+  generateItemTokensForOrder,
   mergeOrders,
   normalizeOrder,
   isMockOrder,
@@ -60,10 +61,22 @@ export const doesOrderMatch = (ord, target) => {
   const tToken = target.tokenNumber || target.updatedOrder?.tokenNumber;
   const tNum = target.orderNumber || target.orderId || target.updatedOrder?.orderNumber || target.updatedOrder?.orderId;
 
-  const cleanOrdToken = ord.tokenNumber ? String(ord.tokenNumber).replace('#', '').trim().toLowerCase() : '';
-  const cleanTargetToken = tToken ? String(tToken).replace('#', '').trim().toLowerCase() : '';
+  const ordTokens = [];
+  if (ord.tokenNumber) {
+    String(ord.tokenNumber).split(',').forEach(s => ordTokens.push(s.replace('#', '').trim().toLowerCase()));
+  }
+  if (Array.isArray(ord.tokens)) {
+    ord.tokens.forEach(s => ordTokens.push(String(s).replace('#', '').trim().toLowerCase()));
+  }
+  if (Array.isArray(ord.items)) {
+    ord.items.forEach(it => {
+      if (it.tokenNumber) ordTokens.push(String(it.tokenNumber).replace('#', '').trim().toLowerCase());
+      if (it.itemToken) ordTokens.push(String(it.itemToken).replace('#', '').trim().toLowerCase());
+    });
+  }
 
-  if (cleanOrdToken && cleanTargetToken && cleanOrdToken === cleanTargetToken) return true;
+  const cleanTargetToken = tToken ? String(tToken).replace('#', '').trim().toLowerCase() : '';
+  if (cleanTargetToken && ordTokens.includes(cleanTargetToken)) return true;
 
   const ordIds = [
     ord.id,
@@ -71,6 +84,7 @@ export const doesOrderMatch = (ord, target) => {
     ord.orderId,
     ord.orderNumber,
     ord.tokenNumber,
+    ...ordTokens,
   ].filter(Boolean).map((v) => String(v).replace('#', '').trim().toLowerCase());
 
   const targetIds = [
@@ -1658,12 +1672,22 @@ export const DataProvider = ({ children }) => {
   // ORDER ACTIONS & AUTO-RECIPE DEDUCTION
   // ==========================================
   const placeOrder = (orderData) => {
-    const { tokenNumber, orderNumber, sequence } = generateUniqueToken(orders);
+    // Generate mandatory 100% unique, non-repeating token for EVERY food item
+    const {
+      itemsWithTokens,
+      tokens,
+      primaryToken,
+      tokenNumber,
+      orderNumber,
+      sequence,
+    } = generateItemTokensForOrder(orderData.items, orders);
 
     const newOrder = {
       id: 'ord-' + Date.now(),
       orderId: orderNumber,
       tokenNumber,
+      primaryToken,
+      tokens,
       orderNumber,
       sequence,
       studentId: orderData.studentId || 'user-stu-1',
@@ -1673,7 +1697,7 @@ export const DataProvider = ({ children }) => {
       studentEnrollment: orderData.studentEnrollment || orderData.studentRoll || '0901CS221045',
       studentDepartment: orderData.studentDepartment || 'Computer Science & Engineering',
       studentPhone: orderData.studentPhone || '+91 98765 43210',
-      items: orderData.items,
+      items: itemsWithTokens,
       totalAmount: orderData.totalAmount,
       discountAmount: orderData.discountAmount || 0,
       finalAmount: orderData.finalAmount,
@@ -1701,9 +1725,16 @@ export const DataProvider = ({ children }) => {
 
     // Trigger Automated WhatsApp Alert: Order Placed (if opted in)
     if (newOrder.whatsappOptIn !== false) {
-      const itemsSummary = (newOrder.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', ');
+      const itemsSummary = (newOrder.items || []).map((i) => {
+        const itemTok = i.tokenNumber ? ` (🎫 Token: #${i.tokenNumber})` : '';
+        return `• ${i.quantity}x ${i.name}${itemTok}`;
+      }).join('\n');
       const prepNote = newOrder.orderNotes ? `\n📌 *Kitchen Instructions:* ${newOrder.orderNotes}` : '';
-      const placedMsg = `🎉 *MITS Canteen — Order Placed!*\n\nHello *${newOrder.studentName || 'Student'}*!\nYour order has been placed successfully!\n\n🎫 *Token Number:* #${newOrder.tokenNumber}\n🍽️ *Items:* ${itemsSummary}${prepNote}\n💰 *Total Amount:* ₹${newOrder.finalAmount}\n⏳ *Estimated Wait:* ~8 Minutes\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nThank you! 🚀`;
+      const tokensHeader = newOrder.tokens && newOrder.tokens.length > 1
+        ? `🎫 *Tokens (1 per item):* #${newOrder.tokens.join(', #')}`
+        : `🎫 *Token Number:* #${newOrder.tokenNumber}`;
+
+      const placedMsg = `🎉 *MITS Canteen — Order Placed!*\n\nHello *${newOrder.studentName || 'Student'}*!\nYour order has been placed successfully!\n\n${tokensHeader}\n\n🍽️ *Dishes & Item Tokens:*\n${itemsSummary}${prepNote}\n\n💰 *Total Amount:* ₹${newOrder.finalAmount}\n⏳ *Estimated Wait:* ~8 Minutes\n📍 *Pickup Counter:* MITS Main Canteen (Counter, MITS Gwalior)\n\nThank you! 🚀`;
       const cleanPhone = String(newOrder.studentPhone || '9876543210').replace(/\D/g, '');
       const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(placedMsg)}`;

@@ -45,10 +45,23 @@ export const TokenPickupPass = ({ order, onClose }) => {
             Official Campus Pickup Pass
           </span>
 
-          <p className="text-xs text-[#AAB3C5] font-medium">Your Zero-Queue Token</p>
-          <div className="text-4xl sm:text-5xl font-black tracking-tight text-white my-1 font-mono drop-shadow-md">
-            #{order.tokenNumber}
-          </div>
+          <p className="text-xs text-[#AAB3C5] font-medium">Your Zero-Queue Token{order.tokens && order.tokens.length > 1 ? 's' : ''}</p>
+          {order.tokens && order.tokens.length > 1 ? (
+            <div className="flex flex-wrap items-center justify-center gap-2 my-2">
+              {order.tokens.map((tok, idx) => (
+                <span
+                  key={idx}
+                  className="text-2xl sm:text-3xl font-black tracking-tight text-white font-mono bg-[#151C30] px-3 py-1 rounded-2xl border border-purple-500/40 shadow-sm"
+                >
+                  #{tok}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="text-4xl sm:text-5xl font-black tracking-tight text-white my-1 font-mono drop-shadow-md">
+              #{order.tokenNumber}
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-2 mt-2">
             <span
@@ -116,11 +129,18 @@ export const TokenPickupPass = ({ order, onClose }) => {
             </div>
             {order.items?.map((it, idx) => (
               <div key={idx} className="space-y-0.5">
-                <div className="flex justify-between text-[#AAB3C5] text-[11px]">
-                  <span>
-                    {it.quantity}x {it.name}
-                  </span>
-                  <span className="font-bold text-white">₹{it.price * it.quantity}</span>
+                <div className="flex justify-between items-center text-[#AAB3C5] text-[11px]">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span>
+                      {it.quantity}x {it.name}
+                    </span>
+                    {(it.tokenNumber || it.itemToken) && (
+                      <span className="px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-200 border border-purple-500/40 text-[9px] font-mono font-black shrink-0">
+                        #{it.tokenNumber || it.itemToken}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-bold text-white shrink-0 ml-2">₹{it.price * it.quantity}</span>
                 </div>
                 {it.specialInstructions && (
                   <p className="text-[10px] text-amber-300 font-semibold pl-2 border-l-2 border-amber-400/40">

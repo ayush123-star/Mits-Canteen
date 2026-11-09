@@ -124,6 +124,8 @@ export const AllOrdersHistoryPage = () => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const token = String(order.tokenNumber || '').toLowerCase();
+        const tokensArr = (order.tokens || []).join(' ').toLowerCase();
+        const itemTokens = (order.items || []).map((i) => `${i.tokenNumber || ''} ${i.itemToken || ''}`).join(' ').toLowerCase();
         const student = String(order.studentName || '').toLowerCase();
         const roll = String(order.studentRoll || order.studentEnrollment || '').toLowerCase();
         const phone = String(order.studentPhone || '').toLowerCase();
@@ -132,6 +134,8 @@ export const AllOrdersHistoryPage = () => {
 
         return (
           token.includes(q) ||
+          tokensArr.includes(q) ||
+          itemTokens.includes(q) ||
           student.includes(q) ||
           roll.includes(q) ||
           phone.includes(q) ||
@@ -585,9 +589,16 @@ export const AllOrdersHistoryPage = () => {
                         <div className="space-y-1">
                           {(order.items || []).map((item, idx) => (
                             <div key={idx} className="text-xs">
-                              <span className="font-extrabold text-white">
-                                {item.quantity}x {item.name}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-extrabold text-white">
+                                  {item.quantity}x {item.name}
+                                </span>
+                                {(item.tokenNumber || item.itemToken) && (
+                                  <span className="px-1.5 py-0.2 rounded bg-purple-500/25 text-purple-300 border border-purple-500/40 text-[9px] font-mono font-black">
+                                    #{item.tokenNumber || item.itemToken}
+                                  </span>
+                                )}
+                              </div>
                               {item.specialInstructions && (
                                 <span className="text-[10px] text-amber-300 font-semibold block pl-2 border-l border-amber-500/40">
                                   ↳ {item.specialInstructions}
@@ -724,9 +735,16 @@ export const AllOrdersHistoryPage = () => {
               <div className="p-3.5 rounded-xl bg-[#151C30] border border-purple-500/20 space-y-2 text-xs">
                 <span className="text-[10px] uppercase font-bold text-[#AAB3C5] block">Items Ordered:</span>
                 {selectedOrderModal.items?.map((it, idx) => (
-                  <div key={idx} className="flex justify-between border-b border-purple-500/10 pb-1.5 last:border-none">
+                  <div key={idx} className="flex justify-between items-center border-b border-purple-500/10 pb-1.5 last:border-none">
                     <div>
-                      <span className="font-bold text-white">{it.quantity}x {it.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white">{it.quantity}x {it.name}</span>
+                        {(it.tokenNumber || it.itemToken) && (
+                          <span className="px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/40 text-[10px] font-mono font-black">
+                            #{it.tokenNumber || it.itemToken}
+                          </span>
+                        )}
+                      </div>
                       {it.specialInstructions && (
                         <p className="text-[10px] text-amber-300 font-semibold pl-2">↳ {it.specialInstructions}</p>
                       )}

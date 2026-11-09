@@ -29,6 +29,14 @@ const orderItemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  tokenNumber: {
+    type: String,
+    default: '',
+  },
+  itemToken: {
+    type: String,
+    default: '',
+  },
 });
 
 const orderSchema = new mongoose.Schema({
@@ -42,6 +50,9 @@ const orderSchema = new mongoose.Schema({
     unique: true,
     index: true,
   },
+  tokens: [{
+    type: String,
+  }],
   user: {
     type: mongoose.Schema.Types.Mixed,
     ref: 'User',

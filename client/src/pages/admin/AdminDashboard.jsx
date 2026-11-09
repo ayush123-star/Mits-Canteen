@@ -285,9 +285,10 @@ export const AdminDashboard = () => {
     const cleanQ = searchToken.replace('#', '').trim().toLowerCase();
     const found = orders.find(
       (o) =>
-        o.tokenNumber.toLowerCase() === cleanQ ||
-        o.tokenNumber.toLowerCase() === `#${cleanQ}` ||
-        o.id.toLowerCase() === cleanQ ||
+        String(o.tokenNumber || '').toLowerCase().includes(cleanQ) ||
+        (Array.isArray(o.tokens) && o.tokens.some((t) => String(t || '').replace('#', '').trim().toLowerCase() === cleanQ)) ||
+        (Array.isArray(o.items) && o.items.some((i) => String(i.tokenNumber || i.itemToken || '').replace('#', '').trim().toLowerCase() === cleanQ)) ||
+        String(o.id || '').toLowerCase() === cleanQ ||
         (o.studentEnrollment && o.studentEnrollment.toLowerCase().includes(cleanQ)) ||
         (o.studentRoll && o.studentRoll.toLowerCase().includes(cleanQ))
     );
@@ -716,6 +717,11 @@ export const AdminDashboard = () => {
                               {item.quantity}x
                             </span>
                             <span className="font-extrabold text-white truncate">{item.name}</span>
+                            {(item.tokenNumber || item.itemToken) && (
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/25 text-purple-300 border border-purple-500/40 font-mono font-black text-[10px] shrink-0" title="Item's Permanent Unique Token">
+                                #{item.tokenNumber || item.itemToken}
+                              </span>
+                            )}
                           </div>
                           <span className="font-bold text-[#AAB3C5] shrink-0 ml-2">₹{(item.price || 50) * item.quantity}</span>
                         </div>
@@ -1189,9 +1195,16 @@ export const AdminDashboard = () => {
               <span className="font-bold text-white block">Ordered Food:</span>
               {verifiedTokenModal.items.map((i, idx) => (
                 <div key={idx} className="space-y-0.5">
-                  <div className="flex justify-between text-[#AAB3C5]">
-                    <span className="font-medium text-white">{i.quantity}x {i.name}</span>
-                    <span className="font-bold text-purple-300">₹{(i.price || 50) * i.quantity}</span>
+                  <div className="flex justify-between items-center text-[#AAB3C5]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-medium text-white">{i.quantity}x {i.name}</span>
+                      {(i.tokenNumber || i.itemToken) && (
+                        <span className="px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/40 text-[10px] font-mono font-black shrink-0">
+                          #{i.tokenNumber || i.itemToken}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-bold text-purple-300 shrink-0 ml-2">₹{(i.price || 50) * i.quantity}</span>
                   </div>
                   {i.specialInstructions && (
                     <p className="text-[11px] text-amber-300 font-semibold pl-3 border-l-2 border-amber-400/40">

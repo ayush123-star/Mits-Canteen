@@ -441,11 +441,31 @@ export const LiveTokenDisplay = () => {
                     }`}
                   >
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
-                      TOKEN
+                      TOKEN{ord.tokens && ord.tokens.length > 1 ? 'S' : ''}
                     </span>
-                    <span className="text-3xl sm:text-4xl font-black font-mono text-white tracking-tight my-1 drop-shadow-md">
-                      #{ord.tokenNumber}
-                    </span>
+                    {ord.tokens && ord.tokens.length > 1 ? (
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 my-1">
+                        {ord.tokens.map((tok, tidx) => {
+                          const matchingItem = ord.items?.find((i) => (i.tokenNumber || i.itemToken) === tok);
+                          return (
+                            <div key={tidx} className="flex flex-col items-center">
+                              <span className="text-xl sm:text-2xl font-black font-mono text-white tracking-tight drop-shadow-md">
+                                #{tok}
+                              </span>
+                              {matchingItem && (
+                                <span className="text-[10px] text-emerald-200 font-bold truncate max-w-[120px]">
+                                  {matchingItem.name}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-3xl sm:text-4xl font-black font-mono text-white tracking-tight my-1 drop-shadow-md">
+                        #{ord.tokenNumber}
+                      </span>
+                    )}
                     <div className="mt-1 px-3 py-1 rounded-full bg-emerald-400 text-emerald-950 text-xs font-black flex items-center gap-1 shadow-sm">
                       <MapPin className="w-3 h-3" />
                       Counter
@@ -529,11 +549,31 @@ export const LiveTokenDisplay = () => {
                   >
                     <div>
                       <span className="text-[10px] font-bold text-[#AAB3C5] uppercase tracking-wider">
-                        Token
+                        Token{ord.tokens && ord.tokens.length > 1 ? 's' : ''}
                       </span>
-                      <div className="text-2xl font-black font-mono text-white">
-                        #{ord.tokenNumber}
-                      </div>
+                      {ord.tokens && ord.tokens.length > 1 ? (
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 my-1">
+                          {ord.tokens.map((tok, tidx) => {
+                            const matchingItem = ord.items?.find((i) => (i.tokenNumber || i.itemToken) === tok);
+                            return (
+                              <div key={tidx} className="flex flex-col items-center">
+                                <span className="text-lg font-black font-mono text-white">
+                                  #{tok}
+                                </span>
+                                {matchingItem && (
+                                  <span className="text-[9px] text-purple-300 font-bold truncate max-w-[100px]">
+                                    {matchingItem.name}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-2xl font-black font-mono text-white">
+                          #{ord.tokenNumber}
+                        </div>
+                      )}
                     </div>
                     <div className="mt-2 flex items-center justify-between text-[11px] text-[#AAB3C5] bg-[#0B1020] px-2.5 py-1 rounded-lg border border-purple-500/20">
                       <span className="flex items-center gap-1 text-purple-300">

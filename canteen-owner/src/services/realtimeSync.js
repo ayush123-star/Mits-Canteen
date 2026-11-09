@@ -414,58 +414,143 @@ export const fetchRecentCloudEvents = async () => {
 };
 
 /**
- * Guaranteed 100% Unique & Sequential Token Generator
- * Ensures no duplicate tokens are ever generated across all orders.
+ * Guaranteed 100% Unique, Non-Repeating Token Generator for Every Food Item
+ * Ensures that EVERY food item gets its own unique token (e.g. TK-115, TK-116...),
+ * and that once generated, that token will NEVER appear or be reused for any other item again.
  */
-export const generateUniqueToken = (currentOrders = []) => {
-  let highestTokenNum = 100;
+export const generateItemTokensForOrder = (items = [], currentOrders = []) => {
+  const usedTokens = new Set();
+  let maxSequenceFound = 100;
 
-  // 1. Scan in-memory orders
+  const recordToken = (tok) => {
+    if (!tok) return;
+    const str = String(tok).replace('#', '').trim();
+    if (!str) return;
+    usedTokens.add(str.toUpperCase());
+    const matches = str.match(/\d+/g);
+    if (matches) {
+      matches.forEach((m) => {
+        const val = parseInt(m, 10);
+        if (!isNaN(val) && val > maxSequenceFound) {
+          maxSequenceFound = val;
+        }
+      });
+    }
+  };
+
+  // 1. Scan in-memory orders (order tokens and item tokens)
   if (Array.isArray(currentOrders)) {
-    for (const ord of currentOrders) {
-      if (ord && ord.tokenNumber) {
-        const m = String(ord.tokenNumber).match(/\d+/);
-        if (m) {
-          const val = parseInt(m[0], 10);
-          if (!isNaN(val) && val > highestTokenNum) {
-            highestTokenNum = val;
-          }
+    currentOrders.forEach((ord) => {
+      if (!ord) return;
+      recordToken(ord.tokenNumber);
+      if (Array.isArray(ord.tokens)) {
+        ord.tokens.forEach(recordToken);
+      }
+      if (Array.isArray(ord.items)) {
+        ord.items.forEach((it) => {
+          recordToken(it.tokenNumber);
+          recordToken(it.itemToken);
+        });
+      }
+    });
+  }
+
+  // 2. Read persistent sequence and used tokens ledger from localStorage
+  try {
+    const storedSeq = localStorage.getItem('smart_canteen_token_sequence');
+    if (storedSeq) {
+      const parsed = parseInt(storedSeq, 10);
+      if (!isNaN(parsed) && parsed > maxSequenceFound) {
+        maxSequenceFound = parsed;
+      }
+    }
+
+    const storedUsed = localStorage.getItem('smart_canteen_used_item_tokens');
+    if (storedUsed) {
+      const list = JSON.parse(storedUsed);
+      if (Array.isArray(list)) {
+        list.forEach(recordToken);
+      }
+    }
+  } catch (_) {}
+
+  // 3. Scan cached orders in localStorage
+  try {
+    ['canteen_orders', 'smart_canteen_orders'].forEach((key) => {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((ord) => {
+            recordToken(ord.tokenNumber);
+            if (Array.isArray(ord.items)) {
+              ord.items.forEach((it) => {
+                recordToken(it.tokenNumber);
+                recordToken(it.itemToken);
+              });
+            }
+          });
         }
       }
-    }
-  }
-
-  // 2. Read persistent sequence from localStorage
-  let savedSeq = 100;
-  try {
-    const stored = localStorage.getItem('smart_canteen_token_sequence');
-    if (stored) {
-      const parsed = parseInt(stored, 10);
-      if (!isNaN(parsed) && parsed > savedSeq) {
-        savedSeq = parsed;
-      }
-    }
+    });
   } catch (_) {}
 
-  // 3. Compute guaranteed next number (strictly >= 115 if past 114)
-  let nextSeq = Math.max(highestTokenNum, savedSeq, 114) + 1;
+  // 4. Generate guaranteed unique tokens for each item
+  let currentSeq = Math.max(maxSequenceFound, 114);
+  const assignedTokens = [];
+  const incomingItems = Array.isArray(items) && items.length > 0 ? items : [{ name: 'Food Item', quantity: 1 }];
 
-  // 4. Ensure no existing order in current list collides
-  if (Array.isArray(currentOrders)) {
-    while (currentOrders.some((o) => o && o.tokenNumber === `TK-${nextSeq}`)) {
-      nextSeq += 1;
+  const itemsWithTokens = incomingItems.map((item) => {
+    currentSeq += 1;
+    let candidateToken = `TK-${currentSeq}`;
+
+    while (usedTokens.has(candidateToken.toUpperCase())) {
+      currentSeq += 1;
+      candidateToken = `TK-${currentSeq}`;
     }
-  }
 
-  // 5. Persist the sequence
+    usedTokens.add(candidateToken.toUpperCase());
+    assignedTokens.push(candidateToken);
+
+    return {
+      ...item,
+      tokenNumber: candidateToken,
+      itemToken: candidateToken,
+      itemSequence: currentSeq,
+    };
+  });
+
+  // 5. Persist the sequence and all issued tokens permanently
   try {
-    localStorage.setItem('smart_canteen_token_sequence', String(nextSeq));
+    localStorage.setItem('smart_canteen_token_sequence', String(currentSeq));
+    const persistentList = Array.from(usedTokens);
+    localStorage.setItem('smart_canteen_used_item_tokens', JSON.stringify(persistentList));
   } catch (_) {}
+
+  const primaryToken = assignedTokens[0] || `TK-${currentSeq}`;
+  const allTokensStr = assignedTokens.join(', ');
 
   return {
-    tokenNumber: `TK-${nextSeq}`,
-    orderNumber: `ORD-2026-${String(nextSeq).padStart(3, '0')}`,
-    sequence: nextSeq,
+    itemsWithTokens,
+    tokens: assignedTokens,
+    primaryToken,
+    tokenNumber: allTokensStr || primaryToken,
+    orderNumber: `ORD-2026-${assignedTokens.map((t) => t.replace('TK-', '')).join('-')}`,
+    sequence: currentSeq,
+  };
+};
+
+/**
+ * Guaranteed 100% Unique & Sequential Token Generator
+ * Backward-compatible helper that delegates to generateItemTokensForOrder.
+ */
+export const generateUniqueToken = (currentOrders = []) => {
+  const result = generateItemTokensForOrder([{ name: 'Order Unit' }], currentOrders);
+  return {
+    tokenNumber: result.primaryToken,
+    orderNumber: result.orderNumber,
+    sequence: result.sequence,
+    tokens: result.tokens,
   };
 };
 

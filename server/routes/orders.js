@@ -23,38 +23,83 @@ inMemoryOrders.set('TK-114', {
   updatedAt: new Date(),
 });
 
-// Helper to generate next sequential, guaranteed unique campus token
-const generateCampusToken = async () => {
+// Helper to generate next sequential, guaranteed unique non-repeating campus tokens for items
+const generateCampusItemTokens = async (itemsCount = 1) => {
   try {
-    const allTokens = await Order.find({}, 'tokenNumber');
+    const allOrders = await Order.find({}, 'tokenNumber tokens items.tokenNumber');
+    const usedTokens = new Set();
     let maxNumber = 100;
 
-    allTokens.forEach((o) => {
+    allOrders.forEach((o) => {
       if (o.tokenNumber) {
-        const m = String(o.tokenNumber).match(/\d+/);
-        if (m) {
-          const val = parseInt(m[0], 10);
-          if (!isNaN(val) && val > maxNumber) {
-            maxNumber = val;
+        String(o.tokenNumber).split(',').forEach((tok) => {
+          const clean = tok.replace('#', '').trim();
+          if (clean) usedTokens.add(clean.toUpperCase());
+          const m = clean.match(/\d+/);
+          if (m) {
+            const val = parseInt(m[0], 10);
+            if (!isNaN(val) && val > maxNumber) maxNumber = val;
           }
-        }
+        });
+      }
+      if (Array.isArray(o.tokens)) {
+        o.tokens.forEach((t) => {
+          const clean = String(t).replace('#', '').trim();
+          if (clean) usedTokens.add(clean.toUpperCase());
+        });
+      }
+      if (Array.isArray(o.items)) {
+        o.items.forEach((it) => {
+          if (it.tokenNumber) {
+            const clean = String(it.tokenNumber).replace('#', '').trim();
+            if (clean) usedTokens.add(clean.toUpperCase());
+            const m = clean.match(/\d+/);
+            if (m) {
+              const val = parseInt(m[0], 10);
+              if (!isNaN(val) && val > maxNumber) maxNumber = val;
+            }
+          }
+        });
       }
     });
 
     const countAll = await Order.countDocuments({});
-    let candidateSeq = Math.max(maxNumber, 100 + countAll, 114) + 1;
+    let candidateSeq = Math.max(maxNumber, 100 + countAll, 114);
+    const assignedTokens = [];
 
-    let candidateToken = `TK-${candidateSeq}`;
-    while (await Order.findOne({ tokenNumber: candidateToken })) {
+    for (let i = 0; i < itemsCount; i++) {
       candidateSeq += 1;
-      candidateToken = `TK-${candidateSeq}`;
+      let candidateToken = `TK-${candidateSeq}`;
+      while (usedTokens.has(candidateToken.toUpperCase())) {
+        candidateSeq += 1;
+        candidateToken = `TK-${candidateSeq}`;
+      }
+      usedTokens.add(candidateToken.toUpperCase());
+      assignedTokens.push(candidateToken);
     }
 
-    return candidateToken;
+    return {
+      tokens: assignedTokens,
+      primaryToken: assignedTokens[0] || `TK-${candidateSeq}`,
+      tokenNumber: assignedTokens.join(', '),
+    };
   } catch (err) {
-    const fallbackSeq = 115 + Math.floor(Math.random() * 800);
-    return `TK-${fallbackSeq}`;
+    const base = 115 + Math.floor(Math.random() * 800);
+    const fallbackTokens = [];
+    for (let i = 0; i < itemsCount; i++) {
+      fallbackTokens.push(`TK-${base + i}`);
+    }
+    return {
+      tokens: fallbackTokens,
+      primaryToken: fallbackTokens[0],
+      tokenNumber: fallbackTokens.join(', '),
+    };
   }
+};
+
+const generateCampusToken = async () => {
+  const result = await generateCampusItemTokens(1);
+  return result.primaryToken;
 };
 
 // @route   POST /api/orders
@@ -127,7 +172,11 @@ router.post('/', optionalAuth, async (req, res) => {
     }
 
     const finalAmount = Math.max(0, totalAmount - discountAmount);
-    const tokenNumber = await generateCampusToken();
+    const { tokens, primaryToken, tokenNumber } = await generateCampusItemTokens(populatedItems.length);
+    populatedItems.forEach((it, idx) => {
+      it.tokenNumber = tokens[idx] || primaryToken;
+      it.itemToken = tokens[idx] || primaryToken;
+    });
 
     // Check current queue depth to adjust prep time
     const pendingOrdersCount = await Order.countDocuments({
@@ -141,6 +190,7 @@ router.post('/', optionalAuth, async (req, res) => {
     // Generate secure QR Code data payload
     const qrPayload = JSON.stringify({
       token: tokenNumber,
+      tokens,
       orderId: '', // will attach after creation
       user: req.user.name,
       amount: finalAmount,
@@ -151,8 +201,9 @@ router.post('/', optionalAuth, async (req, res) => {
     const qrCodeData = await QRCode.toDataURL(qrPayload);
 
     const order = await Order.create({
-      orderId: `ORD-2026-${tokenNumber.replace('TK-', '')}`,
+      orderId: `ORD-2026-${tokens.map((t) => t.replace('TK-', '')).join('-')}`,
       tokenNumber,
+      tokens,
       user: req.user._id,
       studentName: req.body.studentName || req.user.name || 'Campus Student',
       studentEmail: req.body.studentEmail || req.user.email || '',
@@ -497,6 +548,11 @@ router.patch('/:id/status', async (req, res) => {
           $or: [
             { tokenNumber: rawId },
             { tokenNumber: `#${rawId}` },
+            { tokens: rawId },
+            { tokens: `#${rawId}` },
+            { 'items.tokenNumber': rawId },
+            { 'items.tokenNumber': `#${rawId}` },
+            { 'items.itemToken': rawId },
             { orderId: rawId },
             { _id: mongoose.Types.ObjectId.isValid(rawId) ? rawId : null },
             { 'paymentDetails.transactionId': rawId },

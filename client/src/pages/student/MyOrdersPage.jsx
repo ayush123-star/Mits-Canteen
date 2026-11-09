@@ -341,12 +341,12 @@ export const MyOrdersPage = () => {
                 {/* Order Top Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-purple-500/20">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#151C30] border border-purple-500/30 text-purple-300 flex flex-col items-center justify-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-[#AAB3C5]">
-                        TOKEN
+                    <div className="min-w-12 h-12 px-2.5 rounded-2xl bg-[#151C30] border border-purple-500/30 text-purple-300 flex flex-col items-center justify-center">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-[#AAB3C5]">
+                        TOKEN{order.tokens && order.tokens.length > 1 ? 'S' : ''}
                       </span>
-                      <span className="text-sm font-black font-mono text-white">
-                        {order.tokenNumber}
+                      <span className="text-xs sm:text-sm font-black font-mono text-white whitespace-nowrap">
+                        {order.tokens && order.tokens.length > 1 ? `#${order.tokens.join(', #')}` : `#${order.tokenNumber}`}
                       </span>
                     </div>
 
@@ -475,11 +475,16 @@ export const MyOrdersPage = () => {
                     {(order.items || []).map((item, idx) => (
                       <div key={idx} className="py-2 space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="w-5 h-5 rounded-md bg-[#151C30] text-purple-300 border border-purple-500/20 font-extrabold flex items-center justify-center text-[11px]">
                               {item.quantity}x
                             </span>
                             <span className="font-bold text-white">{item.name}</span>
+                            {(item.tokenNumber || item.itemToken) && (
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-mono font-black">
+                                🎫 Token: #{item.tokenNumber || item.itemToken}
+                              </span>
+                            )}
                           </div>
                           <span className="font-bold text-white">
                             ₹{(item.price || 50) * item.quantity}
