@@ -231,6 +231,8 @@ export const sanitizeOrderForBroadcast = (ord) => {
     cancellationReason: ord.cancellationReason,
     specialInstructions: ord.specialInstructions,
     orderNotes: ord.orderNotes || '',
+    orderDate: ord.orderDate || '',
+    createdAtDate: ord.createdAtDate || '',
   };
 };
 

@@ -20,6 +20,7 @@ import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { CanteenSettingsPage } from './pages/admin/CanteenSettingsPage';
 import { HomepageManagerPage } from './pages/admin/HomepageManagerPage';
 import { AdminFeedbackPage } from './pages/admin/AdminFeedbackPage';
+import { AllOrdersHistoryPage } from './pages/admin/AllOrdersHistoryPage';
 import { LiveTokenDisplay } from './pages/LiveTokenDisplay';
 
 // Protected Route Guard for Canteen Owner Portal
@@ -88,6 +89,8 @@ export function App() {
                   >
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="orders" element={<AllOrdersHistoryPage />} />
+                    <Route path="all-orders" element={<AllOrdersHistoryPage />} />
                     <Route path="menu" element={<MenuManagementPage />} />
                     <Route path="stock" element={<Navigate to="/menu" replace />} />
                     <Route path="inventory" element={<Navigate to="/menu" replace />} />
@@ -111,6 +114,8 @@ export function App() {
                   >
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="orders" element={<AllOrdersHistoryPage />} />
+                    <Route path="all-orders" element={<AllOrdersHistoryPage />} />
                     <Route path="menu" element={<MenuManagementPage />} />
                     <Route path="stock" element={<Navigate to="/admin/menu" replace />} />
                     <Route path="inventory" element={<Navigate to="/admin/menu" replace />} />

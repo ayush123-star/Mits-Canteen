@@ -478,38 +478,6 @@ export const CanteenSettingsPage = () => {
               <Power className="w-6 h-6" />
             </div>
           </div>
-
-          {/* Rush Hour Mode Switch */}
-          <div
-            onClick={handleToggleRushHour}
-            className={`p-5 rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-              rushHourMode
-                ? 'border-amber-500/40 bg-amber-500/10'
-                : 'border-purple-500/20 bg-[#151C30]'
-            }`}
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#AAB3C5]">
-                Rush Hour Surge Mode
-              </span>
-              <h3 className="text-base font-black text-white">
-                {rushHourMode ? 'Rush Mode ACTIVE 🔥' : 'Standard Operations'}
-              </h3>
-              <p className="text-xs text-[#AAB3C5]">
-                {rushHourMode
-                  ? 'Prep time dynamically padded by +4 mins.'
-                  : 'Normal kitchen delivery times (~7m).'}
-              </p>
-            </div>
-
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg ${
-                rushHourMode ? 'bg-amber-500 shadow-amber-500/30' : 'bg-[#1C263A] border border-purple-500/30 text-[#AAB3C5]'
-              }`}
-            >
-              <Flame className="w-6 h-6" />
-            </div>
-          </div>
         </div>
       </div>
 

@@ -29,14 +29,14 @@ import {
   ShieldCheck,
   Sparkles,
   MessageSquare,
-  Star
+  Star,
+  FileText
 } from 'lucide-react';
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
   const { canteens, toggleCanteenStatus, orders, feedbackList } = useData();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [rushHour, setRushHour] = useState(false);
   
   // Privacy & Screen Lock States for Canteen Owner
   const [privacyMode, setPrivacyMode] = useState(() => {
@@ -66,6 +66,7 @@ export const AdminLayout = () => {
 
   const navItems = [
     { label: 'Live Orders Queue', path: '/admin/dashboard', icon: Clock, badge: pendingOrdersCount },
+    { label: 'All Orders History', path: '/admin/orders', icon: FileText, badge: orders.length, badgeColor: 'bg-purple-600' },
     { label: 'Menu Catalog', path: '/admin/menu', icon: Layers },
     { label: 'Cravings & Day Offers', path: '/admin/homepage-manager', icon: Flame, badge: 'Home', badgeColor: 'bg-gradient-to-r from-[#7955E8] to-[#526DFF]' },
     { label: 'Customer Feedback', path: '/admin/feedback', icon: MessageSquare, badge: feedbackList?.length || 0, badgeColor: 'bg-emerald-600' },
@@ -262,21 +263,6 @@ export const AdminLayout = () => {
             >
               <Power className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden xs:inline">{currentCanteen.isOpen ? 'OPEN' : 'CLOSED'}</span>
-            </button>
-
-            {/* Rush Hour Mode Switch */}
-            <button
-              onClick={() => setRushHour(!rushHour)}
-              className={`p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-black flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
-                rushHour
-                  ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white ring-2 ring-purple-400 animate-pulse'
-                  : 'bg-[#151C30] text-[#AAB3C5] hover:bg-[#1C263A] hover:text-white border border-purple-500/20'
-              }`}
-              title={rushHour ? "Rush Hour active (+10 mins estimated)" : "Turn on Rush Hour"}
-            >
-              <Flame className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-              <span className="hidden md:inline">Rush Hour:</span>
-              <span className="hidden sm:inline">{rushHour ? 'ON' : 'OFF'}</span>
             </button>
 
             {/* Counter Privacy Shield Toggle */}

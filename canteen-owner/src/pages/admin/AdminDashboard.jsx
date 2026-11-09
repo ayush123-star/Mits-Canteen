@@ -30,7 +30,8 @@ import {
   RefreshCw,
   MessageSquare,
   ExternalLink,
-  Send
+  Send,
+  FileText
 } from 'lucide-react';
 
 export const AdminDashboard = () => {
@@ -158,15 +159,56 @@ export const AdminDashboard = () => {
     return true; // 'ALL'
   });
 
-  // Calculate quick metrics for all dedicated tabs & stats
-  const totalOrdersToday = orders.length;
+  // Helper to determine if an order was placed today (1 single day)
+  const isOrderFromToday = (ord) => {
+    if (!ord) return false;
+    const todayStr = new Date().toDateString();
+
+    if (ord.createdAtDate) {
+      return new Date(ord.createdAtDate).toDateString() === todayStr;
+    }
+    if (ord.createdDate) {
+      return new Date(ord.createdDate).toDateString() === todayStr;
+    }
+    if (ord.date) {
+      return new Date(ord.date).toDateString() === todayStr;
+    }
+    if (ord.orderDate) {
+      return new Date(ord.orderDate).toDateString() === todayStr;
+    }
+
+    if (typeof ord.id === 'string' && ord.id.startsWith('ord-')) {
+      const ts = parseInt(ord.id.replace('ord-', ''), 10);
+      if (!isNaN(ts) && ts > 1000000000000) {
+        return new Date(ts).toDateString() === todayStr;
+      }
+    }
+
+    if (ord.createdAt && (ord.createdAt.includes('T') || ord.createdAt.includes('-') || ord.createdAt.includes('/'))) {
+      const d = new Date(ord.createdAt);
+      if (!isNaN(d.getTime())) {
+        return d.toDateString() === todayStr;
+      }
+    }
+
+    // Default for orders created during current session with simple time string e.g. "01:45 AM"
+    if (ord.createdAt && typeof ord.createdAt === 'string' && (ord.createdAt.includes('AM') || ord.createdAt.includes('PM'))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Calculate quick metrics strictly for TODAY (1 single day) vs status pipelines
+  const todayOrders = orders.filter(isOrderFromToday);
+  const totalOrdersToday = todayOrders.length;
   const newOrdersCount = orders.filter((o) => ['Placed', 'Pending Acceptance'].includes(o.status)).length;
   const acceptedOrdersCount = orders.filter((o) => o.status === 'Accepted').length;
   const preparingCount = orders.filter((o) => o.status === 'Preparing').length;
   const readyCount = orders.filter((o) => o.status === 'Ready for Pickup').length;
   const completedCount = orders.filter((o) => ['Completed', 'Collected'].includes(o.status)).length;
   const rejectedCount = orders.filter((o) => ['Rejected', 'Cancelled'].includes(o.status)).length;
-  const totalRevenueToday = orders
+  const totalRevenueToday = todayOrders
     .filter((o) => !['Cancelled', 'Rejected'].includes(o.status))
     .reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0);
 
@@ -368,13 +410,19 @@ export const AdminDashboard = () => {
           spotlightColor="rgba(255, 120, 68, 0.2)"
           className="p-3 sm:p-4 rounded-2xl bg-[#1C263A]/85 backdrop-blur-xl border border-purple-500/20 shadow-xl"
         >
-          <p className="text-[10px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">Today's Total Orders</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold text-[#AAB3C5] uppercase tracking-wider truncate">Today's Orders</p>
+            <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 rounded">1 Day</span>
+          </div>
           <div className="flex items-center justify-between mt-1">
             <span className="text-xl sm:text-2xl font-black text-white">{totalOrdersToday}</span>
             <span className="w-7 h-7 rounded-lg bg-[#151C30] text-purple-300 flex items-center justify-center font-bold text-xs border border-purple-500/30">
               📊
             </span>
           </div>
+          <p className="text-[9px] text-[#AAB3C5] mt-1 truncate">
+            Today: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+          </p>
         </SpotlightCard>
 
         {/* Card 2: Pending Orders */}
@@ -534,16 +582,28 @@ export const AdminDashboard = () => {
                 : 'text-[#AAB3C5] hover:bg-[#151C30] hover:text-white'
             }`}
           >
-            All History ({totalOrdersToday})
+            All Live ({orders.length})
           </button>
         </div>
 
-        {/* Dedicated Single Express Counter Indicator */}
-        <div className="flex items-center gap-2 shrink-0 bg-[#151C30] border border-purple-500/30 px-3 py-1.5 rounded-xl shadow-xs self-start sm:self-auto">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span className="text-[11px] sm:text-xs font-black text-slate-200">
-            Pickup Counter: <span className="text-purple-300">Counter</span>
-          </span>
+        {/* Link to Full Monthly & Yearly Archive */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin/orders"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 hover:text-white text-xs font-black transition-all shadow-sm shrink-0"
+            title="Open Complete Month & Year Order Archive"
+          >
+            <FileText className="w-3.5 h-3.5 text-purple-400" />
+            <span>All Orders Archive (Month & Year) &rarr;</span>
+          </Link>
+
+          {/* Dedicated Single Express Counter Indicator */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0 bg-[#151C30] border border-purple-500/30 px-3 py-1.5 rounded-xl shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-[11px] sm:text-xs font-black text-slate-200">
+              Pickup Counter: <span className="text-purple-300">Counter</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1081,7 +1141,7 @@ export const AdminDashboard = () => {
               className="w-full px-3.5 py-2.5 rounded-xl sm:rounded-2xl bg-[#151C30] border border-purple-500/30 text-xs font-bold text-white focus:outline-none focus:border-red-500 cursor-pointer"
             >
               <option value="Item Out of Stock">Item Out of Stock</option>
-              <option value="Kitchen Busy / Rush Hour Wait Time">Kitchen Busy / Rush Hour Wait Time</option>
+              <option value="Kitchen Busy / High Wait Time">Kitchen Busy / High Wait Time</option>
               <option value="Canteen Closing Soon">Canteen Closing Soon</option>
               <option value="Ingredients temporarily unavailable">Ingredients temporarily unavailable</option>
               <option value="Duplicate or test order">Duplicate or test order</option>

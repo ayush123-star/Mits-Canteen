@@ -1688,6 +1688,8 @@ export const DataProvider = ({ children }) => {
       orderNotes: orderData.orderNotes || '',
       specialInstructions: orderData.specialInstructions || '',
       whatsappOptIn: orderData.whatsappOptIn !== undefined ? orderData.whatsappOptIn : true,
+      orderDate: new Date().toISOString().split('T')[0],
+      createdAtDate: new Date().toISOString(),
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       stockDeducted: false,
     };
