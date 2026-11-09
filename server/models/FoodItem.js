@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const foodItemSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    trim: true,
+  },
   name: {
     type: String,
     required: [true, 'Food name is required'],
@@ -19,7 +23,7 @@ const foodItemSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['Breakfast', 'Lunch', 'Snacks', 'Beverages', 'Fast Food', 'Combos'],
+    trim: true,
   },
   isVeg: {
     type: Boolean,

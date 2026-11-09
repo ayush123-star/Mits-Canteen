@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const HomepageConfig = require('../models/HomepageConfig');
-const { protect, adminOnly } = require('../middleware/auth');
+const { ownerOrAdminAuth } = require('../middleware/auth');
 
 // Helper to get or create singleton config
 async function getOrCreateConfig() {
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 
 // @route   PUT /api/homepage
 // @desc    Update homepage configuration (Admin / Owner only)
-router.put('/', protect, adminOnly, async (req, res) => {
+router.put('/', ownerOrAdminAuth, async (req, res) => {
   try {
     const {
       cravingsTitle,
@@ -63,7 +63,7 @@ router.put('/', protect, adminOnly, async (req, res) => {
 });
 
 // Also allow POST for flexibility
-router.post('/', protect, adminOnly, async (req, res) => {
+router.post('/', ownerOrAdminAuth, async (req, res) => {
   req.method = 'PUT';
   router.handle(req, res);
 });

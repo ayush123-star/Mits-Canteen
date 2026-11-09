@@ -797,6 +797,30 @@ export const DataProvider = ({ children }) => {
         if (incomingMenu && Array.isArray(incomingMenu)) {
           setMenuItems(incomingMenu);
         }
+        if (type === 'FOOD_CREATED' && event.data.item) {
+          const itm = event.data.item;
+          setMenuItems((prev) => {
+            if (prev.some((p) => p.id === itm.id || p._id === itm._id)) return prev;
+            return [itm, ...prev];
+          });
+        }
+        if (type === 'FOOD_UPDATED' && (event.data.foodId || event.data.id)) {
+          const fid = event.data.foodId || event.data.id;
+          const udata = event.data.updatedData || event.data.item || {};
+          setMenuItems((prev) => prev.map((p) => (p.id === fid || p._id === fid ? { ...p, ...udata } : p)));
+        }
+        if (type === 'FOOD_DELETED' && (event.data.foodId || event.data.id)) {
+          const fid = event.data.foodId || event.data.id;
+          setMenuItems((prev) => prev.filter((p) => p.id !== fid && p._id !== fid));
+          setHomepageConfig((prev) => ({
+            ...prev,
+            featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== fid),
+          }));
+        }
+        if (type === 'FOOD_STOCK_CHANGED' && (event.data.foodId || event.data.id)) {
+          const fid = event.data.foodId || event.data.id;
+          setMenuItems((prev) => prev.map((p) => (p.id === fid || p._id === fid ? { ...p, isAvailable: event.data.isAvailable } : p)));
+        }
       };
     }
 
@@ -911,20 +935,93 @@ export const DataProvider = ({ children }) => {
           });
         }
 
-        if (Array.isArray(cfg.menuItems) && cfg.menuItems.length > 0) {
+        const incomingMenu = cloudEvent.menuItems || incomingCfg?.menuItems;
+        if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
           setMenuItems((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(cfg.menuItems)) return prev;
-            return cfg.menuItems;
+            if (JSON.stringify(prev) === JSON.stringify(incomingMenu)) return prev;
+            try {
+              localStorage.setItem('smart_canteen_menu', JSON.stringify(incomingMenu));
+            } catch (_) {}
+            return incomingMenu;
           });
         }
 
-        if (Array.isArray(cfg.categories) && cfg.categories.length > 0) {
+        const incomingCategories = cloudEvent.categories || incomingCfg?.categories;
+        if (Array.isArray(incomingCategories) && incomingCategories.length > 0) {
           setCategories((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(cfg.categories)) return prev;
-            return cfg.categories;
+            if (JSON.stringify(prev) === JSON.stringify(incomingCategories)) return prev;
+            try {
+              localStorage.setItem('smart_canteen_categories', JSON.stringify(incomingCategories));
+            } catch (_) {}
+            return incomingCategories;
           });
         }
         return;
+      }
+
+      if (type === 'FOOD_CREATED' && cloudEvent.item) {
+        const item = cloudEvent.item;
+        setMenuItems((prev) => {
+          if (prev.some((i) => i.id === item.id || i._id === item._id)) return prev;
+          const next = [item, ...prev];
+          try {
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'FOOD_UPDATED' && (cloudEvent.foodId || cloudEvent.item)) {
+        const fid = cloudEvent.foodId || cloudEvent.item?.id || cloudEvent.item?._id;
+        const udata = cloudEvent.updatedData || cloudEvent.item || {};
+        setMenuItems((prev) => {
+          const next = prev.map((i) => (i.id === fid || i._id === fid ? { ...i, ...udata } : i));
+          try {
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'FOOD_DELETED' && (cloudEvent.foodId || cloudEvent.id)) {
+        const fid = cloudEvent.foodId || cloudEvent.id;
+        setMenuItems((prev) => {
+          const next = prev.filter((i) => i.id !== fid && i._id !== fid);
+          try {
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+        setHomepageConfig((prev) => ({
+          ...prev,
+          featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== fid),
+        }));
+        return;
+      }
+
+      if (type === 'FOOD_STOCK_CHANGED' && (cloudEvent.foodId || cloudEvent.id)) {
+        const fid = cloudEvent.foodId || cloudEvent.id;
+        const isAvail = cloudEvent.isAvailable;
+        setMenuItems((prev) => {
+          const next = prev.map((i) => (i.id === fid || i._id === fid ? { ...i, isAvailable: isAvail } : i));
+          try {
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (cloudEvent.menuItems && Array.isArray(cloudEvent.menuItems)) {
+        setMenuItems((prev) => {
+          if (JSON.stringify(prev) === JSON.stringify(cloudEvent.menuItems)) return prev;
+          try {
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(cloudEvent.menuItems));
+          } catch (_) {}
+          return cloudEvent.menuItems;
+        });
       }
 
       if (type === 'HOMEPAGE_CONFIG_UPDATED' && cloudEvent.homepageConfig) {
@@ -1654,7 +1751,7 @@ export const DataProvider = ({ children }) => {
   // MENU & CATEGORY MANAGEMENT (REAL-TIME CMS)
   // ==========================================
   const addFoodItem = async (foodData) => {
-    const tempId = 'food-' + Date.now();
+    const tempId = foodData.id || 'food-' + Date.now();
     const newItem = {
       ...foodData,
       id: tempId,
@@ -1664,35 +1761,38 @@ export const DataProvider = ({ children }) => {
       isAvailable: true,
     };
 
+    let updatedMenu = [];
     setMenuItems((prev) => {
-      const next = [newItem, ...prev];
+      updatedMenu = [newItem, ...prev];
       try {
-        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(updatedMenu));
       } catch (_) {}
-      return next;
+      return updatedMenu;
     });
 
     logActivity('Canteen Admin', 'FOOD_ADDED', 'MENU', `Added new dish: ${newItem.name} (₹${newItem.price})`);
 
-    // Broadcast instantly to all tabs & devices
+    // Broadcast instantly to all tabs & remote devices
     if (ordersBroadcastRef.current) {
       try {
-        ordersBroadcastRef.current.postMessage({ type: 'FOOD_CREATED', item: newItem });
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_CREATED', item: newItem, menuItems: updatedMenu });
       } catch (_) {}
     }
-    publishOrderEvent({ type: 'FOOD_CREATED', item: newItem });
+    publishOrderEvent({ type: 'FOOD_CREATED', item: newItem, menuItems: updatedMenu });
+    broadcastCanteenConfig({ menuItems: updatedMenu });
 
     // Save permanently to MongoDB backend & trigger Socket.IO emit
     try {
-      const res = await axios.post('/api/food', foodData);
+      const res = await axios.post('/api/food', { ...foodData, id: tempId });
       if (res.data?.data) {
-        const savedItem = { ...res.data.data, id: res.data.data._id, _id: res.data.data._id };
+        const savedItem = { ...res.data.data, id: res.data.data.id || res.data.data._id, _id: res.data.data._id };
         setMenuItems((prev) => {
-          const updated = prev.map((i) => (i.id === tempId ? savedItem : i));
+          const finalMenu = prev.map((i) => (i.id === tempId || i._id === tempId ? savedItem : i));
           try {
-            localStorage.setItem('smart_canteen_menu', JSON.stringify(updated));
+            localStorage.setItem('smart_canteen_menu', JSON.stringify(finalMenu));
           } catch (_) {}
-          return updated;
+          broadcastCanteenConfig({ menuItems: finalMenu });
+          return finalMenu;
         });
         return savedItem;
       }
@@ -1703,24 +1803,26 @@ export const DataProvider = ({ children }) => {
   };
 
   const updateFoodItem = async (foodId, updatedData) => {
+    let updatedMenu = [];
     setMenuItems((prev) => {
-      const next = prev.map((item) =>
+      updatedMenu = prev.map((item) =>
         item.id === foodId || item._id === foodId ? { ...item, ...updatedData } : item
       );
       try {
-        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(updatedMenu));
       } catch (_) {}
-      return next;
+      return updatedMenu;
     });
 
     logActivity('Canteen Admin', 'FOOD_UPDATED', 'MENU', `Updated dish: ${updatedData.name || foodId}`);
 
     if (ordersBroadcastRef.current) {
       try {
-        ordersBroadcastRef.current.postMessage({ type: 'FOOD_UPDATED', foodId, updatedData });
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_UPDATED', foodId, updatedData, menuItems: updatedMenu });
       } catch (_) {}
     }
-    publishOrderEvent({ type: 'FOOD_UPDATED', foodId, updatedData });
+    publishOrderEvent({ type: 'FOOD_UPDATED', foodId, updatedData, menuItems: updatedMenu });
+    broadcastCanteenConfig({ menuItems: updatedMenu });
 
     try {
       await axios.put(`/api/food/${foodId}`, updatedData);
@@ -1731,27 +1833,36 @@ export const DataProvider = ({ children }) => {
 
   const deleteFoodItem = async (foodId) => {
     const item = menuItems.find((i) => i.id === foodId || i._id === foodId);
+    let updatedMenu = [];
     setMenuItems((prev) => {
-      const next = prev.filter((i) => i.id !== foodId && i._id !== foodId);
+      updatedMenu = prev.filter((i) => i.id !== foodId && i._id !== foodId);
       try {
-        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(updatedMenu));
       } catch (_) {}
-      return next;
+      return updatedMenu;
     });
 
-    setHomepageConfig((prev) => ({
-      ...prev,
-      featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== foodId),
-    }));
+    setHomepageConfig((prev) => {
+      const nextHp = {
+        ...prev,
+        featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== foodId),
+      };
+      try {
+        localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(nextHp));
+      } catch (_) {}
+      broadcastHomepageConfig(nextHp);
+      return nextHp;
+    });
 
     logActivity('Canteen Admin', 'FOOD_DELETED', 'MENU', `Removed dish: ${item?.name || foodId}`);
 
     if (ordersBroadcastRef.current) {
       try {
-        ordersBroadcastRef.current.postMessage({ type: 'FOOD_DELETED', foodId });
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_DELETED', foodId, menuItems: updatedMenu });
       } catch (_) {}
     }
-    publishOrderEvent({ type: 'FOOD_DELETED', foodId });
+    publishOrderEvent({ type: 'FOOD_DELETED', foodId, menuItems: updatedMenu });
+    broadcastCanteenConfig({ menuItems: updatedMenu });
 
     try {
       await axios.delete(`/api/food/${foodId}`);
@@ -1762,8 +1873,9 @@ export const DataProvider = ({ children }) => {
 
   const toggleFoodStock = async (foodId) => {
     let nextAvailable = true;
+    let updatedMenu = [];
     setMenuItems((prev) => {
-      const next = prev.map((item) => {
+      updatedMenu = prev.map((item) => {
         if (item.id === foodId || item._id === foodId) {
           nextAvailable = !item.isAvailable;
           logActivity('Canteen Admin', 'STOCK_TOGGLE', 'MENU', `Toggled ${item.name} to ${nextAvailable ? 'In Stock' : 'Sold Out'}`);
@@ -1772,17 +1884,18 @@ export const DataProvider = ({ children }) => {
         return item;
       });
       try {
-        localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
+        localStorage.setItem('smart_canteen_menu', JSON.stringify(updatedMenu));
       } catch (_) {}
-      return next;
+      return updatedMenu;
     });
 
     if (ordersBroadcastRef.current) {
       try {
-        ordersBroadcastRef.current.postMessage({ type: 'FOOD_STOCK_CHANGED', foodId, isAvailable: nextAvailable });
+        ordersBroadcastRef.current.postMessage({ type: 'FOOD_STOCK_CHANGED', foodId, isAvailable: nextAvailable, menuItems: updatedMenu });
       } catch (_) {}
     }
-    publishOrderEvent({ type: 'FOOD_STOCK_CHANGED', foodId, isAvailable: nextAvailable });
+    publishOrderEvent({ type: 'FOOD_STOCK_CHANGED', foodId, isAvailable: nextAvailable, menuItems: updatedMenu });
+    broadcastCanteenConfig({ menuItems: updatedMenu });
 
     try {
       await axios.patch(`/api/food/${foodId}/toggle-stock`);

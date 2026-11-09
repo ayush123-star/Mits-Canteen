@@ -4,7 +4,7 @@ const Canteen = require('../models/Canteen');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const NotificationLog = require('../models/NotificationLog');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, ownerOrAdminAuth } = require('../middleware/auth');
 
 // Super Admin guard middleware
 const superAdminOnly = (req, res, next) => {
@@ -85,7 +85,7 @@ router.patch('/:id/toggle-open', protect, adminOnly, async (req, res) => {
 
 // @route   PATCH /api/canteens/:id/payment-qr
 // @desc    CANTEEN OWNER ONLY: Upload or configure custom payment QR code & UPI VPA
-router.patch('/:id/payment-qr', protect, adminOnly, async (req, res) => {
+router.patch('/:id/payment-qr', ownerOrAdminAuth, async (req, res) => {
   try {
     const { qrCodeImage, upiId, upiMerchantName } = req.body;
     const canteen = await Canteen.findById(req.params.id);

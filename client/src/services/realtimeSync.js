@@ -104,13 +104,15 @@ const getMqttClient = () => {
             } catch (_) {}
           });
         } else if (topic === TOPIC_CANTEEN_CONFIG) {
-          // Retained/instant canteen config, payment QR, and homepage cravings sync
+          // Retained/instant canteen config, payment QR, homepage cravings, and menu items sync
           subscribers.forEach((callback) => {
             try {
               callback({
                 type: 'CANTEEN_CONFIG_SYNC',
                 config: data,
                 homepageConfig: data.homepageConfig,
+                menuItems: data.menuItems,
+                categories: data.categories,
                 timestamp: data.timestamp || Date.now(),
               });
             } catch (_) {}

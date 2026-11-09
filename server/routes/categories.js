@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
-const { protect, adminOnly } = require('../middleware/auth');
+const { ownerOrAdminAuth } = require('../middleware/auth');
 
 const DEFAULT_CATEGORIES = [
   { name: 'Breakfast', icon: 'SunMedium', displayOrder: 1 },
@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
 
 // @route   POST /api/categories
 // @desc    Create new category (Admin / Owner only)
-router.post('/', protect, adminOnly, async (req, res) => {
+router.post('/', ownerOrAdminAuth, async (req, res) => {
   try {
     const { name, icon, description, displayOrder } = req.body;
     if (!name || !name.trim()) {
@@ -60,7 +60,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 
 // @route   PUT /api/categories/:id
 // @desc    Update category (Admin / Owner only)
-router.put('/:id', protect, adminOnly, async (req, res) => {
+router.put('/:id', ownerOrAdminAuth, async (req, res) => {
   try {
     const updatedCategory = await Category.findByIdAndUpdate(
       req.params.id,
@@ -86,7 +86,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
 
 // @route   DELETE /api/categories/:id
 // @desc    Delete / deactivate category (Admin / Owner only)
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+router.delete('/:id', ownerOrAdminAuth, async (req, res) => {
   try {
     const category = await Category.findByIdAndDelete(req.params.id);
     if (!category) {

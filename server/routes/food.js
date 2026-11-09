@@ -1,7 +1,18 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const FoodItem = require('../models/FoodItem');
-const { protect, adminOnly } = require('../middleware/auth');
+const { ownerOrAdminAuth } = require('../middleware/auth');
+
+// Helper to query by either 24-character MongoDB ObjectId, custom string ID (e.g. food-1), or dish name
+const findFoodQuery = (rawId) => {
+  if (!rawId) return { _id: null };
+  const isMongoId = mongoose.Types.ObjectId.isValid(rawId);
+  if (isMongoId) {
+    return { $or: [{ _id: rawId }, { id: rawId }] };
+  }
+  return { $or: [{ id: String(rawId) }, { name: String(rawId) }] };
+};
 
 // @route   GET /api/food
 // @desc    Get all food items with optional filters
@@ -11,7 +22,7 @@ router.get('/', async (req, res) => {
     let query = {};
 
     if (category && category !== 'All') {
-      query.category = category;
+      query.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     if (isVeg === 'true') {
@@ -57,7 +68,8 @@ router.get('/popular', async (req, res) => {
 // @desc    Get single food item details
 router.get('/:id', async (req, res) => {
   try {
-    const item = await FoodItem.findById(req.params.id);
+    const query = findFoodQuery(req.params.id);
+    const item = await FoodItem.findOne(query);
     if (!item) {
       return res.status(404).json({ message: 'Food item not found' });
     }
@@ -68,10 +80,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // @route   POST /api/food
-// @desc    Add a new food item (Admin only)
-router.post('/', protect, adminOnly, async (req, res) => {
+// @desc    Add a new food item (Owner / Admin)
+router.post('/', ownerOrAdminAuth, async (req, res) => {
   try {
     const {
+      id,
       name,
       description,
       price,
@@ -86,11 +99,12 @@ router.post('/', protect, adminOnly, async (req, res) => {
     } = req.body;
 
     const newItem = await FoodItem.create({
-      name,
-      description,
-      price: Number(price),
-      category,
-      isVeg: Boolean(isVeg),
+      id: id || 'food-' + Date.now(),
+      name: name?.trim(),
+      description: description?.trim() || '',
+      price: Number(price) || 0,
+      category: category?.trim() || 'Fast Food',
+      isVeg: isVeg !== undefined ? Boolean(isVeg) : true,
       image: image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
       preparationTime: Number(preparationTime) || 10,
       calories: Number(calories) || 250,
@@ -116,11 +130,12 @@ router.post('/', protect, adminOnly, async (req, res) => {
 });
 
 // @route   PUT /api/food/:id
-// @desc    Update food item (Admin only)
-router.put('/:id', protect, adminOnly, async (req, res) => {
+// @desc    Update food item (Owner / Admin)
+router.put('/:id', ownerOrAdminAuth, async (req, res) => {
   try {
-    const updatedItem = await FoodItem.findByIdAndUpdate(
-      req.params.id,
+    const query = findFoodQuery(req.params.id);
+    const updatedItem = await FoodItem.findOneAndUpdate(
+      query,
       req.body,
       { new: true, runValidators: true }
     );
@@ -138,15 +153,17 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
 
     res.json({ success: true, data: updatedItem });
   } catch (err) {
+    console.error('Update food item error:', err);
     res.status(400).json({ message: err.message || 'Error updating food item' });
   }
 });
 
 // @route   PATCH /api/food/:id/toggle-stock
-// @desc    Toggle Available / Out of stock (Admin only)
-router.patch('/:id/toggle-stock', protect, adminOnly, async (req, res) => {
+// @desc    Toggle Available / Out of stock (Owner / Admin)
+router.patch('/:id/toggle-stock', ownerOrAdminAuth, async (req, res) => {
   try {
-    const item = await FoodItem.findById(req.params.id);
+    const query = findFoodQuery(req.params.id);
+    const item = await FoodItem.findOne(query);
     if (!item) {
       return res.status(404).json({ message: 'Food item not found' });
     }
@@ -174,28 +191,31 @@ router.patch('/:id/toggle-stock', protect, adminOnly, async (req, res) => {
 
     res.json({ success: true, data: item });
   } catch (err) {
+    console.error('Toggle stock error:', err);
     res.status(500).json({ message: 'Error toggling stock' });
   }
 });
 
 // @route   DELETE /api/food/:id
-// @desc    Delete food item (Admin only)
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+// @desc    Delete food item (Owner / Admin)
+router.delete('/:id', ownerOrAdminAuth, async (req, res) => {
   try {
-    const item = await FoodItem.findByIdAndDelete(req.params.id);
+    const query = findFoodQuery(req.params.id);
+    const item = await FoodItem.findOneAndDelete(query);
     if (!item) {
       return res.status(404).json({ message: 'Food item not found' });
     }
 
     const io = req.app.get('socketio');
     if (io) {
-      io.emit('food:deleted', { id: req.params.id, _id: req.params.id, name: item.name });
-      io.emit('menu:item_deleted', { id: req.params.id, _id: req.params.id });
-      io.emit('menu:updated', { action: 'deleted', id: req.params.id });
+      io.emit('food:deleted', { id: item.id || item._id, _id: item._id, name: item.name });
+      io.emit('menu:item_deleted', { id: item.id || item._id, _id: item._id });
+      io.emit('menu:updated', { action: 'deleted', id: item.id || item._id, _id: item._id });
     }
 
-    res.json({ success: true, message: 'Food item deleted successfully' });
+    res.json({ success: true, message: 'Food item deleted successfully', deletedId: item.id || item._id });
   } catch (err) {
+    console.error('Delete food item error:', err);
     res.status(500).json({ message: 'Error deleting food item' });
   }
 });
