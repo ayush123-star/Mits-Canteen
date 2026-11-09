@@ -31,7 +31,7 @@ export const HomepageManagerPage = () => {
     homepageConfig?.cravingsSubtitle || 'Top rated and most ordered items across campus this week.'
   );
   const [selectedIds, setSelectedIds] = useState(
-    homepageConfig?.featuredCravingsIds || ['food-1', 'food-2', 'food-3', 'food-5']
+    Array.isArray(homepageConfig?.featuredCravingsIds) ? homepageConfig.featuredCravingsIds : []
   );
 
   React.useEffect(() => {

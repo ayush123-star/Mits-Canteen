@@ -19,6 +19,17 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('canteen_cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
+  // Instantly purge any deleted food item from student's active cart
+  useEffect(() => {
+    const handleFoodDeleted = (e) => {
+      const foodId = e.detail?.foodId || e.detail?.id || e.detail?._id || e.detail;
+      if (!foodId) return;
+      setCartItems((prev) => prev.filter((item) => (item.food?._id || item.food?.id) !== foodId));
+    };
+    window.addEventListener('smartcanteen:food_deleted', handleFoodDeleted);
+    return () => window.removeEventListener('smartcanteen:food_deleted', handleFoodDeleted);
+  }, []);
+
   const addToCart = (food, quantity = 1, specialInstructions = '') => {
     const foodKey = food._id || food.id;
     const normalizedFood = { ...food, _id: foodKey, id: foodKey };

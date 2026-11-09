@@ -46,37 +46,19 @@ export const HomePage = () => {
 
   const todayDiscount = getTodayDiscount ? getTodayDiscount() : { day: 'Today', percent: 15, title: 'Campus Special Offer', promoCode: 'CAMPUSDAY' };
 
-  // Dynamic Popular Items: Owner-selected dishes (strictly prioritized) + top-rated items to fill a 4-card grid.
-  // Whenever Canteen Owner selects/changes any dishes, they immediately reflect here across all devices!
+  // Dynamic Popular Items: Strictly ONLY the dishes selected by Canteen Owner in Cravings
+  // If owner hasn't selected any dish, or if all are unselected, returns [] (NOTHING is shown in default case)
   const popularItems = useMemo(() => {
-    const all = (menuItems && menuItems.length > 0) ? menuItems : INITIAL_MENU_ITEMS;
+    const all = Array.isArray(menuItems) ? menuItems : [];
 
-    // 1. If owner has selected ANY dishes, prioritize those exact dishes in selected order
-    let selected = [];
-    if (homepageConfig?.featuredCravingsIds && Array.isArray(homepageConfig.featuredCravingsIds) && homepageConfig.featuredCravingsIds.length > 0) {
-      selected = homepageConfig.featuredCravingsIds
-        .map((id) => all.find((m) => (m._id || m.id) === id) || INITIAL_MENU_ITEMS.find((m) => m.id === id))
-        .filter(Boolean);
-    } else {
-      // Canonical fallback if owner hasn't configured any cravings
-      selected = ['food-1', 'food-2', 'food-3', 'food-5']
-        .map((id) => all.find((m) => (m._id || m.id) === id) || INITIAL_MENU_ITEMS.find((m) => m.id === id))
-        .filter(Boolean);
+    if (!homepageConfig?.featuredCravingsIds || !Array.isArray(homepageConfig.featuredCravingsIds) || homepageConfig.featuredCravingsIds.length === 0) {
+      return [];
     }
 
-    // 2. If fewer than 4 dishes were chosen, fill remaining slots with highest rated items
-    // (excluding items already selected) so layout is always balanced and full
-    if (selected.length < 4) {
-      const selectedIds = new Set(selected.map((item) => item._id || item.id));
-      const remainingTop = all
-        .filter((item) => !selectedIds.has(item._id || item.id))
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0));
-
-      const needed = 4 - selected.length;
-      selected = [...selected, ...remainingTop.slice(0, needed)];
-    }
-
-    return selected.slice(0, 8);
+    // Map ONLY the active dishes currently present in menuItems (deleted dishes are automatically excluded)
+    return homepageConfig.featuredCravingsIds
+      .map((id) => all.find((m) => (m._id || m.id) === id))
+      .filter(Boolean);
   }, [menuItems, homepageConfig?.featuredCravingsIds]);
 
   return (
@@ -268,95 +250,119 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* 3. POPULAR FOOD ITEMS SECTION */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* Canteen Owner Only Quick Live Toolbar */}
-        {isAdmin && (
-          <div className="mb-6 p-4 rounded-3xl bg-purple-50/90 dark:bg-gradient-to-r dark:from-purple-900/30 dark:via-indigo-900/20 dark:to-purple-900/30 border-2 border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-fadeIn">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-black shadow-xs shrink-0">
-                <SlidersHorizontal className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300">
-                    Canteen Owner Controls
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                    Visible Only To Canteen Owner
-                  </span>
+      {/* 3. POPULAR FOOD ITEMS SECTION (Strictly reflects owner's chosen cravings dishes) */}
+      {(popularItems.length > 0 || isAdmin) && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          {/* Canteen Owner Only Quick Live Toolbar */}
+          {isAdmin && (
+            <div className="mb-6 p-4 rounded-3xl bg-purple-50/90 dark:bg-gradient-to-r dark:from-purple-900/30 dark:via-indigo-900/20 dark:to-purple-900/30 border-2 border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                  <SlidersHorizontal className="w-4 h-4" />
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-[#AAB3C5]">
-                  Select which food items appear in "Popular Cravings" & schedule day-wise discount % for students.
-                </p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                      Canteen Owner Controls
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      Live Cravings: {popularItems.length} Dish(es) Active
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-[#AAB3C5]">
+                    Sirf wahi dishes user website par dikhengi jo aapne Cravings me select ki hain. Agar kuch select nahi kiya toh section blank rahega.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <Link
+                  to="/admin/homepage-manager"
+                  className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#1C263A] hover:bg-slate-100 dark:hover:bg-[#25334d] border border-purple-500/30 text-slate-800 dark:text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs"
+                >
+                  <span>Full Admin Panel</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs shadow-md shadow-purple-500/30 flex items-center gap-1.5 transition-all cursor-pointer transform hover:-translate-y-0.5"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Edit Cravings ({popularItems.length})</span>
+                </button>
               </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <Link
-                to="/admin/homepage-manager"
-                className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#1C263A] hover:bg-slate-100 dark:hover:bg-[#25334d] border border-purple-500/30 text-slate-800 dark:text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs"
-              >
-                <span>Full Admin Panel</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] hover:from-[#6842df] hover:to-[#3d5bff] text-white font-black text-xs shadow-md shadow-purple-500/30 flex items-center gap-1.5 transition-all cursor-pointer transform hover:-translate-y-0.5"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Edit Cravings & Day Offers</span>
-              </button>
-            </div>
-          </div>
-        )}
+          {popularItems.length > 0 ? (
+            <>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest mb-1">
+                    <Flame className="w-4 h-4 text-purple-400 fill-purple-400" />
+                    Student Favorites
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    {homepageConfig?.cravingsTitle || 'Popular Campus Cravings'}
+                  </h2>
+                  <p className="text-xs text-[#AAB3C5] mt-1">
+                    {homepageConfig?.cravingsSubtitle || 'Top rated and most ordered items across campus this week.'}
+                  </p>
+                </div>
 
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest mb-1">
-              <Flame className="w-4 h-4 text-purple-400 fill-purple-400" />
-              Student Favorites
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {homepageConfig?.cravingsTitle || 'Popular Campus Cravings'}
-            </h2>
-            <p className="text-xs text-[#AAB3C5] mt-1">
-              {homepageConfig?.cravingsSubtitle || 'Top rated and most ordered items across campus this week.'}
-            </p>
-          </div>
+                <div className="flex items-center gap-3">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-300 hover:text-white bg-[#1C263A] border border-purple-500/30 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>Edit Items</span>
+                    </button>
+                  )}
+                  <Link
+                    to="/menu"
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-300 hover:text-white transition-colors group"
+                  >
+                    <span>View Complete Menu</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-3">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-300 hover:text-white bg-[#1C263A] border border-purple-500/30 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Edit Items</span>
-              </button>
-            )}
-            <Link
-              to="/menu"
-              className="inline-flex items-center gap-1.5 text-xs font-extrabold text-purple-300 hover:text-white transition-colors group"
-            >
-              <span>View Complete Menu</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Popular Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {popularItems.map((food) => (
-            <FoodCard
-              key={food._id || food.id}
-              food={food}
-              onSelect={(item) => setSelectedFood(item)}
-            />
-          ))}
-        </div>
-      </section>
+              {/* Popular Grid: Strictly owner-chosen dishes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {popularItems.map((food) => (
+                  <FoodCard
+                    key={food._id || food.id}
+                    food={food}
+                    onSelect={(item) => setSelectedFood(item)}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            isAdmin && (
+              <div className="p-8 rounded-3xl bg-[#1C263A]/60 border border-dashed border-purple-500/30 text-center text-[#AAB3C5] space-y-3">
+                <Flame className="w-8 h-8 text-purple-400 mx-auto opacity-50" />
+                <h4 className="text-sm font-bold text-white">Popular Campus Cravings (Currently Empty)</h4>
+                <p className="text-xs text-[#AAB3C5] max-w-md mx-auto">
+                  Aapne abhi Cravings me koi dish select nahi ki hai. Normal users ko yeh section blank/hidden dikhega.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white font-extrabold text-xs shadow-md shadow-purple-500/30 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Choose Dishes for Cravings</span>
+                </button>
+              </div>
+            )
+          )}
+        </section>
+      )}
 
       {/* 4. SPECIAL OFFERS SECTION (DYNAMIC CANTEEN OWNER SCHEDULED OFFERS) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

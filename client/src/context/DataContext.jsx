@@ -26,14 +26,14 @@ import {
   fetchRemoteCanteenConfig,
 } from '../services/realtimeSync';
 
-export const HOMEPAGE_CONFIG_VERSION = 3;
-export const CANONICAL_FEATURED_CRAVINGS = ['food-1', 'food-2', 'food-3', 'food-5'];
+export const HOMEPAGE_CONFIG_VERSION = 4;
+export const CANONICAL_FEATURED_CRAVINGS = [];
 
 export const DEFAULT_HOMEPAGE_CONFIG = {
   configVersion: HOMEPAGE_CONFIG_VERSION,
   cravingsTitle: 'Popular Campus Cravings',
   cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
-  featuredCravingsIds: CANONICAL_FEATURED_CRAVINGS, // Default to 4 top rated campus dishes
+  featuredCravingsIds: [], // Default empty: only dishes explicitly selected by owner appear
   dailyDiscounts: {
     Monday: { percent: 10, title: 'Monday Kickstart', active: true },
     Tuesday: { percent: 15, title: 'Tasty Tuesday Feast', active: true },
@@ -247,6 +247,7 @@ export const DataProvider = ({ children }) => {
       const baseConfig = {
         ...DEFAULT_HOMEPAGE_CONFIG,
         ...parsed,
+        featuredCravingsIds: Array.isArray(parsed.featuredCravingsIds) ? parsed.featuredCravingsIds : [],
         dailyDiscounts: {
           ...DEFAULT_HOMEPAGE_CONFIG.dailyDiscounts,
           ...(parsed.dailyDiscounts || {}),
@@ -257,15 +258,11 @@ export const DataProvider = ({ children }) => {
         },
       };
 
-      // Ensure valid cravings array
       if (!parsed.configVersion || parsed.configVersion < HOMEPAGE_CONFIG_VERSION) {
         baseConfig.configVersion = HOMEPAGE_CONFIG_VERSION;
-        baseConfig.featuredCravingsIds = [...CANONICAL_FEATURED_CRAVINGS];
-        try {
-          localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
-        } catch (_) {}
-      } else if (!Array.isArray(baseConfig.featuredCravingsIds)) {
-        baseConfig.featuredCravingsIds = [...CANONICAL_FEATURED_CRAVINGS];
+        if (!Array.isArray(baseConfig.featuredCravingsIds)) {
+          baseConfig.featuredCravingsIds = [];
+        }
         try {
           localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(baseConfig));
         } catch (_) {}
@@ -612,12 +609,23 @@ export const DataProvider = ({ children }) => {
     const onFoodDeleted = (e) => {
       const data = e.detail;
       if (!data) return;
-      const targetId = data.id || data._id;
-      setMenuItems((prev) => prev.filter((i) => i.id !== targetId && i._id !== targetId));
-      setHomepageConfig((prev) => ({
-        ...prev,
-        featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== targetId),
-      }));
+      const targetId = data.id || data._id || data.foodId;
+      setMenuItems((prev) => {
+        const next = prev.filter((i) => i.id !== targetId && i._id !== targetId);
+        try { localStorage.setItem('smart_canteen_menu', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+      setHomepageConfig((prev) => {
+        const next = {
+          ...prev,
+          featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== targetId),
+        };
+        try { localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+      try {
+        window.dispatchEvent(new CustomEvent('smartcanteen:food_deleted_local', { detail: { foodId: targetId } }));
+      } catch (_) {}
     };
 
     const onCategoryCreated = (e) => {
@@ -906,11 +914,22 @@ export const DataProvider = ({ children }) => {
         }
         if (type === 'FOOD_DELETED' && (event.data.foodId || event.data.id)) {
           const fid = event.data.foodId || event.data.id;
-          setMenuItems((prev) => prev.filter((p) => p.id !== fid && p._id !== fid));
-          setHomepageConfig((prev) => ({
-            ...prev,
-            featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== fid),
-          }));
+          setMenuItems((prev) => {
+            const next = prev.filter((p) => p.id !== fid && p._id !== fid);
+            try { localStorage.setItem('smart_canteen_menu', JSON.stringify(next)); } catch (_) {}
+            return next;
+          });
+          setHomepageConfig((prev) => {
+            const next = {
+              ...prev,
+              featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== fid),
+            };
+            try { localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(next)); } catch (_) {}
+            return next;
+          });
+          try {
+            window.dispatchEvent(new CustomEvent('smartcanteen:food_deleted', { detail: { foodId: fid } }));
+          } catch (_) {}
         }
         if (type === 'FOOD_STOCK_CHANGED' && (event.data.foodId || event.data.id)) {
           const fid = event.data.foodId || event.data.id;
@@ -1140,10 +1159,19 @@ export const DataProvider = ({ children }) => {
           } catch (_) {}
           return next;
         });
-        setHomepageConfig((prev) => ({
-          ...prev,
-          featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== fid),
-        }));
+        setHomepageConfig((prev) => {
+          const next = {
+            ...prev,
+            featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== fid),
+          };
+          try {
+            localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(next));
+          } catch (_) {}
+          return next;
+        });
+        try {
+          window.dispatchEvent(new CustomEvent('smartcanteen:food_deleted', { detail: { foodId: fid } }));
+        } catch (_) {}
         return;
       }
 
@@ -2190,8 +2218,9 @@ export const DataProvider = ({ children }) => {
       return updatedMenu;
     });
 
+    let nextHp = null;
     setHomepageConfig((prev) => {
-      const nextHp = {
+      nextHp = {
         ...prev,
         featuredCravingsIds: (prev.featuredCravingsIds || []).filter((id) => id !== foodId),
       };
@@ -2202,15 +2231,25 @@ export const DataProvider = ({ children }) => {
       return nextHp;
     });
 
+    // Clean up from student cart if present
+    try {
+      window.dispatchEvent(new CustomEvent('smartcanteen:food_deleted', { detail: { foodId } }));
+    } catch (_) {}
+
     logActivity('Canteen Admin', 'FOOD_DELETED', 'MENU', `Removed dish: ${item?.name || foodId}`);
 
     if (ordersBroadcastRef.current) {
       try {
-        ordersBroadcastRef.current.postMessage({ type: 'FOOD_DELETED', foodId, menuItems: updatedMenu });
+        ordersBroadcastRef.current.postMessage({
+          type: 'FOOD_DELETED',
+          foodId,
+          menuItems: updatedMenu,
+          homepageConfig: nextHp,
+        });
       } catch (_) {}
     }
-    publishOrderEvent({ type: 'FOOD_DELETED', foodId, menuItems: updatedMenu });
-    broadcastCanteenConfig({ menuItems: updatedMenu });
+    publishOrderEvent({ type: 'FOOD_DELETED', foodId, menuItems: updatedMenu, homepageConfig: nextHp });
+    broadcastCanteenConfig({ menuItems: updatedMenu, homepageConfig: nextHp });
 
     try {
       await axios.delete(`/api/food/${foodId}`);

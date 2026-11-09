@@ -24,10 +24,10 @@ let canteenConfigCache = {
   upiMerchantName: 'Ayush Pandey',
   qrCodeImage: '',
   homepageConfig: {
-    configVersion: 3,
+    configVersion: 4,
     cravingsTitle: 'Popular Campus Cravings',
     cravingsSubtitle: 'Top rated and most ordered items across campus this week.',
-    featuredCravingsIds: ['food-1', 'food-2', 'food-3', 'food-5'],
+    featuredCravingsIds: [],
     dailyDiscounts: {
       Monday: { percent: 10, title: 'Monday Kickstart', active: true },
       Tuesday: { percent: 15, title: 'Tasty Tuesday Feast', active: true },
@@ -74,32 +74,57 @@ export default async function handler(req, res) {
           payload = JSON.parse(payload);
         } catch (_) {}
       }
+      if (payload.homepageConfig !== undefined) {
+        canteenConfigCache.homepageConfig = {
+          ...canteenConfigCache.homepageConfig,
+          ...payload.homepageConfig,
+          featuredCravingsIds: Array.isArray(payload.homepageConfig.featuredCravingsIds)
+            ? payload.homepageConfig.featuredCravingsIds
+            : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
+          dailyDiscounts: {
+            ...(canteenConfigCache.homepageConfig?.dailyDiscounts || {}),
+            ...(payload.homepageConfig?.dailyDiscounts || {}),
+          },
+          specialOfferBanner: {
+            ...(canteenConfigCache.homepageConfig?.specialOfferBanner || {}),
+            ...(payload.homepageConfig?.specialOfferBanner || {}),
+          },
+        };
+      }
+
+      if (Array.isArray(payload.menuItems)) {
+        canteenConfigCache.menuItems = payload.menuItems;
+        const activeIds = new Set(payload.menuItems.map((m) => m.id || m._id));
+        if (canteenConfigCache.homepageConfig?.featuredCravingsIds) {
+          canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => activeIds.has(id));
+        }
+      }
+
       canteenConfigCache = {
         ...canteenConfigCache,
         ...payload,
         qrCodeImage: payload.qrCodeImage !== undefined ? payload.qrCodeImage : canteenConfigCache.qrCodeImage,
         upiId: payload.upiId || canteenConfigCache.upiId,
         upiMerchantName: payload.upiMerchantName || payload.name || canteenConfigCache.upiMerchantName,
-        homepageConfig: payload.homepageConfig !== undefined
-          ? {
-              ...canteenConfigCache.homepageConfig,
-              ...payload.homepageConfig,
-              dailyDiscounts: {
-                ...(canteenConfigCache.homepageConfig?.dailyDiscounts || {}),
-                ...(payload.homepageConfig?.dailyDiscounts || {}),
-              },
-              specialOfferBanner: {
-                ...(canteenConfigCache.homepageConfig?.specialOfferBanner || {}),
-                ...(payload.homepageConfig?.specialOfferBanner || {}),
-              },
-            }
-          : canteenConfigCache.homepageConfig,
-        menuItems: Array.isArray(payload.menuItems) ? payload.menuItems : canteenConfigCache.menuItems,
+        homepageConfig: canteenConfigCache.homepageConfig,
+        menuItems: canteenConfigCache.menuItems,
         categories: Array.isArray(payload.categories) ? payload.categories : canteenConfigCache.categories,
         inventoryItems: Array.isArray(payload.inventoryItems) ? payload.inventoryItems : canteenConfigCache.inventoryItems,
         recipes: Array.isArray(payload.recipes) ? payload.recipes : canteenConfigCache.recipes,
         updatedAt: Date.now(),
       };
+      return res.status(200).json({ success: true, config: canteenConfigCache });
+    }
+
+    // DELETE: Delete a food item or inventory SKU from cache
+    if (req.method === 'DELETE') {
+      const foodId = req.query?.foodId || req.body?.foodId;
+      if (foodId && Array.isArray(canteenConfigCache.menuItems)) {
+        canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => m.id !== foodId && m._id !== foodId);
+        if (canteenConfigCache.homepageConfig?.featuredCravingsIds) {
+          canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => id !== foodId);
+        }
+      }
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
