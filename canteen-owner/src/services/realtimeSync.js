@@ -22,6 +22,7 @@ const BASE_TOPIC = 'mits_campus_canteen_prod_2026';
 const TOPIC_EVENTS = `${BASE_TOPIC}/events`;
 const TOPIC_SNAPSHOT = `${BASE_TOPIC}/snapshot`;
 const TOPIC_CANTEEN_CONFIG = `${BASE_TOPIC}/canteen_config`;
+const TOPIC_HOMEPAGE_CONFIG = `${BASE_TOPIC}/homepage_config`;
 
 // Local client instance identifier (prevents self-echo)
 let cachedInstanceId = null;
@@ -62,8 +63,8 @@ const getMqttClient = () => {
     mqttClient.on('connect', () => {
       isConnecting = false;
       console.log(`[RealtimeSync] Connected to MQTT broker: ${PRIMARY_BROKER}`);
-      // Subscribe to instant events, retained order snapshot, and canteen config
-      mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG], { qos: 1 }, (err) => {
+      // Subscribe to instant events, retained order snapshot, canteen config, and homepage config
+      mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG, TOPIC_HOMEPAGE_CONFIG], { qos: 1 }, (err) => {
         if (err) console.debug('[RealtimeSync] Subscribe error:', err.message);
       });
     });
@@ -101,6 +102,17 @@ const getMqttClient = () => {
           subscribers.forEach((callback) => {
             try {
               callback(data);
+            } catch (_) {}
+          });
+        } else if (topic === TOPIC_HOMEPAGE_CONFIG) {
+          // Retained/instant homepage cravings & daily offers sync
+          subscribers.forEach((callback) => {
+            try {
+              callback({
+                type: 'HOMEPAGE_CONFIG_SYNC',
+                homepageConfig: data.homepageConfig || data,
+                timestamp: data.timestamp || Date.now(),
+              });
             } catch (_) {}
           });
         } else if (topic === TOPIC_CANTEEN_CONFIG) {
@@ -564,6 +576,7 @@ export const broadcastCanteenConfig = (configData) => {
   let savedCategories = null;
   let savedInventory = null;
   let savedRecipes = null;
+  let savedHp = null;
   try {
     const rawMenu = localStorage.getItem('smart_canteen_menu');
     if (rawMenu) savedMenu = JSON.parse(rawMenu);
@@ -573,9 +586,12 @@ export const broadcastCanteenConfig = (configData) => {
     if (rawInv) savedInventory = JSON.parse(rawInv);
     const rawRec = localStorage.getItem('smart_canteen_recipes');
     if (rawRec) savedRecipes = JSON.parse(rawRec);
+    const rawHp = localStorage.getItem('smart_canteen_homepage_config');
+    if (rawHp) savedHp = JSON.parse(rawHp);
   } catch (_) {}
 
   const postPayload = {
+    ...(savedHp ? { homepageConfig: savedHp } : {}),
     ...configData,
     ...(savedMenu ? { menuItems: savedMenu } : {}),
     ...(savedCategories ? { categories: savedCategories } : {}),
@@ -612,17 +628,34 @@ export const broadcastCanteenConfig = (configData) => {
 export const broadcastHomepageConfig = (homepageConfig) => {
   if (!homepageConfig || typeof homepageConfig !== 'object') return;
 
-  const payload = {
-    type: 'CANTEEN_CONFIG_SYNC',
-    homepageConfig,
-    emitterId: getClientInstanceId(),
-    timestamp: Date.now(),
+  const now = Date.now();
+  const configWithTimestamp = {
+    ...homepageConfig,
+    configVersion: homepageConfig.configVersion || now,
+    updatedAt: homepageConfig.updatedAt || now,
   };
 
-  // 1. MQTT publish with retain: true (so all student devices get it instantly!)
-  publishMqtt(TOPIC_CANTEEN_CONFIG, payload, { retain: true, qos: 1 });
+  const payload = {
+    type: 'HOMEPAGE_CONFIG_SYNC',
+    homepageConfig: configWithTimestamp,
+    emitterId: getClientInstanceId(),
+    timestamp: now,
+  };
 
-  // 2. Also publish to TOPIC_EVENTS (for active listeners)
+  // 1. MQTT publish with retain: true on dedicated TOPIC_HOMEPAGE_CONFIG (bulletproof cross-device persistence)
+  publishMqtt(TOPIC_HOMEPAGE_CONFIG, payload, { retain: true, qos: 1 });
+
+  // 2. Also publish to TOPIC_CANTEEN_CONFIG and TOPIC_EVENTS
+  publishMqtt(
+    TOPIC_CANTEEN_CONFIG,
+    {
+      type: 'CANTEEN_CONFIG_SYNC',
+      homepageConfig: configWithTimestamp,
+      emitterId: getClientInstanceId(),
+      timestamp: now,
+    },
+    { retain: true, qos: 1 }
+  );
   publishMqtt(TOPIC_EVENTS, payload, { qos: 1 });
 
   // 3. HTTP sync to Vercel API
@@ -637,7 +670,7 @@ export const broadcastHomepageConfig = (homepageConfig) => {
     } catch (_) {}
 
     const postPayload = {
-      homepageConfig,
+      homepageConfig: configWithTimestamp,
       ...(savedMenu ? { menuItems: savedMenu } : {}),
       ...(savedCategories ? { categories: savedCategories } : {}),
     };

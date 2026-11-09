@@ -34,13 +34,19 @@ export const HomepageManagerPage = () => {
     Array.isArray(homepageConfig?.featuredCravingsIds) ? homepageConfig.featuredCravingsIds : []
   );
 
+  const lastSavedVersionRef = React.useRef(Number(homepageConfig?.configVersion || homepageConfig?.updatedAt || 0));
+
   React.useEffect(() => {
     if (homepageConfig) {
-      if (homepageConfig.cravingsTitle) setCravingsTitle(homepageConfig.cravingsTitle);
-      if (homepageConfig.cravingsSubtitle) setCravingsSubtitle(homepageConfig.cravingsSubtitle);
-      if (Array.isArray(homepageConfig.featuredCravingsIds)) setSelectedIds(homepageConfig.featuredCravingsIds);
-      if (homepageConfig.dailyDiscounts) setDailyDiscounts(homepageConfig.dailyDiscounts);
-      if (homepageConfig.specialOfferBanner) setBannerConfig(homepageConfig.specialOfferBanner);
+      const incomingVer = Number(homepageConfig.configVersion || homepageConfig.updatedAt || 0);
+      if (incomingVer >= lastSavedVersionRef.current) {
+        lastSavedVersionRef.current = incomingVer;
+        if (homepageConfig.cravingsTitle) setCravingsTitle(homepageConfig.cravingsTitle);
+        if (homepageConfig.cravingsSubtitle) setCravingsSubtitle(homepageConfig.cravingsSubtitle);
+        if (Array.isArray(homepageConfig.featuredCravingsIds)) setSelectedIds(homepageConfig.featuredCravingsIds);
+        if (homepageConfig.dailyDiscounts) setDailyDiscounts(homepageConfig.dailyDiscounts);
+        if (homepageConfig.specialOfferBanner) setBannerConfig(homepageConfig.specialOfferBanner);
+      }
     }
   }, [homepageConfig]);
 
@@ -97,12 +103,16 @@ export const HomepageManagerPage = () => {
   };
 
   const handleSave = () => {
+    const now = Date.now();
+    lastSavedVersionRef.current = now;
     updateHomepageConfig({
       cravingsTitle,
       cravingsSubtitle,
       featuredCravingsIds: selectedIds,
       dailyDiscounts,
       specialOfferBanner: bannerConfig,
+      configVersion: now,
+      updatedAt: now,
     });
 
     setSaveSuccess(true);

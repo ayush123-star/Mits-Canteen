@@ -276,10 +276,16 @@ export const DataProvider = ({ children }) => {
 
   const updateHomepageConfig = (newConfig) => {
     const prev = homepageConfig || DEFAULT_HOMEPAGE_CONFIG;
+    const now = Date.now();
     const updatedConfig = {
       ...prev,
       ...newConfig,
-      configVersion: Date.now(),
+      configVersion: now,
+      updatedAt: now,
+      isUserEdited: true,
+      featuredCravingsIds: Array.isArray(newConfig.featuredCravingsIds)
+        ? newConfig.featuredCravingsIds
+        : (prev.featuredCravingsIds || []),
       dailyDiscounts: {
         ...(prev.dailyDiscounts || {}),
         ...(newConfig.dailyDiscounts || {}),
@@ -301,7 +307,7 @@ export const DataProvider = ({ children }) => {
         ordersBroadcastRef.current.postMessage({
           type: 'HOMEPAGE_CONFIG_UPDATED',
           homepageConfig: updatedConfig,
-          timestamp: Date.now(),
+          timestamp: now,
         });
       } catch (_) {}
     }
@@ -436,6 +442,19 @@ export const DataProvider = ({ children }) => {
 
         if (cfg.homepageConfig) {
           setHomepageConfig((prev) => {
+            const remoteVer = Number(cfg.homepageConfig.configVersion || cfg.homepageConfig.updatedAt || 0);
+            const localVer = Number(prev.configVersion || prev.updatedAt || 0);
+
+            // 1. If local is strictly newer, do NOT overwrite or downgrade!
+            if (localVer > remoteVer) {
+              return prev;
+            }
+
+            // 2. If remote is default cold/unconfigured container (version <= 4) and local has cravings, preserve local!
+            if (remoteVer <= 4 && Array.isArray(prev.featuredCravingsIds) && prev.featuredCravingsIds.length > 0) {
+              return prev;
+            }
+
             if (
               prev.cravingsTitle === cfg.homepageConfig.cravingsTitle &&
               prev.cravingsSubtitle === cfg.homepageConfig.cravingsSubtitle &&
@@ -447,6 +466,10 @@ export const DataProvider = ({ children }) => {
             const merged = {
               ...prev,
               ...cfg.homepageConfig,
+              configVersion: remoteVer || localVer || Date.now(),
+              featuredCravingsIds: Array.isArray(cfg.homepageConfig.featuredCravingsIds)
+                ? cfg.homepageConfig.featuredCravingsIds
+                : (prev.featuredCravingsIds || []),
               dailyDiscounts: {
                 ...prev.dailyDiscounts,
                 ...(cfg.homepageConfig.dailyDiscounts || {}),
@@ -1034,6 +1057,40 @@ export const DataProvider = ({ children }) => {
         return;
       }
 
+      if (type === 'HOMEPAGE_CONFIG_SYNC') {
+        const incomingHp = cloudEvent.homepageConfig;
+        if (incomingHp && typeof incomingHp === 'object') {
+          setHomepageConfig((prev) => {
+            const incomingVer = Number(incomingHp.configVersion || incomingHp.updatedAt || 0);
+            const localVer = Number(prev.configVersion || prev.updatedAt || 0);
+
+            if (localVer > incomingVer) return prev;
+
+            const merged = {
+              ...prev,
+              ...incomingHp,
+              configVersion: incomingVer || localVer || Date.now(),
+              featuredCravingsIds: Array.isArray(incomingHp.featuredCravingsIds)
+                ? incomingHp.featuredCravingsIds
+                : (prev.featuredCravingsIds || []),
+              dailyDiscounts: {
+                ...prev.dailyDiscounts,
+                ...(incomingHp.dailyDiscounts || {}),
+              },
+              specialOfferBanner: {
+                ...prev.specialOfferBanner,
+                ...(incomingHp.specialOfferBanner || {}),
+              },
+            };
+            try {
+              localStorage.setItem('smart_canteen_homepage_config', JSON.stringify(merged));
+            } catch (_) {}
+            return merged;
+          });
+        }
+        return;
+      }
+
       if (type === 'CANTEEN_CONFIG_SYNC') {
         const incomingCfg = cloudEvent.config || cloudEvent.canteen;
         if (incomingCfg && (incomingCfg.qrCodeImage !== undefined || incomingCfg.upiId)) {
@@ -1059,9 +1116,18 @@ export const DataProvider = ({ children }) => {
         const incomingHp = cloudEvent.homepageConfig || incomingCfg?.homepageConfig;
         if (incomingHp) {
           setHomepageConfig((prev) => {
+            const incomingVer = Number(incomingHp.configVersion || incomingHp.updatedAt || 0);
+            const localVer = Number(prev.configVersion || prev.updatedAt || 0);
+
+            if (localVer > incomingVer) return prev;
+
             const merged = {
               ...prev,
               ...incomingHp,
+              configVersion: incomingVer || localVer || Date.now(),
+              featuredCravingsIds: Array.isArray(incomingHp.featuredCravingsIds)
+                ? incomingHp.featuredCravingsIds
+                : (prev.featuredCravingsIds || []),
               dailyDiscounts: {
                 ...prev.dailyDiscounts,
                 ...(incomingHp.dailyDiscounts || {}),
@@ -1254,16 +1320,26 @@ export const DataProvider = ({ children }) => {
 
       if (type === 'HOMEPAGE_CONFIG_UPDATED' && cloudEvent.homepageConfig) {
         setHomepageConfig((prev) => {
+          const incomingHp = cloudEvent.homepageConfig;
+          const incomingVer = Number(incomingHp.configVersion || incomingHp.updatedAt || 0);
+          const localVer = Number(prev.configVersion || prev.updatedAt || 0);
+
+          if (localVer > incomingVer) return prev;
+
           const merged = {
             ...prev,
-            ...cloudEvent.homepageConfig,
+            ...incomingHp,
+            configVersion: incomingVer || localVer || Date.now(),
+            featuredCravingsIds: Array.isArray(incomingHp.featuredCravingsIds)
+              ? incomingHp.featuredCravingsIds
+              : (prev.featuredCravingsIds || []),
             dailyDiscounts: {
               ...prev.dailyDiscounts,
-              ...(cloudEvent.homepageConfig.dailyDiscounts || {}),
+              ...(incomingHp.dailyDiscounts || {}),
             },
             specialOfferBanner: {
               ...prev.specialOfferBanner,
-              ...(cloudEvent.homepageConfig.specialOfferBanner || {}),
+              ...(incomingHp.specialOfferBanner || {}),
             },
           };
           try {

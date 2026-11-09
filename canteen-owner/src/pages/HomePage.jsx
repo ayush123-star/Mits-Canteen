@@ -57,7 +57,7 @@ export const HomePage = () => {
 
     // Map ONLY the active dishes currently present in menuItems (deleted dishes are automatically excluded)
     return homepageConfig.featuredCravingsIds
-      .map((id) => all.find((m) => (m._id || m.id) === id))
+      .map((id) => all.find((m) => m && (m._id === id || m.id === id || String(m._id || m.id) === String(id))))
       .filter(Boolean);
   }, [menuItems, homepageConfig?.featuredCravingsIds]);
 

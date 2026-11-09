@@ -1,7 +1,10 @@
 // Centralized Serverless API for Vercel deployment - /api/canteen-config
 // Manages canteen details, payment QR code image, UPI ID, and Payee Name across all portals
 import { createRequire } from 'module';
+import fs from 'fs';
 const require = createRequire(import.meta.url);
+
+const CACHE_FILE = '/tmp/canteenConfigCache.json';
 
 let canonicalData = {};
 try {
@@ -52,6 +55,37 @@ let canteenConfigCache = {
   updatedAt: Date.now(),
 };
 
+function loadDiskCache() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const content = fs.readFileSync(CACHE_FILE, 'utf-8');
+      const data = JSON.parse(content);
+      if (data && typeof data === 'object') {
+        canteenConfigCache = {
+          ...canteenConfigCache,
+          ...data,
+          homepageConfig: {
+            ...canteenConfigCache.homepageConfig,
+            ...(data.homepageConfig || {}),
+            featuredCravingsIds: Array.isArray(data.homepageConfig?.featuredCravingsIds)
+              ? data.homepageConfig.featuredCravingsIds
+              : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
+          },
+        };
+      }
+    }
+  } catch (_) {}
+}
+
+function saveDiskCache() {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(canteenConfigCache), 'utf-8');
+  } catch (_) {}
+}
+
+// Initial attempt to load from disk
+loadDiskCache();
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -66,6 +100,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    loadDiskCache();
+
     // POST, PATCH, PUT: Update canteen config / payment QR
     if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
       let payload = req.body || {};
@@ -75,19 +111,24 @@ export default async function handler(req, res) {
         } catch (_) {}
       }
       if (payload.homepageConfig !== undefined) {
+        const incomingHp = payload.homepageConfig;
+        const incomingVer = Number(incomingHp.configVersion || incomingHp.updatedAt || Date.now());
+
         canteenConfigCache.homepageConfig = {
           ...canteenConfigCache.homepageConfig,
-          ...payload.homepageConfig,
-          featuredCravingsIds: Array.isArray(payload.homepageConfig.featuredCravingsIds)
-            ? payload.homepageConfig.featuredCravingsIds
+          ...incomingHp,
+          configVersion: incomingVer,
+          updatedAt: incomingVer,
+          featuredCravingsIds: Array.isArray(incomingHp.featuredCravingsIds)
+            ? incomingHp.featuredCravingsIds
             : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
           dailyDiscounts: {
             ...(canteenConfigCache.homepageConfig?.dailyDiscounts || {}),
-            ...(payload.homepageConfig?.dailyDiscounts || {}),
+            ...(incomingHp.dailyDiscounts || {}),
           },
           specialOfferBanner: {
             ...(canteenConfigCache.homepageConfig?.specialOfferBanner || {}),
-            ...(payload.homepageConfig?.specialOfferBanner || {}),
+            ...(incomingHp.specialOfferBanner || {}),
           },
         };
       }
@@ -113,6 +154,7 @@ export default async function handler(req, res) {
         recipes: Array.isArray(payload.recipes) ? payload.recipes : canteenConfigCache.recipes,
         updatedAt: Date.now(),
       };
+      saveDiskCache();
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
@@ -125,6 +167,7 @@ export default async function handler(req, res) {
           canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => id !== foodId);
         }
       }
+      saveDiskCache();
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
