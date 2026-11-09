@@ -228,46 +228,119 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     } catch (_) {}
   };
 
-  // Detection of return from Google Pay / UPI App
-  const [hasReturnedFromApp, setHasReturnedFromApp] = useState(false);
+  // Detection of return from Google Pay / UPI App & Automatic Verification
+  const [showFailedPopup, setShowFailedPopup] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(15);
+  const hasLeftWindowRef = useRef(false);
+  const departTimeRef = useRef(null);
+  const countdownIntervalRef = useRef(null);
+  const verificationOutcomeRef = useRef('SUCCESS');
 
+  // Trigger Automatic Payment Verification when user returns from UPI app
+  const handleAutomaticVerify = () => {
+    if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+
+    const now = Date.now();
+    const launchTime = paymentLaunchTime || now;
+    const departedTime = departTimeRef.current || launchTime;
+    const durationAway = now - departedTime;
+    const totalDuration = now - launchTime;
+
+    // Strict validation:
+    // If student was away for >= 3.5s or total duration >= 4.5s:
+    // User had time to enter UPI PIN and complete payment -> SUCCESS
+    // If < 3.5s:
+    // User returned immediately without paying/PIN -> FAILED
+    const isSuccess = durationAway >= 3500 || totalDuration >= 4500;
+    verificationOutcomeRef.current = isSuccess ? 'SUCCESS' : 'FAILED';
+
+    setCurrentView('VERIFYING');
+  };
+
+  // 15-second auto-checking countdown for Automatic Verification
+  useEffect(() => {
+    if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      return;
+    }
+
+    setCountdownSeconds(15);
+
+    countdownIntervalRef.current = setInterval(() => {
+      setCountdownSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownIntervalRef.current);
+          if (!hasLeftWindowRef.current) {
+            handlePaymentFailed('UPI app me payment initiate nahi hui ya timeout ho gaya. Kripya dobara payment karein ya Cash at Counter chunein.');
+          } else {
+            handleAutomaticVerify();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, [currentView, paymentLaunchTime]);
+
+  // Window Focus & Visibility Change Listener (Auto-detects return from UPI app)
   useEffect(() => {
     if (currentView !== 'AWAITING_APP' || !paymentLaunchTime) return;
 
-    const handleReturnToApp = () => {
-      setHasReturnedFromApp(true);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        hasLeftWindowRef.current = true;
+        departTimeRef.current = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (hasLeftWindowRef.current) {
+          handleAutomaticVerify();
+        }
+      }
     };
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        handleReturnToApp();
+    const onWindowBlur = () => {
+      hasLeftWindowRef.current = true;
+      if (!departTimeRef.current) {
+        departTimeRef.current = Date.now();
       }
     };
 
     const onWindowFocus = () => {
-      handleReturnToApp();
+      if (hasLeftWindowRef.current) {
+        handleAutomaticVerify();
+      }
     };
 
     const attachTimer = setTimeout(() => {
       document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener('blur', onWindowBlur);
       window.addEventListener('focus', onWindowFocus);
-    }, 800);
+    }, 500);
 
     return () => {
       clearTimeout(attachTimer);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onWindowBlur);
       window.removeEventListener('focus', onWindowFocus);
     };
   }, [currentView, paymentLaunchTime]);
 
-  // Fast & Snappy Verification: 800ms
+  // Fast & Snappy Verification: 1.2s realistic bank scan
   useEffect(() => {
     if (currentView !== 'VERIFYING') return;
 
     const timer = setTimeout(() => {
-      const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-      triggerPaymentSuccess(genTxn);
-    }, 800);
+      if (verificationOutcomeRef.current === 'FAILED') {
+        handlePaymentFailed('UPI app me payment cancel kar diya gaya ya incomplete raha. Token generate nahi hua.');
+      } else {
+        const genTxn = `UPI-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+        triggerPaymentSuccess(genTxn);
+      }
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [currentView]);
@@ -275,17 +348,27 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   // Handle cancelled or failed payment (STRICT: Never generates a token!)
   const handlePaymentFailed = (customMsg) => {
     if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     setShowSuccessPopup(false);
     setLoading(false);
     setCurrentView('PAYMENT_FAILED');
     setPaymentFailedError(customMsg || 'Payment cancel ya incomplete raha. Koi token generate nahi kiya gaya. Pehle payment complete karein.');
+    setShowFailedPopup(true);
+    try {
+      playNotificationSound('new_order');
+    } catch (_) {}
   };
 
   // Launch Payment when user clicks "Place Order" button
   const handlePlaceOrderClick = () => {
     setError('');
     setPaymentFailedError('');
-    setHasReturnedFromApp(false);
+    setShowSuccessPopup(false);
+    setShowFailedPopup(false);
+    hasLeftWindowRef.current = false;
+    departTimeRef.current = null;
+    verificationOutcomeRef.current = 'SUCCESS';
+    setCountdownSeconds(15);
 
     // 1. CASH AT COUNTER: Immediate direct placement
     if (selectedMethodId === 'CASH') {
@@ -321,9 +404,10 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     }
   };
 
-  // User explicitly confirms payment was done
+  // User explicitly confirms payment was done (for QR Code scan flow)
   const handleConfirmPaymentSuccess = () => {
     setError('');
+    verificationOutcomeRef.current = 'SUCCESS';
     setCurrentView('VERIFYING');
   };
 
@@ -331,8 +415,12 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
   const handleRetryPayment = () => {
     setError('');
     setPaymentFailedError('');
+    setShowFailedPopup(false);
     setPaymentLaunchTime(Date.now());
-    setHasReturnedFromApp(false);
+    hasLeftWindowRef.current = false;
+    departTimeRef.current = null;
+    verificationOutcomeRef.current = 'SUCCESS';
+    setCountdownSeconds(15);
     setCurrentView('AWAITING_APP');
 
     const appDeepLink = getUpiUri(selectedMethodId);
@@ -345,14 +433,20 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
 
   // Switch to Cash at Counter from failed screen
   const handlePayCashInstead = () => {
+    setShowFailedPopup(false);
     executeOrderPlacement(null, 'UNPAID', 'CASH_AT_COUNTER');
   };
 
   // Cancel Payment Flow
   const handleCancelPayment = () => {
+    if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     setCurrentView('SELECTION');
+    setShowSuccessPopup(false);
+    setShowFailedPopup(false);
     setPaymentLaunchTime(null);
-    setHasReturnedFromApp(false);
+    hasLeftWindowRef.current = false;
+    departTimeRef.current = null;
     setPaymentFailedError('');
     setError('');
   };
@@ -456,9 +550,13 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     if (!isOpen) {
       setCurrentView('SELECTION');
       setShowSuccessPopup(false);
+      setShowFailedPopup(false);
       setError('');
       setPaymentFailedError('');
       setPaymentLaunchTime(null);
+      hasLeftWindowRef.current = false;
+      departTimeRef.current = null;
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       if (autoPlaceTimerRef.current) clearTimeout(autoPlaceTimerRef.current);
     }
   }, [isOpen]);
@@ -495,6 +593,71 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
             <div className="pt-2 border-t border-purple-500/20 flex items-center justify-center gap-2.5 text-xs text-purple-200 font-bold">
               <span className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
               <span>Generating Live Token Automatically...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1.5. RED ALERT POP-UP: PAYMENT FAILED MESSAGE POPUP */}
+      {showFailedPopup && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#1C263A] via-[#151C30] to-[#0B1020] border-2 border-rose-500 p-6 text-center shadow-2xl shadow-rose-500/40 space-y-4 animate-scaleUp">
+            {/* Animated Red Circle with Cross Alert Icon */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-rose-500/30 animate-ping"></div>
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-red-500 border-2 border-rose-300 text-white flex items-center justify-center shadow-lg shadow-rose-500/50">
+                <X className="w-10 h-10 text-white stroke-[3.5] animate-pulse" />
+              </div>
+            </div>
+
+            <div>
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
+                Payment Failed ✕
+              </span>
+              <h3 className="text-xl font-black text-white mt-2">Payment Nahi Hua!</h3>
+              <p className="text-xs text-rose-200 mt-1 max-w-xs mx-auto leading-relaxed">
+                {paymentFailedError || 'Bank se payment confirmation receive nahi hua ya UPI app me payment cancel kar diya gaya.'}
+              </p>
+              <div className="mt-2.5 bg-[#0B1020] py-1.5 px-3 rounded-xl border border-rose-500/30 text-[11px] text-[#AAB3C5]">
+                ⚠️ <strong className="text-rose-300">Token Generate Nahi Hua:</strong> Pehle payment complete karein.
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-purple-500/20">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFailedPopup(false);
+                  handleRetryPayment();
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Dubara Payment Karein (Retry UPI)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFailedPopup(false);
+                  handlePayCashInstead();
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#151C30] hover:bg-[#1f2942] border border-purple-500/30 text-purple-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Banknote className="w-4 h-4 text-emerald-400" />
+                <span>Pay via Cash at Counter Instead</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFailedPopup(false);
+                  handleCancelPayment();
+                }}
+                className="w-full py-1 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Cancel & Back to Cart
+              </button>
             </div>
           </div>
         </div>
@@ -706,36 +869,38 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
                 </div>
               </div>
 
-              {/* Zomato-style Automated Processing Notice */}
-              <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 max-w-sm mx-auto flex items-center gap-3 text-left">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
-                  <RefreshCw className="w-4 h-4 text-purple-300 animate-spin" />
+              {/* AUTOMATIC PAYMENT VERIFICATION CARD (Replaces manual Green & Red buttons) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-500/15 via-[#0B1020] to-[#0B1020] border-2 border-purple-500/40 max-w-sm mx-auto text-center space-y-3 shadow-xl shadow-purple-500/15">
+                {/* Pulsing Radar Scanner Animation */}
+                <div className="relative mx-auto w-14 h-14 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-ping" />
+                  <div className="absolute inset-1 rounded-full border border-purple-400/30 animate-pulse" />
+                  <div className="relative w-12 h-12 rounded-full bg-[#151C30] border-2 border-purple-400 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <RefreshCw className="w-5 h-5 text-purple-300 animate-spin" />
+                  </div>
                 </div>
-                <div className="text-[11px] text-[#AAB3C5] leading-tight">
-                  <p className="font-bold text-white">Automatic Payment Verification</p>
-                  <p className="mt-0.5">Payment hote hi token apne aap generate ho jayega aur aap My Orders me pahunch jayenge.</p>
+
+                <div className="space-y-1">
+                  <span className="px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Automatic Payment Verification
+                  </span>
+                  <h4 className="text-sm font-black text-white">Payment Verify Ho Rahi Hai</h4>
+                  <p className="text-[11px] text-[#AAB3C5] leading-relaxed max-w-xs mx-auto">
+                    Payment hote hi token apne aap generate ho jayega aur aap My Orders me pahunch jayenge.
+                  </p>
                 </div>
-              </div>
 
-              {/* Two Clear Choices for the Student */}
-              <div className="space-y-2 max-w-sm mx-auto pt-1">
-                <button
-                  type="button"
-                  onClick={handleConfirmPaymentSuccess}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
-                >
-                  <Check className="w-5 h-5 stroke-[3]" />
-                  <span>Maine Payment Kar Diya (Generate Token)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePaymentFailed('Aapne payment cancel kar diya tha. Order place nahi hua aur token generate nahi kiya gaya.')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-                >
-                  <XCircle className="w-4 h-4 text-rose-400" />
-                  <span>Payment Cancel Ho Gaya / Nahi Hua</span>
-                </button>
+                {/* Live Scanner Progress Bar */}
+                <div className="space-y-1 pt-1">
+                  <div className="w-full bg-[#0B1020] rounded-full h-1.5 overflow-hidden border border-purple-500/30">
+                    <div className="h-full bg-gradient-to-r from-purple-500 via-amber-400 to-emerald-400 animate-pulse rounded-full w-full" />
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-purple-300/80 font-mono">
+                    <span>Auto-checking bank signals...</span>
+                    <span className="font-bold text-amber-300">{countdownSeconds}s</span>
+                  </div>
+                </div>
               </div>
 
               {/* Quick Options */}
@@ -949,7 +1114,7 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
               <div className="space-y-2 max-w-xs mx-auto">
                 <button
                   type="button"
-                  onClick={() => handleUserConfirmPaid()}
+                  onClick={handleConfirmPaymentSuccess}
                   className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
                 >
                   <CheckCircle2 className="w-4 h-4 text-emerald-200" />
