@@ -35,7 +35,7 @@ import {
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
-  const { orders, updateOrderStatus, rejectOrder, cancelOrder, feedbackList } = useData();
+  const { orders, updateOrderStatus, updateOrderPrepTime, rejectOrder, cancelOrder, feedbackList } = useData();
   const { socket, isConnected } = useSocket();
 
   const [searchToken, setSearchToken] = useState('');
@@ -47,6 +47,8 @@ export const AdminDashboard = () => {
   const [customPrepMinutes, setCustomPrepMinutes] = useState(15);
   const [verifiedTokenModal, setVerifiedTokenModal] = useState(null);
   const [newOrderAlert, setNewOrderAlert] = useState(null);
+  const [orderPrepTimes, setOrderPrepTimes] = useState({});
+  const [prepTimeFeedback, setPrepTimeFeedback] = useState(null);
   const prevCountRef = useRef(orders.length);
 
   // Instant notification when a new order arrives via state changes
@@ -168,12 +170,32 @@ export const AdminDashboard = () => {
     .filter((o) => !['Cancelled', 'Rejected'].includes(o.status))
     .reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0);
 
-  // Direct 1-Click Accept with Automated WhatsApp Notification
-  const handleDirectAccept = (order) => {
+  const getExpectedReadyTime = (mins) => {
+    const m = Math.max(1, Number(mins) || 15);
+    return new Date(Date.now() + m * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleSelectCardPrepTime = (order, mins) => {
+    const validMins = Math.max(1, Number(mins) || 10);
+    const key = order.id || order._id || order.orderId || order.tokenNumber;
+    setOrderPrepTimes((prev) => ({ ...prev, [key]: validMins }));
+  };
+
+  const handleApplyPrepTimeUpdate = (order) => {
+    const key = order.id || order._id || order.orderId || order.tokenNumber;
+    const mins = Number(orderPrepTimes[key] || order.estimatedPrepMinutes || 15);
     const actor = user?.name || 'Canteen Owner';
-    const estMins = order.estimatedPrepMinutes || 12;
-    const orderId = order.id || order._id || order.orderId || order.tokenNumber;
-    updateOrderStatus(orderId, 'Accepted', actor, {
+    updateOrderPrepTime(key, mins, actor);
+    setPrepTimeFeedback({ orderId: key, text: `Prep time updated to ~${mins} mins!` });
+    setTimeout(() => setPrepTimeFeedback(null), 3000);
+  };
+
+  // Direct 1-Click Accept with Customized Preparation Time & Automated WhatsApp Notification
+  const handleDirectAccept = (order, customMinutes) => {
+    const actor = user?.name || 'Canteen Owner';
+    const key = order.id || order._id || order.orderId || order.tokenNumber;
+    const estMins = Number(customMinutes || orderPrepTimes[key] || order.estimatedPrepMinutes || 15);
+    updateOrderStatus(key, 'Accepted', actor, {
       estimatedMinutes: estMins,
       note: `Order accepted. Kitchen is preparing your food (~${estMins}m)`,
     });
@@ -187,7 +209,9 @@ export const AdminDashboard = () => {
     const actor = user?.name || 'Canteen Owner';
     const orderId = order.id || order._id || order.orderId || order.tokenNumber;
     if (order.status === 'Placed' || order.status === 'Pending Acceptance') {
-      handleDirectAccept(order);
+      const key = orderId;
+      const estMins = Number(orderPrepTimes[key] || order.estimatedPrepMinutes || 15);
+      handleDirectAccept(order, estMins);
     } else if (order.status === 'Accepted') {
       updateOrderStatus(orderId, 'Preparing', actor);
     } else if (order.status === 'Preparing') {
@@ -679,39 +703,124 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
+                {/* Preparation Time Configuration Box (For Placed, Accepted, and Preparing Orders) */}
+                {['Placed', 'Pending Acceptance', 'Accepted', 'Preparing'].includes(order.status) && (() => {
+                  const orderKey = order.id || order._id || order.orderId || order.tokenNumber;
+                  const selectedPrepMins = Number(orderPrepTimes[orderKey] || order.estimatedPrepMinutes || 15);
+                  return (
+                    <div className="mt-3 p-2.5 sm:p-3 rounded-2xl bg-[#0E1424] border border-purple-500/30 space-y-2 shadow-inner">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-extrabold text-purple-300 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-purple-400" />
+                          Set Preparation Time:
+                        </span>
+                        <span className="text-xs font-black text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-lg font-mono">
+                          ~{selectedPrepMins} Mins
+                          <span className="text-[10px] text-slate-300 font-semibold ml-1.5">
+                            (Ready ~{getExpectedReadyTime(selectedPrepMins)})
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Fast Preset Minutes Selector */}
+                      <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                        {[5, 8, 10, 15, 20, 25, 30].map((mins) => {
+                          const isCurrent = selectedPrepMins === mins;
+                          return (
+                            <button
+                              key={mins}
+                              type="button"
+                              onClick={() => handleSelectCardPrepTime(order, mins)}
+                              className={`py-1 px-2 sm:px-2.5 rounded-lg text-xs font-black transition-all cursor-pointer border ${
+                                isCurrent
+                                  ? 'bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white border-purple-400 shadow-md shadow-purple-500/40 scale-105'
+                                  : 'bg-[#151C30] text-[#AAB3C5] border-purple-500/20 hover:text-white hover:bg-[#25334d]'
+                              }`}
+                            >
+                              {mins}m
+                            </button>
+                          );
+                        })}
+
+                        {/* Custom minute input box */}
+                        <div className="flex items-center gap-1 ml-auto bg-[#151C30] border border-purple-500/30 rounded-lg px-2 py-0.5">
+                          <span className="text-[10px] text-slate-400 font-bold">Custom:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={selectedPrepMins}
+                            onChange={(e) => handleSelectCardPrepTime(order, Math.max(1, Number(e.target.value)))}
+                            className="w-9 sm:w-10 text-center text-xs font-black bg-transparent text-white focus:outline-none"
+                          />
+                          <span className="text-[10px] text-slate-400 font-bold">mins</span>
+                        </div>
+                      </div>
+
+                      {/* If order is already Accepted or Preparing, allow instant time update with 1-click */}
+                      {['Accepted', 'Preparing'].includes(order.status) && (
+                        <div className="flex items-center justify-between pt-1.5 border-t border-purple-500/20">
+                          <span className="text-[10px] text-[#AAB3C5]">
+                            Adjust prep time for student live pass:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyPrepTimeUpdate(order)}
+                            className="px-2.5 py-1 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/40 text-purple-200 text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                          >
+                            <RefreshCw className="w-2.5 h-2.5" />
+                            Update Time
+                          </button>
+                        </div>
+                      )}
+
+                      {prepTimeFeedback?.orderId === orderKey && (
+                        <p className="text-[10px] text-emerald-400 font-bold animate-fadeIn">
+                          ✓ {prepTimeFeedback.text}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Card Action Buttons (Responsive & Touch-Friendly on Phones) */}
                 <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-purple-500/20 flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  {isPlaced && (
-                    <>
-                      <button
-                        onClick={() => handleDirectAccept(order)}
-                        className="flex-1 min-w-[130px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
-                        title="Accept order and notify student"
-                      >
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">ACCEPT ORDER</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAcceptModalOrder(order);
-                          setCustomPrepMinutes(order.estimatedPrepMinutes || 15);
-                        }}
-                        className="p-2 sm:p-2.5 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-purple-300 font-bold text-xs transition-colors cursor-pointer border border-purple-500/30 active:scale-95"
-                        title="Custom Prep Time"
-                        aria-label="Custom Prep Time"
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRejectModalOrder(order)}
-                        className="py-2.5 px-3 rounded-xl bg-red-600/25 hover:bg-red-600/40 text-red-200 font-black text-xs transition-colors cursor-pointer border border-red-500/40 active:scale-95"
-                      >
-                        REJECT ORDER
-                      </button>
-                    </>
-                  )}
+                  {isPlaced && (() => {
+                    const orderKey = order.id || order._id || order.orderId || order.tokenNumber;
+                    const selectedPrepMins = Number(orderPrepTimes[orderKey] || order.estimatedPrepMinutes || 15);
+                    return (
+                      <>
+                        <button
+                          onClick={() => handleDirectAccept(order, selectedPrepMins)}
+                          className="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                          title={`Accept order and notify student (~${selectedPrepMins} mins)`}
+                        >
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">ACCEPT ORDER (~{selectedPrepMins}m)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAcceptModalOrder(order);
+                            setCustomPrepMinutes(selectedPrepMins);
+                          }}
+                          className="p-2 sm:p-2.5 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-purple-300 font-bold text-xs transition-colors cursor-pointer border border-purple-500/30 active:scale-95 flex items-center gap-1"
+                          title="Fine-tune prep time & WhatsApp Preview"
+                          aria-label="Fine-tune prep time & WhatsApp Preview"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline text-[11px]">Options</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRejectModalOrder(order)}
+                          className="py-2.5 px-3 rounded-xl bg-red-600/25 hover:bg-red-600/40 text-red-200 font-black text-xs transition-colors cursor-pointer border border-red-500/40 active:scale-95"
+                        >
+                          REJECT
+                        </button>
+                      </>
+                    );
+                  })()}
 
                   {isAccepted && (
                     <div className="w-full flex flex-col gap-1.5">
@@ -720,7 +829,9 @@ export const AdminDashboard = () => {
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                           Step 2: Order Accepted
                         </span>
-                        <span className="text-[#AAB3C5]">Kitchen Ready</span>
+                        <span className="text-amber-300 font-mono">
+                          ~{order.estimatedPrepMinutes || 15}m prep (Ready ~{order.estimatedReadyTime || getExpectedReadyTime(order.estimatedPrepMinutes || 15)})
+                        </span>
                       </div>
                       <button
                         onClick={() => handleAdvanceStatus(order)}
@@ -739,7 +850,9 @@ export const AdminDashboard = () => {
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                           Step 3: Food Preparing
                         </span>
-                        <span className="text-amber-300 font-mono">~{order.estimatedPrepMinutes || 8}m prep</span>
+                        <span className="text-amber-300 font-mono">
+                          ~{order.estimatedPrepMinutes || 15}m prep (Ready ~{order.estimatedReadyTime || getExpectedReadyTime(order.estimatedPrepMinutes || 15)})
+                        </span>
                       </div>
                       <button
                         onClick={() => handleAdvanceStatus(order)}
@@ -866,8 +979,8 @@ export const AdminDashboard = () => {
                 <label className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#AAB3C5] block mb-2">
                   Estimated Preparation Time (Minutes)
                 </label>
-                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-                  {[8, 12, 15, 20, 25].map((mins) => (
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                  {[5, 8, 10, 15, 20, 25, 30].map((mins) => (
                     <button
                       key={mins}
                       type="button"

@@ -102,7 +102,9 @@ export const TokenPickupPass = ({ order, onClose }) => {
             <div className="h-6 w-px bg-purple-500/30"></div>
             <div>
               <span className="text-[10px] text-[#AAB3C5] block">Est. Prep Time:</span>
-              <span className="font-bold text-purple-300">~{order.estimatedPrepMinutes || 8} mins</span>
+              <span className="font-bold text-purple-300">
+                ~{order.estimatedPrepMinutes || 8} mins {order.estimatedReadyTime ? `(~${order.estimatedReadyTime})` : ''}
+              </span>
             </div>
           </div>
 

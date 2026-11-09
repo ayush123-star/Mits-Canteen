@@ -554,10 +554,11 @@ router.patch('/:id/status', async (req, res) => {
 
     order.status = status;
 
-    if (status === 'Accepted') {
-      if (estimatedPrepMinutes) {
-        order.estimatedPrepMinutes = Number(estimatedPrepMinutes);
-      }
+    if (estimatedPrepMinutes) {
+      order.estimatedPrepMinutes = Number(estimatedPrepMinutes);
+      const prepMins = order.estimatedPrepMinutes || 15;
+      order.estimatedReadyTime = new Date(Date.now() + prepMins * 60 * 1000);
+    } else if (status === 'Accepted') {
       const prepMins = order.estimatedPrepMinutes || 15;
       order.estimatedReadyTime = new Date(Date.now() + prepMins * 60 * 1000);
     }

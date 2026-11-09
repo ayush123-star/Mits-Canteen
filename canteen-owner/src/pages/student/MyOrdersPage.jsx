@@ -434,7 +434,7 @@ export const MyOrdersPage = () => {
                       </span>
                       {order.estimatedPrepMinutes && ['Accepted', 'Preparing'].includes(order.status) && (
                         <span className="text-[11px] font-bold text-purple-200">
-                          ~{order.estimatedPrepMinutes} Mins Prep Time
+                          ~{order.estimatedPrepMinutes} Mins Prep Time {order.estimatedReadyTime ? `(Ready by ~${order.estimatedReadyTime})` : ''}
                         </span>
                       )}
                     </div>

@@ -1927,6 +1927,56 @@ export const DataProvider = ({ children }) => {
       .catch(() => {});
   };
 
+  // Dedicated function for Owner to adjust/set preparation time at any point
+  const updateOrderPrepTime = (orderId, prepMinutes, actorName = 'Canteen Owner') => {
+    const cleanId = String(orderId || '').trim();
+    const queryObj = { orderId: cleanId, tokenNumber: cleanId, id: cleanId };
+    const mins = Math.max(1, Number(prepMinutes) || 15);
+    const readyTime = new Date(Date.now() + mins * 60 * 1000).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    let targetUpdatedOrder = null;
+    const nextOrders = orders.map((ord) => {
+      if (!doesOrderMatch(ord, queryObj)) return ord;
+      const updated = {
+        ...ord,
+        estimatedPrepMinutes: mins,
+        estimatedReadyTime: readyTime,
+      };
+      targetUpdatedOrder = updated;
+      return updated;
+    });
+
+    if (targetUpdatedOrder) {
+      persistAndBroadcastOrders(nextOrders, 'STATUS_UPDATED', {
+        orderId: cleanId,
+        tokenNumber: targetUpdatedOrder.tokenNumber,
+        orderNumber: targetUpdatedOrder.orderNumber || targetUpdatedOrder.orderId,
+        newStatus: targetUpdatedOrder.status,
+        estimatedPrepMinutes: mins,
+        estimatedReadyTime: readyTime,
+        updatedOrder: targetUpdatedOrder,
+      });
+
+      logActivity(actorName, 'ORDER_PREP_TIME_UPDATE', 'ORDERS', `Updated order #${targetUpdatedOrder.tokenNumber} prep time to ${mins} mins (ready by ~${readyTime})`);
+
+      axios
+        .patch(`/api/orders/${encodeURIComponent(cleanId)}/status`, {
+          orderId: cleanId,
+          tokenNumber: targetUpdatedOrder.tokenNumber,
+          orderNumber: targetUpdatedOrder.orderNumber || targetUpdatedOrder.orderId,
+          status: targetUpdatedOrder.status,
+          estimatedPrepMinutes: mins,
+          estimatedReadyTime: readyTime,
+          updatedOrder: targetUpdatedOrder,
+        })
+        .catch(() => {});
+    }
+    return targetUpdatedOrder;
+  };
+
   // Recipe deduction engine: automatically calculates ingredient requirements & updates inventory
   const deductRecipeStockForOrder = (order) => {
     const deductions = [];
@@ -2871,6 +2921,7 @@ export const DataProvider = ({ children }) => {
         setSimulatedWhatsAppAlert,
         placeOrder,
         updateOrderStatus,
+        updateOrderPrepTime,
         rejectOrder,
         cancelOrder,
         markCashPaymentCollected,
