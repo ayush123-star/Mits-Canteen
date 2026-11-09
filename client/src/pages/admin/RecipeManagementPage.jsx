@@ -17,10 +17,18 @@ import {
 
 export const RecipeManagementPage = () => {
   const { user } = useAuth();
-  const { recipes, menuItems, inventoryItems, saveRecipe } = useData();
+  const { recipes, menuItems, inventoryItems, saveRecipe, deleteRecipe } = useData();
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [recipeToDelete, setRecipeToDelete] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
 
   // Form State for Recipe Studio
   const [formData, setFormData] = useState({
@@ -67,6 +75,23 @@ export const RecipeManagementPage = () => {
       ingredients: recipe.ingredients.map((ing) => ({ ...ing })),
     });
     setIsModalOpen(true);
+  };
+
+  const openDeleteModal = (recipe) => {
+    setRecipeToDelete(recipe);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!recipeToDelete) return;
+    try {
+      await deleteRecipe(recipeToDelete.menuItemId || recipeToDelete.id);
+      showToast(`Recipe formula for "${recipeToDelete.menuItemName}" deleted!`);
+      setIsDeleteModalOpen(false);
+      setRecipeToDelete(null);
+    } catch (err) {
+      alert('Failed to delete recipe: ' + err.message);
+    }
   };
 
   const handleAddIngredientRow = () => {
@@ -117,6 +142,13 @@ export const RecipeManagementPage = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12 text-white">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 px-5 py-3 rounded-2xl bg-emerald-600/90 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 flex items-center gap-2 backdrop-blur-md animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -176,13 +208,22 @@ export const RecipeManagementPage = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleOpenEdit(recipe)}
-                    className="p-2 rounded-xl text-[#AAB3C5] hover:text-[#7955E8] hover:bg-purple-500/10 transition-colors"
-                    title="Edit Formula"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEdit(recipe)}
+                      className="p-2 rounded-xl text-[#AAB3C5] hover:text-[#7955E8] hover:bg-purple-500/10 transition-colors cursor-pointer"
+                      title="Edit Formula"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal(recipe)}
+                      className="p-2 rounded-xl text-[#AAB3C5] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      title="Delete Formula"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Remaining Servings Metric */}
@@ -367,6 +408,46 @@ export const RecipeManagementPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* 4. Delete Confirmation Modal */}
+      {isDeleteModalOpen && recipeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-[#1C263A] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-rose-500/30 space-y-4 text-white">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto shadow-lg">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-black text-white">Delete Recipe Formula?</h3>
+              <p className="text-xs text-[#AAB3C5] leading-relaxed">
+                Are you sure you want to remove the ingredient formula for <strong className="text-white underline">{recipeToDelete.menuItemName}</strong>?
+              </p>
+              <p className="text-[11px] text-rose-400 font-semibold bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                ⚠️ Automatic stock deduction for this dish will stop when orders are prepared.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setRecipeToDelete(null);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-[#AAB3C5] hover:text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+              >
+                Yes, Delete Recipe
+              </button>
+            </div>
           </div>
         </div>
       )}

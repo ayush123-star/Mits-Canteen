@@ -217,6 +217,33 @@ export const SocketProvider = ({ children }) => {
     socketInstance.on('canteen:payment_qr_updated', handleCanteenUpdate);
     socketInstance.on('canteen:status_changed', handleCanteenUpdate);
 
+    // 14. REAL-TIME CMS: Inventory / Raw Material Stock Events
+    socketInstance.on('inventory:created', (item) => {
+      console.log('[Socket.IO] inventory:created event:', item);
+      window.dispatchEvent(new CustomEvent('smartcanteen:inventory_created', { detail: item }));
+    });
+    socketInstance.on('inventory:updated', (item) => {
+      console.log('[Socket.IO] inventory:updated event:', item);
+      window.dispatchEvent(new CustomEvent('smartcanteen:inventory_updated', { detail: item }));
+    });
+    socketInstance.on('inventory:deleted', (data) => {
+      console.log('[Socket.IO] inventory:deleted event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:inventory_deleted', { detail: data }));
+    });
+    socketInstance.on('inventory:sync', () => {
+      window.dispatchEvent(new CustomEvent('smartcanteen:inventory_sync'));
+    });
+
+    // 15. REAL-TIME CMS: Recipe Events
+    socketInstance.on('recipe:saved', (recipe) => {
+      console.log('[Socket.IO] recipe:saved event:', recipe);
+      window.dispatchEvent(new CustomEvent('smartcanteen:recipe_saved', { detail: recipe }));
+    });
+    socketInstance.on('recipe:deleted', (data) => {
+      console.log('[Socket.IO] recipe:deleted event:', data);
+      window.dispatchEvent(new CustomEvent('smartcanteen:recipe_deleted', { detail: data }));
+    });
+
     // Reconnection handling on browser online
     const handleOnline = () => {
       console.log('[Network] Browser came online, restoring socket & data...');

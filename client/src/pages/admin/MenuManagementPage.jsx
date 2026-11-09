@@ -15,7 +15,8 @@ import {
   AlertCircle,
   DollarSign,
   X,
-  FolderPlus
+  FolderPlus,
+  Settings2,
 } from 'lucide-react';
 
 export const MenuManagementPage = () => {
@@ -28,6 +29,8 @@ export const MenuManagementPage = () => {
     toggleFoodStock,
     categories,
     addCategory,
+    updateCategory,
+    deleteCategory,
   } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,8 +40,36 @@ export const MenuManagementPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingFood, setEditingFood] = useState(null);
   const [isAddCatModalOpen, setIsAddCatModalOpen] = useState(false);
+  const [isManageCatModalOpen, setIsManageCatModalOpen] = useState(false);
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editingCatName, setEditingCatName] = useState('');
   const [newCatName, setNewCatName] = useState('');
   const [catSuccessMsg, setCatSuccessMsg] = useState('');
+
+  const handleStartEditCat = (cat) => {
+    setEditingCatId(cat.id || cat._id || cat.name);
+    setEditingCatName(typeof cat === 'string' ? cat : cat.name);
+  };
+
+  const handleSaveEditCat = async (cat) => {
+    const targetId = cat.id || cat._id;
+    if (!editingCatName.trim()) return;
+    if (targetId) {
+      await updateCategory(targetId, { name: editingCatName.trim() });
+    }
+    setEditingCatId(null);
+  };
+
+  const handleDeleteCat = async (cat) => {
+    const catName = typeof cat === 'string' ? cat : cat.name;
+    const targetId = cat.id || cat._id || catName;
+    if (window.confirm(`Are you sure you want to delete category "${catName}"?`)) {
+      await deleteCategory(targetId);
+      if (selectedCategory === catName) {
+        setSelectedCategory('All');
+      }
+    }
+  };
 
   // Dynamically computed categories from CMS database
   const allCategoryNames = useMemo(() => {
@@ -143,7 +174,7 @@ export const MenuManagementPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -154,7 +185,16 @@ export const MenuManagementPage = () => {
             className="px-4 py-3 rounded-2xl bg-[#151C30] hover:bg-[#25334d] border border-purple-500/30 text-purple-200 font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <FolderPlus className="w-4 h-4 text-purple-400" />
-            Add Category
+            + Add Category
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsManageCatModalOpen(true)}
+            className="px-4 py-3 rounded-2xl bg-[#151C30] hover:bg-[#25334d] border border-purple-500/30 text-purple-200 font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Settings2 className="w-4 h-4 text-purple-400" />
+            Manage Categories
           </button>
 
           <button
@@ -565,6 +605,123 @@ export const MenuManagementPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* 6. Manage Categories Modal (Edit / Rename & Delete Categories) */}
+      {isManageCatModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg bg-[#1C263A] rounded-3xl border border-purple-500/30 p-6 shadow-2xl space-y-4 animate-scaleUp max-h-[85vh] overflow-y-auto text-white">
+            <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center">
+                  <Settings2 className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Manage Food Categories</h3>
+                  <p className="text-[11px] text-[#AAB3C5]">Edit names or remove categories live across campus</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsManageCatModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-[#151C30] hover:bg-[#25334d] text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {(categories || []).map((cat) => {
+                const catName = typeof cat === 'string' ? cat : cat.name;
+                const catId = cat.id || cat._id || catName;
+                const dishCount = menuItems.filter((m) => m.category === catName).length;
+                const isEditing = editingCatId === catId;
+
+                return (
+                  <div
+                    key={catId}
+                    className="p-3.5 rounded-2xl bg-[#151C30] border border-purple-500/20 flex items-center justify-between gap-3 hover:border-purple-500/40 transition-colors"
+                  >
+                    {isEditing ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editingCatName}
+                          onChange={(e) => setEditingCatName(e.target.value)}
+                          className="flex-1 px-3 py-1.5 rounded-xl bg-[#1C263A] border border-purple-500/40 text-white text-xs font-bold focus:outline-none focus:border-[#7955E8]"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditCat(cat)}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingCatId(null)}
+                          className="px-2 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                          <span className="font-extrabold text-white text-xs sm:text-sm">{catName}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                            {dishCount} dish(es)
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditCat(cat)}
+                            title="Rename Category"
+                            className="p-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCat(cat)}
+                            title="Delete Category"
+                            className="p-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-3 border-t border-purple-500/20 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageCatModalOpen(false);
+                  setIsAddCatModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-purple-400" />
+                + Add Another Category
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsManageCatModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-[#151C30] hover:bg-[#25334d] text-[#AAB3C5] hover:text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

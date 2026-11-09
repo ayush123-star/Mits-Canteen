@@ -641,6 +641,63 @@ export const DataProvider = ({ children }) => {
       );
     };
 
+    const onInventoryCreated = (e) => {
+      const item = e.detail;
+      if (!item) return;
+      const normalized = { ...item, id: item.id || item._id, _id: item._id || item.id };
+      setInventoryItems((prev) => {
+        if (prev.some((i) => i.id === normalized.id || i._id === normalized._id)) return prev;
+        const next = [normalized, ...prev];
+        try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+    };
+
+    const onInventoryUpdated = (e) => {
+      const item = e.detail;
+      if (!item) return;
+      const targetId = item.id || item._id;
+      setInventoryItems((prev) => {
+        const next = prev.map((i) => (i.id === targetId || i._id === targetId ? { ...i, ...item } : i));
+        try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+    };
+
+    const onInventoryDeleted = (e) => {
+      const data = e.detail;
+      if (!data) return;
+      const targetId = data.id || data._id;
+      setInventoryItems((prev) => {
+        const next = prev.filter((i) => i.id !== targetId && i._id !== targetId);
+        try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+    };
+
+    const onRecipeSaved = (e) => {
+      const recipe = e.detail;
+      if (!recipe) return;
+      setRecipes((prev) => {
+        const next = prev.some((r) => r.menuItemId === recipe.menuItemId)
+          ? prev.map((r) => (r.menuItemId === recipe.menuItemId ? { ...r, ...recipe } : r))
+          : [...prev, recipe];
+        try { localStorage.setItem('smart_canteen_recipes', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+    };
+
+    const onRecipeDeleted = (e) => {
+      const data = e.detail;
+      if (!data) return;
+      const targetId = data.menuItemId || data.id || data._id;
+      setRecipes((prev) => {
+        const next = prev.filter((r) => r.menuItemId !== targetId && r._id !== targetId && r.id !== targetId);
+        try { localStorage.setItem('smart_canteen_recipes', JSON.stringify(next)); } catch (_) {}
+        return next;
+      });
+    };
+
     window.addEventListener('smartcanteen:food_created', onFoodCreated);
     window.addEventListener('smartcanteen:food_updated', onFoodUpdated);
     window.addEventListener('smartcanteen:food_stock_changed', onStockChanged);
@@ -651,6 +708,11 @@ export const DataProvider = ({ children }) => {
     window.addEventListener('smartcanteen:homepage_updated', onHomepageUpdated);
     window.addEventListener('smartcanteen:offer_updated', onHomepageUpdated);
     window.addEventListener('smartcanteen:canteen_config_updated', onCanteenConfigUpdated);
+    window.addEventListener('smartcanteen:inventory_created', onInventoryCreated);
+    window.addEventListener('smartcanteen:inventory_updated', onInventoryUpdated);
+    window.addEventListener('smartcanteen:inventory_deleted', onInventoryDeleted);
+    window.addEventListener('smartcanteen:recipe_saved', onRecipeSaved);
+    window.addEventListener('smartcanteen:recipe_deleted', onRecipeDeleted);
 
     return () => {
       window.removeEventListener('smartcanteen:food_created', onFoodCreated);
@@ -663,6 +725,11 @@ export const DataProvider = ({ children }) => {
       window.removeEventListener('smartcanteen:homepage_updated', onHomepageUpdated);
       window.removeEventListener('smartcanteen:offer_updated', onHomepageUpdated);
       window.removeEventListener('smartcanteen:canteen_config_updated', onCanteenConfigUpdated);
+      window.removeEventListener('smartcanteen:inventory_created', onInventoryCreated);
+      window.removeEventListener('smartcanteen:inventory_updated', onInventoryUpdated);
+      window.removeEventListener('smartcanteen:inventory_deleted', onInventoryDeleted);
+      window.removeEventListener('smartcanteen:recipe_saved', onRecipeSaved);
+      window.removeEventListener('smartcanteen:recipe_deleted', onRecipeDeleted);
     };
   }, []);
 
@@ -820,6 +887,35 @@ export const DataProvider = ({ children }) => {
         if (type === 'FOOD_STOCK_CHANGED' && (event.data.foodId || event.data.id)) {
           const fid = event.data.foodId || event.data.id;
           setMenuItems((prev) => prev.map((p) => (p.id === fid || p._id === fid ? { ...p, isAvailable: event.data.isAvailable } : p)));
+        }
+        if (type === 'INVENTORY_CREATED' && event.data.item) {
+          const invItem = event.data.item;
+          setInventoryItems((prev) => {
+            if (prev.some((p) => p.id === invItem.id || p._id === invItem._id)) return prev;
+            return [invItem, ...prev];
+          });
+        }
+        if (type === 'INVENTORY_UPDATED' && (event.data.inventoryId || event.data.id)) {
+          const invId = event.data.inventoryId || event.data.id;
+          const udata = event.data.updatedData || event.data.item || {};
+          setInventoryItems((prev) => prev.map((p) => (p.id === invId || p._id === invId ? { ...p, ...udata } : p)));
+        }
+        if (type === 'INVENTORY_DELETED' && (event.data.inventoryId || event.data.id)) {
+          const invId = event.data.inventoryId || event.data.id;
+          setInventoryItems((prev) => prev.filter((p) => p.id !== invId && p._id !== invId));
+        }
+        if (type === 'RECIPE_SAVED' && event.data.recipe) {
+          const rec = event.data.recipe;
+          setRecipes((prev) => {
+            const next = prev.some((r) => r.menuItemId === rec.menuItemId)
+              ? prev.map((r) => (r.menuItemId === rec.menuItemId ? { ...r, ...rec } : r))
+              : [...prev, rec];
+            return next;
+          });
+        }
+        if (type === 'RECIPE_DELETED' && (event.data.recipeId || event.data.menuItemId)) {
+          const recId = event.data.recipeId || event.data.menuItemId;
+          setRecipes((prev) => prev.filter((r) => r.menuItemId !== recId && r._id !== recId && r.id !== recId));
         }
       };
     }
@@ -1009,6 +1105,60 @@ export const DataProvider = ({ children }) => {
           try {
             localStorage.setItem('smart_canteen_menu', JSON.stringify(next));
           } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'INVENTORY_CREATED' && cloudEvent.item) {
+        const item = cloudEvent.item;
+        setInventoryItems((prev) => {
+          if (prev.some((i) => i.id === item.id || i._id === item._id)) return prev;
+          const next = [item, ...prev];
+          try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(next)); } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'INVENTORY_UPDATED' && (cloudEvent.inventoryId || cloudEvent.item)) {
+        const invId = cloudEvent.inventoryId || cloudEvent.item?.id || cloudEvent.item?._id;
+        const udata = cloudEvent.updatedData || cloudEvent.item || {};
+        setInventoryItems((prev) => {
+          const next = prev.map((i) => (i.id === invId || i._id === invId ? { ...i, ...udata } : i));
+          try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(next)); } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'INVENTORY_DELETED' && (cloudEvent.inventoryId || cloudEvent.id)) {
+        const invId = cloudEvent.inventoryId || cloudEvent.id;
+        setInventoryItems((prev) => {
+          const next = prev.filter((i) => i.id !== invId && i._id !== invId);
+          try { localStorage.setItem('smart_canteen_inventory', JSON.stringify(next)); } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'RECIPE_SAVED' && cloudEvent.recipe) {
+        const rec = cloudEvent.recipe;
+        setRecipes((prev) => {
+          const next = prev.some((r) => r.menuItemId === rec.menuItemId)
+            ? prev.map((r) => (r.menuItemId === rec.menuItemId ? { ...r, ...rec } : r))
+            : [...prev, rec];
+          try { localStorage.setItem('smart_canteen_recipes', JSON.stringify(next)); } catch (_) {}
+          return next;
+        });
+        return;
+      }
+
+      if (type === 'RECIPE_DELETED' && (cloudEvent.recipeId || cloudEvent.menuItemId)) {
+        const recId = cloudEvent.recipeId || cloudEvent.menuItemId;
+        setRecipes((prev) => {
+          const next = prev.filter((r) => r.menuItemId !== recId && r._id !== recId && r.id !== recId);
+          try { localStorage.setItem('smart_canteen_recipes', JSON.stringify(next)); } catch (_) {}
           return next;
         });
         return;
@@ -1748,6 +1898,128 @@ export const DataProvider = ({ children }) => {
   };
 
   // ==========================================
+  // INVENTORY & STOCK MANAGEMENT (REAL-TIME CMS)
+  // ==========================================
+  const addInventoryItem = async (itemData) => {
+    const tempId = itemData.id || 'inv-' + Date.now();
+    const qty = Number(itemData.currentQuantity) || 0;
+    const minLevel = Number(itemData.minimumStockLevel) || 5;
+    const newItem = {
+      id: tempId,
+      _id: tempId,
+      name: (itemData.name || '').trim(),
+      category: itemData.category ? itemData.category.trim() : 'General',
+      currentQuantity: qty,
+      unit: itemData.unit ? itemData.unit.trim() : 'kg',
+      minimumStockLevel: minLevel,
+      reorderQuantity: Number(itemData.reorderQuantity) || 20,
+      status: qty <= minLevel ? 'Low Stock' : 'Optimal',
+      supplier: itemData.supplier ? itemData.supplier.trim() : 'Campus Wholesale Mart',
+      lastRestocked: new Date().toLocaleDateString(),
+    };
+
+    let updatedList = [];
+    setInventoryItems((prev) => {
+      updatedList = [newItem, ...prev];
+      try {
+        localStorage.setItem('smart_canteen_inventory', JSON.stringify(updatedList));
+      } catch (_) {}
+      return updatedList;
+    });
+
+    logActivity('Canteen Admin', 'INVENTORY_CREATED', 'STOCK', `Added raw material: ${newItem.name}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'INVENTORY_CREATED', item: newItem, inventoryItems: updatedList });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'INVENTORY_CREATED', item: newItem, inventoryItems: updatedList });
+
+    try {
+      const res = await axios.post('/api/inventory', itemData);
+      if (res.data?.data) {
+        const saved = { ...res.data.data, id: res.data.data.id || res.data.data._id, _id: res.data.data._id };
+        setInventoryItems((prev) => {
+          const final = prev.map((i) => (i.id === tempId || i._id === tempId ? saved : i));
+          try {
+            localStorage.setItem('smart_canteen_inventory', JSON.stringify(final));
+          } catch (_) {}
+          return final;
+        });
+        return saved;
+      }
+    } catch (err) {
+      console.warn('Backend inventory save notice (running optimistic):', err.message);
+    }
+    return newItem;
+  };
+
+  const updateInventoryItem = async (inventoryId, updatedData) => {
+    let updatedList = [];
+    setInventoryItems((prev) => {
+      updatedList = prev.map((item) => {
+        if (item.id === inventoryId || item._id === inventoryId) {
+          const merged = { ...item, ...updatedData };
+          if (updatedData.currentQuantity !== undefined || updatedData.minimumStockLevel !== undefined) {
+            const q = Number(merged.currentQuantity) || 0;
+            const m = Number(merged.minimumStockLevel) || 5;
+            merged.status = q <= m ? 'Low Stock' : 'Optimal';
+          }
+          return merged;
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem('smart_canteen_inventory', JSON.stringify(updatedList));
+      } catch (_) {}
+      return updatedList;
+    });
+
+    logActivity('Canteen Admin', 'INVENTORY_UPDATED', 'STOCK', `Updated raw material: ${updatedData.name || inventoryId}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'INVENTORY_UPDATED', inventoryId, updatedData, inventoryItems: updatedList });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'INVENTORY_UPDATED', inventoryId, updatedData, inventoryItems: updatedList });
+
+    try {
+      await axios.put(`/api/inventory/${inventoryId}`, updatedData);
+    } catch (err) {
+      console.warn('Backend inventory update notice (running optimistic):', err.message);
+    }
+  };
+
+  const deleteInventoryItem = async (inventoryId) => {
+    const item = inventoryItems.find((i) => i.id === inventoryId || i._id === inventoryId);
+    let updatedList = [];
+    setInventoryItems((prev) => {
+      updatedList = prev.filter((i) => i.id !== inventoryId && i._id !== inventoryId);
+      try {
+        localStorage.setItem('smart_canteen_inventory', JSON.stringify(updatedList));
+      } catch (_) {}
+      return updatedList;
+    });
+
+    logActivity('Canteen Admin', 'INVENTORY_DELETED', 'STOCK', `Deleted raw material: ${item?.name || inventoryId}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'INVENTORY_DELETED', inventoryId, inventoryItems: updatedList });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'INVENTORY_DELETED', inventoryId, inventoryItems: updatedList });
+
+    try {
+      await axios.delete(`/api/inventory/${inventoryId}`);
+    } catch (err) {
+      console.warn('Backend inventory delete notice (running optimistic):', err.message);
+    }
+  };
+
+  // ==========================================
   // MENU & CATEGORY MANAGEMENT (REAL-TIME CMS)
   // ==========================================
   const addFoodItem = async (foodData) => {
@@ -1985,6 +2257,32 @@ export const DataProvider = ({ children }) => {
     logActivity('Canteen Admin', 'RECIPE_SAVED', 'RECIPES', `Configured ingredient recipe formula for ${newRecipe.menuItemName}`);
   };
 
+  const deleteRecipe = async (menuItemId) => {
+    let updatedList = [];
+    setRecipes((prev) => {
+      updatedList = prev.filter((r) => r.menuItemId !== menuItemId && r._id !== menuItemId && r.id !== menuItemId);
+      try {
+        localStorage.setItem('smart_canteen_recipes', JSON.stringify(updatedList));
+      } catch (_) {}
+      return updatedList;
+    });
+
+    logActivity('Canteen Admin', 'RECIPE_DELETED', 'RECIPES', `Deleted recipe formula: ${menuItemId}`);
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({ type: 'RECIPE_DELETED', menuItemId, recipes: updatedList });
+      } catch (_) {}
+    }
+    publishOrderEvent({ type: 'RECIPE_DELETED', menuItemId, recipes: updatedList });
+
+    try {
+      await axios.delete(`/api/recipes/${menuItemId}`);
+    } catch (err) {
+      console.warn('Backend recipe delete notice:', err.message);
+    }
+  };
+
   // ==========================================
   // SUPER ADMIN: CANTEEN OWNER MANAGEMENT & 24H INVITATIONS
   // ==========================================
@@ -2200,7 +2498,11 @@ export const DataProvider = ({ children }) => {
         toggleFoodStock,
         addStock,
         adjustStock,
+        addInventoryItem,
+        updateInventoryItem,
+        deleteInventoryItem,
         saveRecipe,
+        deleteRecipe,
         createOwnerManually,
         sendOwnerInvitation,
         resendInvitation,

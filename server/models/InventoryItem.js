@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const inventoryItemSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    trim: true,
+  },
   name: {
     type: String,
     required: [true, 'Raw material name is required'],
@@ -9,7 +13,8 @@ const inventoryItemSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Dairy', 'Bakery', 'Vegetables', 'Pantry & Spices', 'Condiments', 'Packaging', 'Beverages'],
+    trim: true,
+    default: 'General',
   },
   currentQuantity: {
     type: Number,
@@ -20,7 +25,8 @@ const inventoryItemSchema = new mongoose.Schema({
   unit: {
     type: String,
     required: true,
-    enum: ['kg', 'L', 'pcs', 'packets', 'cans'],
+    trim: true,
+    default: 'kg',
   },
   minimumStockLevel: {
     type: Number,
@@ -33,12 +39,12 @@ const inventoryItemSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Optimal', 'Low Stock', 'Out of Stock'],
     default: 'Optimal',
   },
   supplier: {
     type: String,
     default: 'Campus Wholesale Mart',
+    trim: true,
   },
   lastRestocked: {
     type: String,
