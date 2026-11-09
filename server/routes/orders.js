@@ -418,9 +418,6 @@ router.get('/live-tokens', async (req, res) => {
     });
   }
 });
-    res.status(500).json({ message: 'Error fetching live tokens' });
-  }
-});
 
 // @route   GET /api/orders/all
 // @desc    Admin: get all orders with filtering and search
