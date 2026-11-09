@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { INITIAL_MENU_ITEMS } from '../mock/mockData';
-import { MitsCampusHeroVideo } from '../components/common/MitsCampusHeroVideo';
+import { AestheticHeroBackground } from '../components/common/AestheticHeroBackground';
 import { HomepageCravingsModal } from '../components/admin/HomepageCravingsModal';
 import { LiveCanteenTicker } from '../components/common/LiveCanteenTicker';
 import { TextRotator } from '../components/common/TextRotator';
@@ -64,12 +64,10 @@ export const HomePage = () => {
   return (
     <div className="space-y-16 sm:space-y-20 pb-20 overflow-x-hidden text-white">
       
-      {/* 1. HERO SECTION WITH FULL-SCREEN MITS GWALIOR BACKGROUND VIDEO */}
-      <section className="relative overflow-hidden bg-[#0B1020] text-white dark-surface">
-        <MitsCampusHeroVideo
-          videoSrc="/assets/videos/mits-campus-tour.mp4"
-          posterSrc="/assets/videos/mits-campus-tour-poster.jpg"
-          overlayClass="bg-gradient-to-t from-[#0B1020] via-[#0B1020]/80 to-[#0B1020]/60"
+      {/* 1. HERO SECTION WITH UNIQUE AESTHETIC CULINARY TECH ANIMATION */}
+      <section className="relative overflow-hidden bg-[#08090D] text-white dark-surface">
+        <AestheticHeroBackground
+          overlayClass="bg-gradient-to-t from-[#08090D] via-[#08090D]/85 to-transparent"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[85vh] lg:min-h-[90vh] flex items-center py-12 lg:py-20 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
@@ -209,7 +207,7 @@ export const HomePage = () => {
 
             </div>
           </div>
-        </MitsCampusHeroVideo>
+        </AestheticHeroBackground>
       </section>
 
       {/* 1.5 INFINITE SMOOTH LIVE MARQUEE TICKER */}
