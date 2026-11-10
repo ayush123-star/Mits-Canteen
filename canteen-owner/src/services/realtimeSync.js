@@ -16,6 +16,9 @@ export const CENTRAL_API = typeof window !== 'undefined' && window.location.orig
   : 'https://mits-canteen.vercel.app/api/orders';
 
 export const CENTRAL_CANTEEN_API = 'https://mits-canteen.vercel.app/api/canteen-config';
+export const CENTRAL_FEEDBACK_API = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+  ? '/api/feedback'
+  : 'https://mits-canteen.vercel.app/api/feedback';
 
 // Global topic namespace for MITS Campus Canteen
 const BASE_TOPIC = 'mits_campus_canteen_fresh_2026';
@@ -23,6 +26,7 @@ const TOPIC_EVENTS = `${BASE_TOPIC}/events`;
 const TOPIC_SNAPSHOT = `${BASE_TOPIC}/snapshot`;
 const TOPIC_CANTEEN_CONFIG = `${BASE_TOPIC}/canteen_config`;
 const TOPIC_HOMEPAGE_CONFIG = `${BASE_TOPIC}/homepage_config`;
+const TOPIC_FEEDBACK = `${BASE_TOPIC}/feedback`;
 
 // Local client instance identifier (prevents self-echo)
 let cachedInstanceId = null;
@@ -63,8 +67,8 @@ const getMqttClient = () => {
     mqttClient.on('connect', () => {
       isConnecting = false;
       console.log(`[RealtimeSync] Connected to MQTT broker: ${PRIMARY_BROKER}`);
-      // Subscribe to instant events, retained order snapshot, canteen config, and homepage config
-      mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG, TOPIC_HOMEPAGE_CONFIG], { qos: 1 }, (err) => {
+      // Subscribe to instant events, retained order snapshot, canteen config, homepage config, and live student feedback
+      mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG, TOPIC_HOMEPAGE_CONFIG, TOPIC_FEEDBACK], { qos: 1 }, (err) => {
         if (err) console.debug('[RealtimeSync] Subscribe error:', err.message);
       });
 
@@ -141,6 +145,18 @@ const getMqttClient = () => {
                 categories: data.categories,
                 inventoryItems: data.inventoryItems,
                 recipes: data.recipes,
+                timestamp: data.timestamp || Date.now(),
+              });
+            } catch (_) {}
+          });
+        } else if (topic === TOPIC_FEEDBACK) {
+          // Instant real-time student review & feedback sync
+          subscribers.forEach((callback) => {
+            try {
+              callback({
+                type: data.type || 'FEEDBACK_SUBMITTED',
+                feedback: data.feedback || data,
+                feedbackId: data.feedbackId || data.id,
                 timestamp: data.timestamp || Date.now(),
               });
             } catch (_) {}
@@ -897,6 +913,48 @@ export const fetchRemoteCanteenConfig = async () => {
     }
   } catch (err) {
     console.debug('[RealtimeSync] Fetch remote canteen config notice:', err.message);
+  }
+  return null;
+};
+
+/**
+ * Publishes newly submitted student feedback over MQTT and dual-redundancy Cloud API
+ */
+export const publishFeedbackEvent = async (feedbackItem, type = 'FEEDBACK_SUBMITTED') => {
+  if (!feedbackItem || typeof feedbackItem !== 'object') return;
+
+  const payload = {
+    type,
+    feedback: feedbackItem,
+    feedbackId: feedbackItem.id || feedbackItem._id,
+    emitterId: getClientInstanceId(),
+    timestamp: Date.now(),
+  };
+
+  // 1. Instant MQTT Broadcast (< 50ms delivery across all devices)
+  publishMqtt(TOPIC_FEEDBACK, payload, { qos: 1 });
+
+  // 2. Dual-redundancy backup to centralized Vercel API
+  try {
+    if (type === 'FEEDBACK_SUBMITTED') {
+      axios.post(CENTRAL_FEEDBACK_API, feedbackItem, { timeout: 3500 }).catch(() => {});
+    } else if (type === 'FEEDBACK_DELETED') {
+      axios.delete(`${CENTRAL_FEEDBACK_API}?id=${encodeURIComponent(feedbackItem.id || feedbackItem._id)}`, { timeout: 3500 }).catch(() => {});
+    }
+  } catch (_) {}
+};
+
+/**
+ * Fetches latest campus feedback from Centralized Cloud API
+ */
+export const fetchRemoteFeedback = async () => {
+  try {
+    const res = await axios.get(CENTRAL_FEEDBACK_API, { timeout: 4000 });
+    if (res.data?.success && Array.isArray(res.data.feedback)) {
+      return res.data.feedback;
+    }
+  } catch (err) {
+    console.debug('[RealtimeSync] Fetch remote feedback notice:', err.message);
   }
   return null;
 };

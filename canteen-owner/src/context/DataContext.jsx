@@ -26,6 +26,8 @@ import {
   broadcastCanteenConfig,
   broadcastHomepageConfig,
   fetchRemoteCanteenConfig,
+  publishFeedbackEvent,
+  fetchRemoteFeedback,
 } from '../services/realtimeSync';
 
 export const HOMEPAGE_CONFIG_VERSION = 4;
@@ -583,11 +585,30 @@ export const DataProvider = ({ children }) => {
       });
     };
 
+    const syncRemoteFeedbackList = () => {
+      fetchRemoteFeedback().then((remoteFb) => {
+        if (Array.isArray(remoteFb) && remoteFb.length > 0) {
+          setFeedbackList((prev) => {
+            const map = new Map();
+            remoteFb.forEach((f) => map.set(f.id || f._id, f));
+            prev.forEach((f) => map.set(f.id || f._id, f));
+            const merged = Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
+            try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(merged)); } catch (_) {}
+            return merged;
+          });
+        }
+      });
+    };
+
     syncRemoteConfig();
+    syncRemoteFeedbackList();
     const configInterval = setInterval(syncRemoteConfig, 2000);
+    const feedbackInterval = setInterval(syncRemoteFeedbackList, 3000);
 
     return () => {
       clearInterval(configInterval);
+      clearInterval(feedbackInterval);
     };
   }, []);
 
@@ -1073,6 +1094,23 @@ export const DataProvider = ({ children }) => {
           const recId = event.data.recipeId || event.data.menuItemId;
           setRecipes((prev) => prev.filter((r) => r.menuItemId !== recId && r._id !== recId && r.id !== recId));
         }
+        if (type === 'FEEDBACK_SUBMITTED' && event.data.feedback) {
+          const fb = event.data.feedback;
+          setFeedbackList((prev) => {
+            if (prev.some((f) => f.id === fb.id || (f.studentId === fb.studentId && f.foodName === fb.foodName && f.date === fb.date))) return prev;
+            const next = [fb, ...prev];
+            try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(next)); } catch (_) {}
+            return next;
+          });
+        }
+        if (type === 'FEEDBACK_DELETED' && (event.data.feedbackId || event.data.id)) {
+          const fId = event.data.feedbackId || event.data.id;
+          setFeedbackList((prev) => {
+            const next = prev.filter((f) => f.id !== fId && f._id !== fId);
+            try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(next)); } catch (_) {}
+            return next;
+          });
+        }
       };
     }
 
@@ -1090,6 +1128,17 @@ export const DataProvider = ({ children }) => {
         } catch (err) {
           console.debug('Storage sync error:', err);
         }
+      }
+      if (e.key === 'smart_canteen_feedback' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setFeedbackList((prev) => {
+              if (JSON.stringify(prev) === JSON.stringify(parsed)) return prev;
+              return parsed;
+            });
+          }
+        } catch (_) {}
       }
       if (e.key === 'smart_canteen_homepage_config' && e.newValue) {
         try {
@@ -1139,6 +1188,29 @@ export const DataProvider = ({ children }) => {
           localStorage.removeItem('smart_canteen_used_item_tokens');
         } catch (_) {}
         window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+        return;
+      }
+
+      if (type === 'FEEDBACK_SUBMITTED' && cloudEvent.feedback) {
+        const fb = cloudEvent.feedback;
+        setFeedbackList((prev) => {
+          if (prev.some((f) => f.id === fb.id || (f.studentId === fb.studentId && f.foodName === fb.foodName && f.date === fb.date))) return prev;
+          const next = [fb, ...prev];
+          try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(next)); } catch (_) {}
+          return next;
+        });
+        window.dispatchEvent(new CustomEvent('smartcanteen:feedback_sync', { detail: { feedback: fb } }));
+        return;
+      }
+
+      if (type === 'FEEDBACK_DELETED' && (cloudEvent.feedbackId || cloudEvent.id)) {
+        const fId = cloudEvent.feedbackId || cloudEvent.id;
+        setFeedbackList((prev) => {
+          const next = prev.filter((f) => f.id !== fId && f._id !== fId);
+          try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(next)); } catch (_) {}
+          return next;
+        });
+        window.dispatchEvent(new CustomEvent('smartcanteen:feedback_sync'));
         return;
       }
 
@@ -2968,19 +3040,72 @@ export const DataProvider = ({ children }) => {
   const submitFeedback = (fbData) => {
     const newFb = {
       ...fbData,
-      id: 'fb-' + Date.now(),
-      date: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      id: fbData.id || ('fb-' + Date.now()),
+      studentId: fbData.studentId || '',
+      studentName: fbData.studentName || 'Student Diner',
+      foodItemId: fbData.foodItemId || fbData.foodId || '',
+      foodName: fbData.foodName || fbData.foodItem || 'Campus Dish',
+      foodItem: fbData.foodName || fbData.foodItem || 'Campus Dish',
+      rating: Math.min(5, Math.max(1, Number(fbData.rating) || 5)),
+      comment: String(fbData.comment || '').trim(),
+      tags: Array.isArray(fbData.tags) ? fbData.tags : [],
+      date: fbData.date || new Date().toISOString().split('T')[0],
+      createdAt: fbData.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      timestamp: Date.now(),
     };
-    setFeedbackList((prev) => [newFb, ...prev]);
-    logActivity(fbData.studentName, 'FEEDBACK_SUBMITTED', 'STUDENT_FEEDBACK', `Reviewed ${fbData.foodName || fbData.foodItem || 'Dish'} (${fbData.rating} Stars)`);
-    axios.post('/api/feedback', fbData).catch(() => {});
+
+    setFeedbackList((prev) => {
+      const exists = prev.some((f) => f.id === newFb.id);
+      if (exists) return prev;
+      const next = [newFb, ...prev];
+      try {
+        localStorage.setItem('smart_canteen_feedback', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+
+    logActivity(fbData.studentName, 'FEEDBACK_SUBMITTED', 'STUDENT_FEEDBACK', `Reviewed ${newFb.foodName} (${newFb.rating} Stars)`);
+
+    // A. Local BroadcastChannel for immediate multi-tab sync (0ms)
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({
+          type: 'FEEDBACK_SUBMITTED',
+          feedback: newFb,
+          timestamp: Date.now(),
+        });
+      } catch (_) {}
+    }
+
+    // B. Local DOM event
+    window.dispatchEvent(new CustomEvent('smartcanteen:feedback_submitted', { detail: { feedback: newFb } }));
+
+    // C. Cross-Device Real-time MQTT & Central Cloud API broadcast (< 50ms)
+    publishFeedbackEvent(newFb, 'FEEDBACK_SUBMITTED');
+
     return newFb;
   };
 
   const deleteFeedback = (feedbackId) => {
-    setFeedbackList((prev) => prev.filter((f) => (f.id !== feedbackId && f._id !== feedbackId)));
-    axios.delete(`/api/feedback/${feedbackId}`).catch(() => {});
+    setFeedbackList((prev) => {
+      const next = prev.filter((f) => f.id !== feedbackId && f._id !== feedbackId);
+      try {
+        localStorage.setItem('smart_canteen_feedback', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({
+          type: 'FEEDBACK_DELETED',
+          feedbackId,
+          timestamp: Date.now(),
+        });
+      } catch (_) {}
+    }
+
+    publishFeedbackEvent({ id: feedbackId }, 'FEEDBACK_DELETED');
   };
 
   return (
