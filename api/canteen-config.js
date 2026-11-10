@@ -63,6 +63,7 @@ let canteenConfigCache = {
   categories: DEFAULT_CATEGORIES,
   inventoryItems: Array.isArray(canonicalData.inventoryItems) ? canonicalData.inventoryItems : null,
   recipes: Array.isArray(canonicalData.recipes) ? canonicalData.recipes : null,
+  feedbackList: null,
   updatedAt: Date.now(),
 };
 
@@ -164,6 +165,12 @@ export default async function handler(req, res) {
         }
       }
 
+      if (Array.isArray(payload.feedbackList)) {
+        canteenConfigCache.feedbackList = payload.feedbackList;
+      } else if (payload.newFeedback) {
+        canteenConfigCache.feedbackList = [payload.newFeedback, ...(Array.isArray(canteenConfigCache.feedbackList) ? canteenConfigCache.feedbackList : [])].slice(0, 100);
+      }
+
       canteenConfigCache = {
         ...canteenConfigCache,
         ...payload,
@@ -186,6 +193,7 @@ export default async function handler(req, res) {
         categories: Array.isArray(payload.categories) ? payload.categories : canteenConfigCache.categories,
         inventoryItems: Array.isArray(payload.inventoryItems) ? payload.inventoryItems : canteenConfigCache.inventoryItems,
         recipes: Array.isArray(payload.recipes) ? payload.recipes : canteenConfigCache.recipes,
+        feedbackList: canteenConfigCache.feedbackList,
         updatedAt: Date.now(),
       };
       saveDiskCache();

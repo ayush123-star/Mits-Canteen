@@ -1,7 +1,10 @@
 // Centralized Serverless API for Vercel deployment - /api/canteen-config
 // Manages canteen details, payment QR code image, UPI ID, and Payee Name across all portals
 import { createRequire } from 'module';
+import fs from 'fs';
 const require = createRequire(import.meta.url);
+
+const CACHE_FILE = '/tmp/canteenConfigCache.json';
 
 let canonicalData = {};
 try {
@@ -20,6 +23,14 @@ const DEFAULT_CATEGORIES = [
 let canteenConfigCache = {
   id: 'canteen-1',
   name: 'MITS Main Canteen',
+  openingTime: '08:00 AM',
+  closingTime: '07:30 PM',
+  activeCounters: 1,
+  managerPhone: '+91 98112 23344',
+  ownerWhatsApp: '919839567623',
+  rushHourMode: false,
+  isOpen: true,
+  status: 'Operational',
   upiId: 'pandeyayush1603-1@okicici',
   upiMerchantName: 'Ayush Pandey',
   qrCodeImage: '',
@@ -45,12 +56,54 @@ let canteenConfigCache = {
       minOrderValue: 99,
     },
   },
-  menuItems: Array.isArray(canonicalData.menuItems) ? canonicalData.menuItems : null,
+  deletedFoodIds: ['food-12'],
+  menuItems: Array.isArray(canonicalData.menuItems)
+    ? canonicalData.menuItems.filter((m) => m.id !== 'food-12' && m._id !== 'food-12')
+    : null,
   categories: DEFAULT_CATEGORIES,
   inventoryItems: Array.isArray(canonicalData.inventoryItems) ? canonicalData.inventoryItems : null,
   recipes: Array.isArray(canonicalData.recipes) ? canonicalData.recipes : null,
+  feedbackList: null,
   updatedAt: Date.now(),
 };
+
+function loadDiskCache() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const content = fs.readFileSync(CACHE_FILE, 'utf-8');
+      const data = JSON.parse(content);
+      if (data && typeof data === 'object') {
+        const mergedDeleted = Array.from(new Set([...(canteenConfigCache.deletedFoodIds || []), ...(data.deletedFoodIds || [])]));
+        canteenConfigCache = {
+          ...canteenConfigCache,
+          ...data,
+          deletedFoodIds: mergedDeleted,
+          homepageConfig: {
+            ...canteenConfigCache.homepageConfig,
+            ...(data.homepageConfig || {}),
+            featuredCravingsIds: Array.isArray(data.homepageConfig?.featuredCravingsIds)
+              ? data.homepageConfig.featuredCravingsIds.filter((id) => !mergedDeleted.includes(id))
+              : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
+          },
+        };
+        if (Array.isArray(canteenConfigCache.menuItems)) {
+          canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter(
+            (m) => !mergedDeleted.includes(m.id) && !mergedDeleted.includes(m._id)
+          );
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+function saveDiskCache() {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(canteenConfigCache), 'utf-8');
+  } catch (_) {}
+}
+
+// Initial attempt to load from disk
+loadDiskCache();
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -66,6 +119,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    loadDiskCache();
+
     // POST, PATCH, PUT: Update canteen config / payment QR
     if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
       let payload = req.body || {};
@@ -75,34 +130,61 @@ export default async function handler(req, res) {
         } catch (_) {}
       }
       if (payload.homepageConfig !== undefined) {
+        const incomingHp = payload.homepageConfig;
+        const incomingVer = Number(incomingHp.configVersion || incomingHp.updatedAt || Date.now());
+
         canteenConfigCache.homepageConfig = {
           ...canteenConfigCache.homepageConfig,
-          ...payload.homepageConfig,
-          featuredCravingsIds: Array.isArray(payload.homepageConfig.featuredCravingsIds)
-            ? payload.homepageConfig.featuredCravingsIds
+          ...incomingHp,
+          configVersion: incomingVer,
+          updatedAt: incomingVer,
+          featuredCravingsIds: Array.isArray(incomingHp.featuredCravingsIds)
+            ? incomingHp.featuredCravingsIds
             : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
           dailyDiscounts: {
             ...(canteenConfigCache.homepageConfig?.dailyDiscounts || {}),
-            ...(payload.homepageConfig?.dailyDiscounts || {}),
+            ...(incomingHp.dailyDiscounts || {}),
           },
           specialOfferBanner: {
             ...(canteenConfigCache.homepageConfig?.specialOfferBanner || {}),
-            ...(payload.homepageConfig?.specialOfferBanner || {}),
+            ...(incomingHp.specialOfferBanner || {}),
           },
         };
       }
 
+      if (Array.isArray(payload.deletedFoodIds)) {
+        canteenConfigCache.deletedFoodIds = Array.from(new Set([...(canteenConfigCache.deletedFoodIds || []), ...payload.deletedFoodIds]));
+      }
+
       if (Array.isArray(payload.menuItems)) {
-        canteenConfigCache.menuItems = payload.menuItems;
-        const activeIds = new Set(payload.menuItems.map((m) => m.id || m._id));
+        const deletedSet = new Set(canteenConfigCache.deletedFoodIds || []);
+        canteenConfigCache.menuItems = payload.menuItems.filter((m) => !deletedSet.has(m.id) && !deletedSet.has(m._id));
+        const activeIds = new Set(canteenConfigCache.menuItems.map((m) => m.id || m._id));
         if (canteenConfigCache.homepageConfig?.featuredCravingsIds) {
           canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => activeIds.has(id));
         }
       }
 
+      if (Array.isArray(payload.feedbackList)) {
+        canteenConfigCache.feedbackList = payload.feedbackList;
+      } else if (payload.newFeedback) {
+        canteenConfigCache.feedbackList = [payload.newFeedback, ...(Array.isArray(canteenConfigCache.feedbackList) ? canteenConfigCache.feedbackList : [])].slice(0, 100);
+      }
+
       canteenConfigCache = {
         ...canteenConfigCache,
         ...payload,
+        id: payload.id || canteenConfigCache.id || 'canteen-1',
+        name: payload.name || payload.canteenName || canteenConfigCache.name || 'MITS Main Canteen',
+        openingTime: payload.openingTime || canteenConfigCache.openingTime || '08:00 AM',
+        closingTime: payload.closingTime || canteenConfigCache.closingTime || '07:30 PM',
+        activeCounters: payload.activeCounters !== undefined ? Number(payload.activeCounters) : canteenConfigCache.activeCounters,
+        managerPhone: payload.managerPhone || canteenConfigCache.managerPhone || '+91 98112 23344',
+        ownerWhatsApp: payload.ownerWhatsApp || canteenConfigCache.ownerWhatsApp || '919839567623',
+        rushHourMode: payload.rushHourMode !== undefined ? payload.rushHourMode : canteenConfigCache.rushHourMode,
+        isOpen: payload.isOpen !== undefined ? payload.isOpen : canteenConfigCache.isOpen,
+        status: payload.status || (payload.isOpen !== undefined ? (payload.isOpen ? 'Operational' : 'Closed') : canteenConfigCache.status),
+        deletedFoodIds: canteenConfigCache.deletedFoodIds,
         qrCodeImage: payload.qrCodeImage !== undefined ? payload.qrCodeImage : canteenConfigCache.qrCodeImage,
         upiId: payload.upiId || canteenConfigCache.upiId,
         upiMerchantName: payload.upiMerchantName || payload.name || canteenConfigCache.upiMerchantName,
@@ -111,24 +193,34 @@ export default async function handler(req, res) {
         categories: Array.isArray(payload.categories) ? payload.categories : canteenConfigCache.categories,
         inventoryItems: Array.isArray(payload.inventoryItems) ? payload.inventoryItems : canteenConfigCache.inventoryItems,
         recipes: Array.isArray(payload.recipes) ? payload.recipes : canteenConfigCache.recipes,
+        feedbackList: canteenConfigCache.feedbackList,
         updatedAt: Date.now(),
       };
+      saveDiskCache();
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
-    // DELETE: Delete a food item or inventory SKU from cache
+    // DELETE: Delete a food item or inventory SKU from cache permanently
     if (req.method === 'DELETE') {
       const foodId = req.query?.foodId || req.body?.foodId;
-      if (foodId && Array.isArray(canteenConfigCache.menuItems)) {
-        canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => m.id !== foodId && m._id !== foodId);
+      if (foodId) {
+        canteenConfigCache.deletedFoodIds = Array.from(new Set([...(canteenConfigCache.deletedFoodIds || []), foodId]));
+        if (Array.isArray(canteenConfigCache.menuItems)) {
+          canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => m.id !== foodId && m._id !== foodId);
+        }
         if (canteenConfigCache.homepageConfig?.featuredCravingsIds) {
           canteenConfigCache.homepageConfig.featuredCravingsIds = canteenConfigCache.homepageConfig.featuredCravingsIds.filter((id) => id !== foodId);
         }
       }
+      saveDiskCache();
       return res.status(200).json({ success: true, config: canteenConfigCache });
     }
 
-    // GET: Fetch current canteen config
+    // GET: Fetch current canteen config (Always filter out any deleted dishes)
+    if (Array.isArray(canteenConfigCache.menuItems) && Array.isArray(canteenConfigCache.deletedFoodIds)) {
+      const delSet = new Set(canteenConfigCache.deletedFoodIds);
+      canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter((m) => !delSet.has(m.id) && !delSet.has(m._id));
+    }
     return res.status(200).json({ success: true, config: canteenConfigCache });
   } catch (err) {
     return res.status(200).json({ success: true, config: canteenConfigCache });

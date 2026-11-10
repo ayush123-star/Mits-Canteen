@@ -575,6 +575,18 @@ export const DataProvider = ({ children }) => {
           });
         }
 
+        if (Array.isArray(cfg.feedbackList) && cfg.feedbackList.length > 0) {
+          setFeedbackList((prev) => {
+            const map = new Map();
+            cfg.feedbackList.forEach((f) => map.set(f.id || f._id, f));
+            prev.forEach((f) => map.set(f.id || f._id, f));
+            const merged = Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
+            try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(merged)); } catch (_) {}
+            return merged;
+          });
+        }
+
         if (Array.isArray(cfg.recipes) && cfg.recipes.length > 0) {
           setRecipes((prev) => {
             if (JSON.stringify(prev) === JSON.stringify(cfg.recipes)) return prev;
@@ -3082,6 +3094,11 @@ export const DataProvider = ({ children }) => {
 
     // C. Cross-Device Real-time MQTT & Central Cloud API broadcast (< 50ms)
     publishFeedbackEvent(newFb, 'FEEDBACK_SUBMITTED');
+
+    // D. Dual-Redundancy sync through Central Canteen Configuration API
+    try {
+      axios.post(CENTRAL_CANTEEN_API, { newFeedback: newFb }).catch(() => {});
+    } catch (_) {}
 
     return newFb;
   };
