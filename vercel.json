@@ -7,6 +7,14 @@
       "destination": "/api/canteen-config.js"
     },
     {
+      "source": "/api/feedback/:id",
+      "destination": "/api/feedback.js"
+    },
+    {
+      "source": "/api/feedback",
+      "destination": "/api/feedback.js"
+    },
+    {
       "source": "/api/orders/:id/status",
       "destination": "/api/orders"
     },
