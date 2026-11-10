@@ -260,7 +260,7 @@ export const LoginPage = () => {
                 </svg>
               </div>
             )}
-            <span className="group-hover:text-white transition-colors">
+            <span className="font-bold tracking-wide">
               {googleLoading ? 'Connecting to Google...' : 'Sign in with Google'}
             </span>
           </button>
@@ -271,7 +271,7 @@ export const LoginPage = () => {
               type="button"
               disabled={googleLoading}
               onClick={() => handleStartGoogleLogin('student')}
-              className="py-1.5 px-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60"
+              className="py-1.5 px-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 dark:text-indigo-300 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60"
             >
               <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
               <span>Student (@mitsgwl)</span>
@@ -281,7 +281,7 @@ export const LoginPage = () => {
               type="button"
               disabled={googleLoading}
               onClick={() => handleStartGoogleLogin('faculty')}
-              className="py-1.5 px-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-300 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60"
+              className="py-1.5 px-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 dark:text-orange-300 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60"
             >
               <Building className="w-3.5 h-3.5 text-orange-400" />
               <span>Teacher (@mitsgwalior)</span>
