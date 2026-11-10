@@ -7,6 +7,7 @@ import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import { TokenPickupPass } from '../../components/TokenPickupPass';
 import { playNotificationSound } from '../../utils/audio';
 import { sendBrowserNotification } from '../../utils/browserNotifications';
+import { isOrderOwnedByUser } from '../../services/realtimeSync';
 import {
   ClipboardList,
   Clock,
@@ -167,11 +168,8 @@ export const MyOrdersPage = () => {
     return [];
   }, [orders, refreshTick]);
 
-  // Filter orders for current student (fallback to all student orders if demo)
-  const studentOrders = currentOrders.filter((o) => {
-    if (!user) return true;
-    return o.studentId === user.id || o.studentRoll === user.studentId || true;
-  });
+  // Filter orders strictly for the current logged-in student (only their own account orders)
+  const studentOrders = currentOrders.filter((o) => isOrderOwnedByUser(o, user));
 
   const activeOrders = studentOrders.filter((o) =>
     ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)

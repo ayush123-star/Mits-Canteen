@@ -581,6 +581,41 @@ export const isMockOrder = (ord) => {
 };
 
 /**
+ * Accurately determines if an order belongs to the currently logged-in user.
+ * Strictly checks user ID, email (case-insensitive), student roll/enrollment number, or phone.
+ */
+export const isOrderOwnedByUser = (order, user) => {
+  if (!order || typeof order !== 'object') return false;
+  if (!user || typeof user !== 'object') return false;
+
+  const uId = String(user.id || user._id || '').trim().toLowerCase();
+  const uEmail = String(user.email || '').trim().toLowerCase();
+  const uRoll = String(user.studentId || user.enrollmentNumber || user.rollNumber || '').trim().toLowerCase();
+  const uPhone = String(user.phone || '').replace(/\D/g, '');
+
+  const ordStudentId = String(order.studentId || order.userId || order.user?._id || order.user || '').trim().toLowerCase();
+  const ordEmail = String(order.studentEmail || order.email || order.user?.email || '').trim().toLowerCase();
+  const ordRoll = String(order.studentRoll || order.studentEnrollment || order.enrollmentNumber || '').trim().toLowerCase();
+  const ordPhone = String(order.studentPhone || order.phone || '').replace(/\D/g, '');
+
+  // 1. Direct ID match
+  if (uId && ordStudentId && uId === ordStudentId) return true;
+
+  // 2. Email match (strictly case-insensitive, primary for Gmail logins)
+  if (uEmail && ordEmail && uEmail === ordEmail) return true;
+
+  // 3. Roll / Enrollment Number match
+  if (uRoll && ordRoll && (uRoll === ordRoll || uRoll.includes(ordRoll) || ordRoll.includes(uRoll))) return true;
+
+  // 4. Phone number match (matching last 10 digits)
+  if (uPhone && ordPhone && uPhone.length >= 10 && ordPhone.length >= 10) {
+    if (uPhone.slice(-10) === ordPhone.slice(-10)) return true;
+  }
+
+  return false;
+};
+
+/**
  * Normalizes an order record so it has consistent id, _id, finalAmount, and items
  */
 export const normalizeOrder = (ord) => {

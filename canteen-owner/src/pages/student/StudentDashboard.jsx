@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useCart } from '../../context/CartContext';
+import { isOrderOwnedByUser } from '../../services/realtimeSync';
 import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import { TokenPickupPass } from '../../components/TokenPickupPass';
 import { FoodCard } from '../../components/FoodCard';
@@ -29,9 +30,9 @@ export const StudentDashboard = () => {
   const [selectedPassOrder, setSelectedPassOrder] = useState(null);
   const [selectedFood, setSelectedFood] = useState(null);
 
-  // Student's active orders
+  // Student's active orders (strictly for current user)
   const activeOrders = orders.filter(
-    (o) => (o.studentId === user?.id || o.studentRoll === user?.studentId) && ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
+    (o) => isOrderOwnedByUser(o, user) && ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
   );
 
   // Recommended dishes

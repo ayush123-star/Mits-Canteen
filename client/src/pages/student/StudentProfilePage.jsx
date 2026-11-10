@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { isOrderOwnedByUser } from '../../services/realtimeSync';
 import {
   User,
   GraduationCap,
@@ -29,12 +30,7 @@ export const StudentProfilePage = () => {
 
   // Filter orders strictly for the logged-in user
   const studentOrders = Array.isArray(orders)
-    ? orders.filter(
-        (o) =>
-          o.studentId === user?.id ||
-          o.studentEmail === user?.email ||
-          o.studentId === user?.studentId
-      )
+    ? orders.filter((o) => isOrderOwnedByUser(o, user))
     : [];
 
   const handleSave = (e) => {

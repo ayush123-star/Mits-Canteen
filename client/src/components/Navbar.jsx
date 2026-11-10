@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
+import { isOrderOwnedByUser } from '../services/realtimeSync';
 import {
   UtensilsCrossed,
   ShoppingBag,
@@ -49,11 +50,11 @@ export const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  // Active orders count for badge
+  // Active orders count for badge (strictly for current user)
   const userActiveOrders = isAuthenticated
     ? orders.filter(
         (o) =>
-          (o.studentId === user?.id || o.studentEmail === user?.email) &&
+          isOrderOwnedByUser(o, user) &&
           ['Placed', 'Accepted', 'Preparing', 'Ready for Pickup'].includes(o.status)
       ).length
     : 0;
