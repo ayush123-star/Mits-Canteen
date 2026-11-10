@@ -213,10 +213,10 @@ export const LoginPage = () => {
             </h2>
             <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5 text-[11px]">
               <span className="px-2 py-0.5 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-300 font-mono font-semibold">
-                Students & Staff: Any Gmail / Google Account Allowed
+                Students: @mitsgwl.ac.in
               </span>
               <span className="px-2 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-mono font-semibold">
-                One-Click Instant Access
+                Faculty: @mitsgwalior.in
               </span>
             </div>
           </div>
@@ -274,7 +274,7 @@ export const LoginPage = () => {
               className="py-1.5 px-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60"
             >
               <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Student Portal</span>
+              <span>Student (@mitsgwl)</span>
             </button>
 
             <button
@@ -284,7 +284,7 @@ export const LoginPage = () => {
               className="py-1.5 px-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-300 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60"
             >
               <Building className="w-3.5 h-3.5 text-orange-400" />
-              <span>Teacher / Faculty</span>
+              <span>Teacher (@mitsgwalior)</span>
             </button>
           </div>
 

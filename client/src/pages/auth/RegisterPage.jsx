@@ -46,11 +46,11 @@ export const RegisterPage = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
-      setError('Please enter a valid email address.');
+      setError('Please enter a valid email address (e.g., yourname@mitsgwl.ac.in).');
       return;
     }
 
-    const isInstituteEmail = true; // Allow all Gmail & institute emails
+    const isInstituteEmail = cleanEmail.endsWith('@mitsgwl.ac.in') || cleanEmail.endsWith('@mitsgwalior.in');
     if (!isInstituteEmail) {
       setError('Access Denied: Only authorized MITS College email addresses (@mitsgwl.ac.in for students and @mitsgwalior.in for faculty) are permitted.');
       return;
@@ -176,7 +176,7 @@ export const RegisterPage = () => {
 
           <div>
             <label className="font-bold text-[#AAB3C5] block mb-1">
-              Email Address (Gmail or College ID)
+              Institute Email ID (@mitsgwl.ac.in / @mitsgwalior.in)
             </label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AAB3C5]" />
@@ -190,7 +190,7 @@ export const RegisterPage = () => {
               />
             </div>
             <p className="text-[10px] text-purple-300 mt-1">
-              Any valid Gmail or Institute Email address accepted
+              Students: @mitsgwl.ac.in &bull; Faculty: @mitsgwalior.in (Strictly Institute Emails Only)
             </p>
           </div>
 

@@ -281,11 +281,11 @@ export const AuthProvider = ({ children }) => {
 
     const cleanEmail = String(tokenEmail || '').toLowerCase().trim();
 
-    // Domain validation (Allow any Gmail or college email)
-    const isFaculty = cleanEmail.endsWith('@mitsgwalior.in') || roleType === 'faculty';
-    const isStudent = !isFaculty;
+    // 1. Strict Domain Validation on Client
+    const isStudent = cleanEmail.endsWith('@mitsgwl.ac.in');
+    const isFaculty = cleanEmail.endsWith('@mitsgwalior.in');
 
-    if (false) {
+    if (cleanEmail && !isStudent && !isFaculty) {
       return {
         success: false,
         code: 'UNAUTHORIZED_DOMAIN',
@@ -294,7 +294,7 @@ export const AuthProvider = ({ children }) => {
       };
     }
 
-    if (false) {
+    if (roleType === 'student' && cleanEmail && !isStudent) {
       return {
         success: false,
         code: 'ROLE_MISMATCH',
@@ -303,7 +303,7 @@ export const AuthProvider = ({ children }) => {
       };
     }
 
-    if (false) {
+    if (roleType === 'faculty' && cleanEmail && !isFaculty) {
       return {
         success: false,
         code: 'ROLE_MISMATCH',
