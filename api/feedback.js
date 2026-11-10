@@ -6,57 +6,32 @@ const require = createRequire(import.meta.url);
 
 const CACHE_FILE = '/tmp/canteenFeedbackCache.json';
 
-const INITIAL_FEEDBACK_DEFAULT = [
-  {
-    id: 'fb-1',
-    studentName: 'Aryan Sharma',
-    foodItem: 'Double Cheese Veg Supreme Burger',
-    foodName: 'Double Cheese Veg Supreme Burger',
-    rating: 5,
-    comment: 'Patty was crisp and hot, cheese melted perfectly! Loved the zero-queue pickup.',
-    date: '2026-11-03',
-    createdAt: 'Nov 3, 2026',
-    tags: ['Crispy & Fresh', 'Piping Hot'],
-  },
-  {
-    id: 'fb-2',
-    studentName: 'Priya Patel',
-    foodItem: 'Thick Cold Coffee with Choco Ice Cream',
-    foodName: 'Thick Cold Coffee with Choco Ice Cream',
-    rating: 5,
-    comment: 'Best cold coffee on campus. Super thick and creamy.',
-    date: '2026-11-03',
-    createdAt: 'Nov 3, 2026',
-    tags: ['Authentic Taste'],
-  },
-  {
-    id: 'fb-3',
-    studentName: 'Karan Mehra',
-    foodItem: 'Special Campus Deluxe Thali',
-    foodName: 'Special Campus Deluxe Thali',
-    rating: 4,
-    comment: 'Very filling for lunch. Rotis were warm and buttered. Dal makhani was great.',
-    date: '2026-11-02',
-    createdAt: 'Nov 2, 2026',
-    tags: ['Generous Portion'],
-  },
-];
+const INITIAL_FEEDBACK_DEFAULT = [];
 
-let serverFeedbackCache = [...INITIAL_FEEDBACK_DEFAULT];
+let serverFeedbackCache = [];
+
+const isMockFeedback = (fb) => {
+  if (!fb) return true;
+  const id = String(fb.id || '');
+  if (['fb-1', 'fb-2', 'fb-3'].includes(id)) return true;
+  if (id.startsWith('fb-test-')) return true;
+  if (['Aryan Sharma', 'Priya Patel', 'Karan Mehra'].includes(fb.studentName)) return true;
+  return false;
+};
 
 try {
   if (fs.existsSync(CACHE_FILE)) {
     const raw = fs.readFileSync(CACHE_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      serverFeedbackCache = parsed;
+      serverFeedbackCache = parsed.filter((f) => !isMockFeedback(f));
     }
   }
 } catch (_) {}
 
 const saveCacheToDisk = () => {
   try {
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(serverFeedbackCache.slice(0, 150)), 'utf8');
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(serverFeedbackCache.filter((f) => !isMockFeedback(f)).slice(0, 150)), 'utf8');
   } catch (_) {}
 };
 
@@ -103,13 +78,15 @@ export default async function handler(req, res) {
       return res.status(201).json({ success: true, feedback: newFb, total: serverFeedbackCache.length });
     }
 
-    // 2. DELETE: Remove feedback by id
+    // 2. DELETE: Remove feedback by id or clear all
     if (req.method === 'DELETE') {
       const targetId = req.query?.id || req.body?.id || req.body?.feedbackId;
-      if (targetId) {
+      if (targetId && targetId !== 'all') {
         serverFeedbackCache = serverFeedbackCache.filter((f) => f.id !== targetId && f._id !== targetId);
-        saveCacheToDisk();
+      } else {
+        serverFeedbackCache = [];
       }
+      saveCacheToDisk();
       return res.status(200).json({ success: true, feedback: serverFeedbackCache });
     }
 

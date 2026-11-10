@@ -21,7 +21,7 @@ import {
 
 export const AdminFeedbackPage = () => {
   const { user } = useAuth();
-  const { feedbackList, menuItems, deleteFeedback } = useData();
+  const { feedbackList, menuItems, deleteFeedback, clearAllFeedback } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRatingFilter, setSelectedRatingFilter] = useState('ALL');
@@ -118,6 +118,14 @@ export const AdminFeedbackPage = () => {
     }
   };
 
+  const handleClearAll = () => {
+    if (window.confirm('Are you sure you want to clear all student feedback and reset to 0 reviews? Only newly submitted authentic reviews will appear.')) {
+      if (clearAllFeedback) {
+        clearAllFeedback();
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12 text-white">
       {/* 1. Header Toolbar */}
@@ -142,6 +150,17 @@ export const AdminFeedbackPage = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {totalReviews > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="px-3.5 py-2 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs font-bold text-red-300 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              title="Clear all student feedback"
+            >
+              <Trash2 className="w-4 h-4 text-red-400" />
+              <span>Clear All Reviews</span>
+            </button>
+          )}
           <span className="px-3.5 py-2 rounded-2xl bg-[#151C30] border border-purple-500/20 text-xs font-bold text-slate-300 flex items-center gap-1.5 shadow-xs">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span>Campus Rating: <strong>{averageRating} / 5.0</strong></span>
@@ -295,11 +314,11 @@ export const AdminFeedbackPage = () => {
             <div className="w-16 h-16 rounded-2xl bg-[#151C30] text-purple-400 flex items-center justify-center mx-auto border border-purple-500/30">
               <MessageSquare className="w-8 h-8 text-purple-400" />
             </div>
-            <h3 className="text-lg font-black text-white">No Reviews Found</h3>
+            <h3 className="text-lg font-black text-white">No Reviews Yet</h3>
             <p className="text-xs text-[#AAB3C5] max-w-sm mx-auto">
               {searchQuery || selectedRatingFilter !== 'ALL' || selectedDishFilter !== 'ALL'
                 ? 'No customer reviews match your active filter criteria. Try clearing filters to see all reviews.'
-                : 'No reviews have been submitted by students yet. When students rate dishes on the feedback page, their reviews will appear here immediately.'}
+                : 'No student reviews yet. New reviews submitted by students on the user portal will appear here live in real-time.'}
             </p>
           </div>
         ) : (

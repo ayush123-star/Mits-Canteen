@@ -703,32 +703,7 @@ export const INITIAL_OWNER_INVITATIONS = [
   },
 ];
 
-export const INITIAL_FEEDBACK = [
-  {
-    id: 'fb-1',
-    studentName: 'Aryan Sharma',
-    foodItem: 'Double Cheese Veg Supreme Burger',
-    rating: 5,
-    comment: 'Patty was crisp and hot, cheese melted perfectly! Loved the zero-queue pickup.',
-    date: '2026-11-03',
-  },
-  {
-    id: 'fb-2',
-    studentName: 'Priya Patel',
-    foodItem: 'Thick Cold Coffee with Choco Ice Cream',
-    rating: 5,
-    comment: 'Best cold coffee on campus. Super thick and creamy.',
-    date: '2026-11-03',
-  },
-  {
-    id: 'fb-3',
-    studentName: 'Karan Mehra',
-    foodItem: 'Special Campus Deluxe Thali',
-    rating: 4,
-    comment: 'Very filling for lunch. Rotis were warm and buttered. Dal makhani was great.',
-    date: '2026-11-02',
-  },
-];
+export const INITIAL_FEEDBACK = [];
 
 export const INITIAL_AUDIT_LOGS = [
   {

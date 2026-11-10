@@ -67,6 +67,15 @@ let canteenConfigCache = {
   updatedAt: Date.now(),
 };
 
+const isMockFeedback = (fb) => {
+  if (!fb) return true;
+  const id = String(fb.id || '');
+  if (['fb-1', 'fb-2', 'fb-3'].includes(id)) return true;
+  if (id.startsWith('fb-test-')) return true;
+  if (['Aryan Sharma', 'Priya Patel', 'Karan Mehra'].includes(fb.studentName)) return true;
+  return false;
+};
+
 function loadDiskCache() {
   try {
     if (fs.existsSync(CACHE_FILE)) {
@@ -85,6 +94,9 @@ function loadDiskCache() {
               ? data.homepageConfig.featuredCravingsIds.filter((id) => !mergedDeleted.includes(id))
               : (canteenConfigCache.homepageConfig?.featuredCravingsIds || []),
           },
+          feedbackList: Array.isArray(data.feedbackList)
+            ? data.feedbackList.filter((f) => !isMockFeedback(f))
+            : [],
         };
         if (Array.isArray(canteenConfigCache.menuItems)) {
           canteenConfigCache.menuItems = canteenConfigCache.menuItems.filter(

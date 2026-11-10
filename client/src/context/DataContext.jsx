@@ -99,6 +99,16 @@ export const doesOrderMatch = (ord, target) => {
   return ordIds.some((id) => targetIds.includes(id));
 };
 
+export const isMockFeedback = (fb) => {
+  if (!fb || typeof fb !== 'object') return true;
+  const id = String(fb.id || '');
+  if (['fb-1', 'fb-2', 'fb-3'].includes(id)) return true;
+  if (id.startsWith('fb-test-')) return true;
+  const student = String(fb.studentName || '');
+  if (['Aryan Sharma', 'Priya Patel', 'Karan Mehra'].includes(student)) return true;
+  return false;
+};
+
 const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
@@ -268,8 +278,21 @@ export const DataProvider = ({ children }) => {
   });
 
   const [feedbackList, setFeedbackList] = useState(() => {
-    const saved = localStorage.getItem('smart_canteen_feedback');
-    return saved ? JSON.parse(saved) : INITIAL_FEEDBACK;
+    try {
+      if (localStorage.getItem('smart_canteen_feedback_clean_2026_v1') !== 'wiped_clean') {
+        localStorage.setItem('smart_canteen_feedback', '[]');
+        localStorage.setItem('smart_canteen_feedback_clean_2026_v1', 'wiped_clean');
+        return [];
+      }
+      const saved = localStorage.getItem('smart_canteen_feedback');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((f) => !isMockFeedback(f));
+        }
+      }
+    } catch (_) {}
+    return [];
   });
 
   const [auditLogs, setAuditLogs] = useState(() => {
@@ -575,11 +598,12 @@ export const DataProvider = ({ children }) => {
           });
         }
 
-        if (Array.isArray(cfg.feedbackList) && cfg.feedbackList.length > 0) {
+        if (Array.isArray(cfg.feedbackList)) {
+          const cleanFb = cfg.feedbackList.filter((f) => !isMockFeedback(f));
           setFeedbackList((prev) => {
             const map = new Map();
-            cfg.feedbackList.forEach((f) => map.set(f.id || f._id, f));
-            prev.forEach((f) => map.set(f.id || f._id, f));
+            cleanFb.forEach((f) => map.set(f.id || f._id, f));
+            prev.filter((f) => !isMockFeedback(f)).forEach((f) => map.set(f.id || f._id, f));
             const merged = Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
             try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(merged)); } catch (_) {}
@@ -599,11 +623,12 @@ export const DataProvider = ({ children }) => {
 
     const syncRemoteFeedbackList = () => {
       fetchRemoteFeedback().then((remoteFb) => {
-        if (Array.isArray(remoteFb) && remoteFb.length > 0) {
+        if (Array.isArray(remoteFb)) {
+          const cleanFb = remoteFb.filter((f) => !isMockFeedback(f));
           setFeedbackList((prev) => {
             const map = new Map();
-            remoteFb.forEach((f) => map.set(f.id || f._id, f));
-            prev.forEach((f) => map.set(f.id || f._id, f));
+            cleanFb.forEach((f) => map.set(f.id || f._id, f));
+            prev.filter((f) => !isMockFeedback(f)).forEach((f) => map.set(f.id || f._id, f));
             const merged = Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
             try { localStorage.setItem('smart_canteen_feedback', JSON.stringify(merged)); } catch (_) {}
@@ -1020,6 +1045,16 @@ export const DataProvider = ({ children }) => {
           return;
         }
 
+        if (type === 'FEEDBACK_PURGE_ALL') {
+          setFeedbackList([]);
+          try {
+            localStorage.setItem('smart_canteen_feedback', '[]');
+            localStorage.setItem('smart_canteen_feedback_clean_2026_v1', 'wiped_clean');
+          } catch (_) {}
+          window.dispatchEvent(new CustomEvent('smartcanteen:feedback_sync'));
+          return;
+        }
+
         if (incomingOrders && Array.isArray(incomingOrders)) {
           setOrders((prev) => {
             if (JSON.stringify(prev) === JSON.stringify(incomingOrders)) return prev;
@@ -1200,6 +1235,16 @@ export const DataProvider = ({ children }) => {
           localStorage.removeItem('smart_canteen_used_item_tokens');
         } catch (_) {}
         window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+        return;
+      }
+
+      if (type === 'FEEDBACK_PURGE_ALL') {
+        setFeedbackList([]);
+        try {
+          localStorage.setItem('smart_canteen_feedback', '[]');
+          localStorage.setItem('smart_canteen_feedback_clean_2026_v1', 'wiped_clean');
+        } catch (_) {}
+        window.dispatchEvent(new CustomEvent('smartcanteen:feedback_sync'));
         return;
       }
 
@@ -3125,6 +3170,26 @@ export const DataProvider = ({ children }) => {
     publishFeedbackEvent({ id: feedbackId }, 'FEEDBACK_DELETED');
   };
 
+  const clearAllFeedback = () => {
+    setFeedbackList([]);
+    try {
+      localStorage.setItem('smart_canteen_feedback', '[]');
+      localStorage.setItem('smart_canteen_feedback_clean_2026_v1', 'wiped_clean');
+    } catch (_) {}
+    if (ordersBroadcastRef.current) {
+      try {
+        ordersBroadcastRef.current.postMessage({
+          type: 'FEEDBACK_PURGE_ALL',
+          timestamp: Date.now(),
+        });
+      } catch (_) {}
+    }
+    publishFeedbackEvent({ id: 'all' }, 'FEEDBACK_PURGE_ALL');
+    try { axios.delete(CENTRAL_FEEDBACK_API + '?id=all').catch(() => {}); } catch (_) {}
+    try { axios.post(CENTRAL_CANTEEN_API, { feedbackList: [] }).catch(() => {}); } catch (_) {}
+    window.dispatchEvent(new CustomEvent('smartcanteen:feedback_sync'));
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -3174,6 +3239,7 @@ export const DataProvider = ({ children }) => {
         changeUserPassword,
         submitFeedback,
         deleteFeedback,
+        clearAllFeedback,
         logActivity,
         homepageConfig,
         updateHomepageConfig,

@@ -20,7 +20,7 @@
     <meta property="twitter:title" content="Canteen Operations — MITS Gwalior" />
     <meta property="twitter:description" content="Official Canteen Owner & Kitchen Operations Console by MITS Gwalior." />
     <meta property="twitter:image" content="/images/mits/mits-logo.png" />
-    <!-- Immediate Zero-Orders Fresh Start Purge (Runs before any React app mounts) -->
+    <!-- Immediate Zero-Orders & Zero-Feedback Fresh Start Purge (Runs before any React app mounts) -->
     <script>
       (function() {
         var CLEAN_KEY = 'smart_canteen_clean_slate_2026_v7';
@@ -33,6 +33,13 @@
             localStorage.removeItem('smart_canteen_clean_slate_version');
             localStorage.setItem('smart_canteen_orders', '[]');
             localStorage.setItem(CLEAN_KEY, 'fresh_zero_start');
+          } catch (e) {}
+        }
+        var FB_KEY = 'smart_canteen_feedback_clean_2026_v1';
+        if (localStorage.getItem(FB_KEY) !== 'wiped_clean') {
+          try {
+            localStorage.setItem('smart_canteen_feedback', '[]');
+            localStorage.setItem(FB_KEY, 'wiped_clean');
           } catch (e) {}
         }
       })();
