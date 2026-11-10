@@ -447,34 +447,54 @@ export const HomePage = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
               step: '01',
               title: 'Select Dishes',
+              tag: '📱 In-App Menu & Add to Tray',
               desc: 'Browse breakfast, fresh thalis, hot snacks, or cold drinks with pure veg dietary filters.',
               icon: UtensilsCrossed,
+              image: '/assets/steps/step1-browse-customize.jpg',
+              fallback: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80',
+              badge: '100+ Campus Items',
+              badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
               counter: 'Menu Catalog',
             },
             {
               step: '02',
               title: 'Set Pickup Slot',
+              tag: '⏰ Break Slot Scheduling',
               desc: 'Choose immediate kitchen prep (~5-8m) or schedule specifically for your upcoming break.',
               icon: Clock,
+              image: '/assets/steps/step2-pickup-time.jpg',
+              fallback: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80',
+              badge: 'Zero Queue Wait',
+              badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
               counter: 'Break Scheduling',
             },
             {
               step: '03',
               title: 'Get Digital Token',
+              tag: '🎫 Contactless QR Pass',
               desc: 'Pay via UPI or select Cash at Counter to receive your digital Token Number & QR Code.',
               icon: QrCode,
+              image: '/assets/steps/step3-unique-token.jpg',
+              fallback: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=600&auto=format&fit=crop&q=80',
+              badge: 'Instant QR & Token',
+              badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
               counter: 'Contactless Pass',
             },
             {
               step: '04',
               title: 'Collect at Counter',
+              tag: '🍱 Fresh Food Handoff',
               desc: 'Watch the dining hall TV calling board or check your phone pass. Collect tray when ready.',
               icon: CheckCircle2,
+              image: '/assets/steps/step4-collect-counter.jpg',
+              fallback: '/assets/campus/mits-main-canteen.jpg',
+              badge: 'Express Counter Pickup',
+              badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
               counter: 'Counter 1 or 2',
             },
           ].map((item, idx) => {
@@ -482,22 +502,55 @@ export const HomePage = () => {
             return (
               <div
                 key={idx}
-                className="bg-[#111625] rounded-2xl p-5 border border-purple-500/25 flex flex-col justify-between hover:border-purple-400/50 transition-colors shadow-md"
+                className="bg-[#111625] rounded-3xl p-4 sm:p-5 border border-purple-500/25 flex flex-col justify-between hover:border-purple-400/50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-purple-900/30 group overflow-hidden hover:-translate-y-1.5"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/15 px-2.5 py-1 rounded-lg border border-purple-500/30">
+                  {/* Photo Container According to Step Role */}
+                  <div className="relative h-44 sm:h-48 w-full rounded-2xl overflow-hidden bg-[#151C30] mb-4 shadow-inner">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.src = item.fallback;
+                      }}
+                    />
+                    {/* Subtle bottom gradient to ensure role pill readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#111625] via-transparent to-black/25" />
+
+                    {/* Step Number Badge */}
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-xl bg-[#0B1020]/90 backdrop-blur-md border border-purple-500/40 text-xs font-black font-mono text-purple-300 shadow-md flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
                       STEP {item.step}
-                    </span>
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center">
+                    </div>
+
+                    {/* Step Icon Badge */}
+                    <div className="absolute top-3 right-3 w-8 h-8 rounded-xl bg-gradient-to-br from-[#7955E8] to-[#526DFF] text-white flex items-center justify-center shadow-lg group-hover:rotate-6 group-hover:scale-105 transition-all">
                       <Icon className="w-4 h-4" />
                     </div>
+
+                    {/* Role Tag Pill */}
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <span className="px-2.5 py-1 rounded-lg bg-[#0B1020]/90 backdrop-blur-md border border-white/10 text-[10px] font-bold text-slate-200 block truncate">
+                        {item.tag}
+                      </span>
+                    </div>
                   </div>
-                  <h4 className="font-bold text-sm text-white mb-1.5">{item.title}</h4>
+
+                  <h4 className="font-bold text-sm text-white mb-1.5 group-hover:text-purple-300 transition-colors">
+                    {item.title}
+                  </h4>
                   <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-purple-500/20 text-[11px] font-semibold text-purple-300">
-                  {item.counter}
+
+                <div className="mt-4 pt-3 border-t border-purple-500/20 flex items-center justify-between text-[11px] font-semibold text-purple-300">
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${item.badgeColor}`}>
+                    {item.badge}
+                  </span>
+                  <span className="text-purple-400 font-bold group-hover:translate-x-1 transition-transform">
+                    {item.counter} &rarr;
+                  </span>
                 </div>
               </div>
             );
