@@ -211,7 +211,7 @@ export const LoginPage = () => {
             <h2 className="text-lg sm:text-xl font-bold text-white">
               Sign in to your account
             </h2>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5 text-[11px]">
+            <div className="flex flex-col items-center justify-center gap-1.5 pt-0.5 text-[11px]">
               <span className="px-2 py-0.5 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-300 font-mono font-semibold">
                 Students: @mitsgwl.ac.in
               </span>
@@ -266,7 +266,7 @@ export const LoginPage = () => {
           </button>
 
           {/* Quick Portal Switcher Pills */}
-          <div className="grid grid-cols-2 gap-2 pt-0.5">
+          <div className="flex flex-col gap-2 pt-0.5">
             <button
               type="button"
               disabled={googleLoading}
