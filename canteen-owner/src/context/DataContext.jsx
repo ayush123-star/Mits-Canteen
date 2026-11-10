@@ -198,34 +198,38 @@ export const DataProvider = ({ children }) => {
   });
 
   const [orders, setOrders] = useState(() => {
-    let localList = [];
-    const saved = localStorage.getItem('smart_canteen_orders');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          localList = parsed
-            .filter((ord) => !isMockOrder(ord) && !String(ord?.id || '').startsWith('ord-ayush-10'))
-            .map((ord) => {
-              const tok = String(ord.tokenNumber || '').replace('#', '').trim();
-              if (tok === 'TK-114' || tok === '114') {
-                return { ...ord, status: 'Completed', updatedAt: new Date().toISOString() };
-              }
-              return ord;
-            });
-        }
-      } catch (_) {}
-    }
-    const cleanInitial = (INITIAL_ORDERS || []).filter((ord) => !isMockOrder(ord) && !String(ord?.id || '').startsWith('ord-ayush-10'));
-    const merged = mergeOrders(cleanInitial, localList);
     try {
-      localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
+      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_version');
+      if (wipeVer !== 'v4_fresh_clean_start_2026') {
+        localStorage.setItem('smart_canteen_orders', '[]');
+        localStorage.setItem('smart_canteen_clean_slate_version', 'v4_fresh_clean_start_2026');
+        localStorage.removeItem('used_canteen_utrs');
+        return [];
+      }
+      const saved = localStorage.getItem('smart_canteen_orders');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((ord) => !isMockOrder(ord) && !String(ord?.id || '').startsWith('ord-ayush-10'));
+        }
+      }
     } catch (_) {}
-    return merged;
+    return [];
   });
 
   // Proactively purge any mock dummy orders and stale TK-114 tokens from local & cloud state
   useEffect(() => {
+    try {
+      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_version');
+      if (wipeVer !== 'v4_fresh_clean_start_2026') {
+        localStorage.setItem('smart_canteen_orders', '[]');
+        localStorage.setItem('smart_canteen_clean_slate_version', 'v4_fresh_clean_start_2026');
+        localStorage.removeItem('used_canteen_utrs');
+        setOrders([]);
+        return;
+      }
+    } catch (_) {}
+
     setOrders((prev) => {
       let changed = false;
       const filtered = prev.filter((ord) => {

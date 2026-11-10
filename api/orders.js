@@ -120,7 +120,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, orderId: cleanOrderId, status: finalStatus });
     }
 
-    // 3. GET: Fetch orders
+    // 3. DELETE: Wipe all orders clean for fresh start
+    if (req.method === 'DELETE') {
+      serverOrdersCache = [];
+      saveCacheToDisk();
+      return res.status(200).json({ success: true, message: 'All orders wiped clean for fresh start', orders: [] });
+    }
+
+    // 4. GET: Fetch orders
     const orders = serverOrdersCache.filter((o) => !isMock(o));
     return res.status(200).json({ success: true, orders });
   } catch (err) {

@@ -140,7 +140,7 @@ export const StudentProfilePage = () => {
           <div>
             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Queues Skipped</p>
             <p className="text-2xl font-black text-white">
-              {Math.max(studentOrders.length * 12, 15)} mins
+              {studentOrders.length === 0 ? '0 mins' : `${studentOrders.length * 15} mins`}
             </p>
           </div>
         </div>

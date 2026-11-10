@@ -67,6 +67,22 @@ const getMqttClient = () => {
       mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG, TOPIC_HOMEPAGE_CONFIG], { qos: 1 }, (err) => {
         if (err) console.debug('[RealtimeSync] Subscribe error:', err.message);
       });
+
+      // Purge broker retained order snapshot for fresh clean start
+      if (typeof window !== 'undefined' && localStorage.getItem('smart_canteen_clean_slate_version') !== 'v4_fresh_clean_start_2026') {
+        try {
+          mqttClient.publish(
+            TOPIC_SNAPSHOT,
+            JSON.stringify({
+              type: 'SNAPSHOT_SYNC',
+              orders: [],
+              timestamp: Date.now(),
+              emitterId: getClientInstanceId(),
+            }),
+            { retain: true, qos: 1 }
+          );
+        } catch (_) {}
+      }
     });
 
     mqttClient.on('message', (topic, payloadBuffer) => {
@@ -84,19 +100,17 @@ const getMqttClient = () => {
         if (topic === TOPIC_SNAPSHOT) {
           // Retained snapshot arrived (delivers latest state on mount/refresh)
           const incomingOrders = Array.isArray(data.orders) ? data.orders.filter((o) => !isMockOrder(o)) : [];
-          if (incomingOrders.length > 0) {
-            lastKnownSnapshot = incomingOrders;
-            subscribers.forEach((callback) => {
-              try {
-                callback({
-                  type: 'SNAPSHOT_SYNC',
-                  orders: incomingOrders,
-                  incomingOrders,
-                  timestamp: data.timestamp || Date.now(),
-                });
-              } catch (_) {}
-            });
-          }
+          lastKnownSnapshot = incomingOrders;
+          subscribers.forEach((callback) => {
+            try {
+              callback({
+                type: 'SNAPSHOT_SYNC',
+                orders: incomingOrders,
+                incomingOrders,
+                timestamp: data.timestamp || Date.now(),
+              });
+            } catch (_) {}
+          });
         } else if (topic === TOPIC_EVENTS) {
           // Instant lifecycle event (NEW_ORDER, STATUS_UPDATED, etc.)
           subscribers.forEach((callback) => {
