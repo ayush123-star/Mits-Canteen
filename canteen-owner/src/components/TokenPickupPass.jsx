@@ -10,13 +10,16 @@ import {
   QrCode,
   ShieldCheck,
   UtensilsCrossed,
-  Printer
+  Printer,
+  Calendar
 } from 'lucide-react';
+import { formatOrderDateTime } from '../services/realtimeSync';
 
 export const TokenPickupPass = ({ order, onClose }) => {
   if (!order) return null;
 
   const isReady = order.status === 'Ready for Pickup';
+  const { dateStr, timeStr } = formatOrderDateTime(order);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn text-white">
@@ -104,6 +107,19 @@ export const TokenPickupPass = ({ order, onClose }) => {
             <p className="text-[11px] text-[#AAB3C5] font-medium mt-0.5">
               Pickup address: Central Campus Quad, MITS Gwalior
             </p>
+          </div>
+
+          {/* Order Placement Date & Time */}
+          <div className="flex items-center justify-center gap-3 text-[11px] text-[#AAB3C5] bg-[#151C30] py-2 px-3 rounded-2xl border border-purple-500/20">
+            <span className="flex items-center gap-1.5 text-purple-200 font-semibold">
+              <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>{dateStr}</span>
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400/50"></span>
+            <span className="flex items-center gap-1.5 text-purple-200 font-semibold">
+              <Clock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>{timeStr}</span>
+            </span>
           </div>
 
           {/* Timing details */}

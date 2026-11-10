@@ -582,37 +582,79 @@ export const isMockOrder = (ord) => {
 
 /**
  * Accurately determines if an order belongs to the currently logged-in user.
- * Strictly checks user ID, email (case-insensitive), student roll/enrollment number, or phone.
+ * Strictly guarantees that no two accounts ever have their orders combined.
  */
 export const isOrderOwnedByUser = (order, user) => {
   if (!order || typeof order !== 'object') return false;
   if (!user || typeof user !== 'object') return false;
 
-  const uId = String(user.id || user._id || '').trim().toLowerCase();
   const uEmail = String(user.email || '').trim().toLowerCase();
-  const uRoll = String(user.studentId || user.enrollmentNumber || user.rollNumber || '').trim().toLowerCase();
-  const uPhone = String(user.phone || '').replace(/\D/g, '');
-
-  const ordStudentId = String(order.studentId || order.userId || order.user?._id || order.user || '').trim().toLowerCase();
   const ordEmail = String(order.studentEmail || order.email || order.user?.email || '').trim().toLowerCase();
+
+  // 1. If both have emails, email is the absolute ground truth (100% unique per Google/auth account)
+  if (uEmail && ordEmail) {
+    return uEmail === ordEmail;
+  }
+
+  // 2. If order has an email but user has a DIFFERENT email, they CANNOT be the same user
+  if (uEmail && ordEmail && uEmail !== ordEmail) {
+    return false;
+  }
+
+  const uId = String(user.id || user._id || '').trim().toLowerCase();
+  const ordStudentId = String(order.studentId || order.userId || order.user?._id || order.user || '').trim().toLowerCase();
+
+  // 3. Direct specific user ID match (excluding default generic fallback IDs)
+  if (uId && ordStudentId && !uId.startsWith('user-stu-1') && !ordStudentId.startsWith('user-stu-1')) {
+    return uId === ordStudentId;
+  }
+
+  // 4. Roll / Enrollment Number match (only if non-generic)
+  const uRoll = String(user.studentId || user.enrollmentNumber || user.rollNumber || '').trim().toLowerCase();
   const ordRoll = String(order.studentRoll || order.studentEnrollment || order.enrollmentNumber || '').trim().toLowerCase();
-  const ordPhone = String(order.studentPhone || order.phone || '').replace(/\D/g, '');
+  const genericRolls = ['btet25o1039', '0901cs221045', 'stu-campus', ''];
 
-  // 1. Direct ID match
-  if (uId && ordStudentId && uId === ordStudentId) return true;
-
-  // 2. Email match (strictly case-insensitive, primary for Gmail logins)
-  if (uEmail && ordEmail && uEmail === ordEmail) return true;
-
-  // 3. Roll / Enrollment Number match
-  if (uRoll && ordRoll && (uRoll === ordRoll || uRoll.includes(ordRoll) || ordRoll.includes(uRoll))) return true;
-
-  // 4. Phone number match (matching last 10 digits)
-  if (uPhone && ordPhone && uPhone.length >= 10 && ordPhone.length >= 10) {
-    if (uPhone.slice(-10) === ordPhone.slice(-10)) return true;
+  if (uRoll && ordRoll && !genericRolls.includes(uRoll) && !genericRolls.includes(ordRoll)) {
+    return uRoll === ordRoll;
   }
 
   return false;
+};
+
+/**
+ * Universal Date & Time Parser & Formatter for Canteen Orders
+ * Extracts reliable Date and Time from any order object format.
+ */
+export const formatOrderDateTime = (order) => {
+  if (!order) return { dateStr: 'Today', timeStr: 'N/A' };
+  let d = null;
+
+  if (order.createdAtDate) {
+    const parsed = new Date(order.createdAtDate);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  }
+  if (!d && order.orderDate) {
+    const parsed = new Date(order.orderDate);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  }
+  if (!d && typeof order.id === 'string' && order.id.startsWith('ord-')) {
+    const ts = parseInt(order.id.replace('ord-', ''), 10);
+    if (!isNaN(ts) && ts > 1000000000000) d = new Date(ts);
+  }
+  if (!d && order.createdAt && (order.createdAt.includes('T') || order.createdAt.includes('-') || order.createdAt.includes('/'))) {
+    const parsed = new Date(order.createdAt);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  }
+
+  const dateStr = d
+    ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : (order.orderDate || 'Today');
+
+  const timeStr = d
+    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : (order.createdAt && !order.createdAt.includes('T') ? order.createdAt : 'Just now');
+
+  return { dateStr, timeStr };
 };
 
 /**

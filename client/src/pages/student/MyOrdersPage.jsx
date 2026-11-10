@@ -7,7 +7,7 @@ import { OrderStatusStepper } from '../../components/OrderStatusStepper';
 import { TokenPickupPass } from '../../components/TokenPickupPass';
 import { playNotificationSound } from '../../utils/audio';
 import { sendBrowserNotification } from '../../utils/browserNotifications';
-import { isOrderOwnedByUser } from '../../services/realtimeSync';
+import { isOrderOwnedByUser, formatOrderDateTime } from '../../services/realtimeSync';
 import {
   ClipboardList,
   Clock,
@@ -250,6 +250,49 @@ export const MyOrdersPage = () => {
         </div>
       </div>
 
+      {/* Account Specific Lifetime Orders Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-[#141A29] p-4 rounded-2xl border border-purple-500/20 shadow-md">
+          <span className="text-[10px] font-black uppercase tracking-wider text-purple-300 block">
+            Your Total Orders
+          </span>
+          <p className="text-2xl sm:text-3xl font-black text-white mt-0.5">
+            {studentOrders.length}
+          </p>
+          <span className="text-[10px] text-slate-400">All-time from your account</span>
+        </div>
+
+        <div className="bg-[#141A29] p-4 rounded-2xl border border-purple-500/20 shadow-md">
+          <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
+            Active in Kitchen
+          </span>
+          <p className="text-2xl sm:text-3xl font-black text-amber-400 mt-0.5">
+            {activeOrders.length}
+          </p>
+          <span className="text-[10px] text-slate-400">Preparing / ready for pickup</span>
+        </div>
+
+        <div className="bg-[#141A29] p-4 rounded-2xl border border-purple-500/20 shadow-md">
+          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 block">
+            Completed Orders
+          </span>
+          <p className="text-2xl sm:text-3xl font-black text-emerald-400 mt-0.5">
+            {pastOrders.filter((o) => ['Completed', 'Collected'].includes(o.status)).length}
+          </p>
+          <span className="text-[10px] text-slate-400">Handed over at counter</span>
+        </div>
+
+        <div className="bg-[#141A29] p-4 rounded-2xl border border-purple-500/20 shadow-md">
+          <span className="text-[10px] font-black uppercase tracking-wider text-blue-300 block">
+            Total Spent
+          </span>
+          <p className="text-2xl sm:text-3xl font-black text-blue-400 mt-0.5">
+            ₹{studentOrders.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0)}
+          </p>
+          <span className="text-[10px] text-slate-400">Lifetime canteen billing</span>
+        </div>
+      </div>
+
       {/* 2. Tabs */}
       <div className="flex items-center gap-3 border-b border-purple-500/20 pb-4 overflow-x-auto">
         <button
@@ -329,6 +372,7 @@ export const MyOrdersPage = () => {
               order.rejectionReason,
               order.cancellationReason
             );
+            const { dateStr, timeStr } = formatOrderDateTime(order);
 
             return (
               <div
@@ -373,18 +417,24 @@ export const MyOrdersPage = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 text-[11px] text-[#AAB3C5] mt-1">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-purple-400" />
-                          {order.createdAt || 'Today'}
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-[#AAB3C5] mt-1.5">
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#151C30] border border-purple-500/30 text-white font-medium shadow-xs">
+                          <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                          <span className="text-[11px] font-bold text-slate-300">Date:</span>
+                          <strong className="text-purple-200 font-extrabold">{dateStr}</strong>
                         </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 font-semibold text-purple-300">
-                          <MapPin className="w-3 h-3 text-purple-400" />
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#151C30] border border-purple-500/30 text-white font-medium shadow-xs">
+                          <Clock className="w-3.5 h-3.5 text-blue-400" />
+                          <span className="text-[11px] font-bold text-slate-300">Time:</span>
+                          <strong className="text-blue-300 font-mono font-black">{timeStr}</strong>
+                        </span>
+                        <span className="hidden sm:inline text-purple-500/40">•</span>
+                        <span className="flex items-center gap-1 font-semibold text-purple-300 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-purple-400" />
                           Counter {order.assignedCounter || 1}
                         </span>
-                        <span>•</span>
-                        <span className="font-mono text-[#AAB3C5]">
+                        <span className="hidden sm:inline text-purple-500/40">•</span>
+                        <span className="font-mono text-xs font-bold text-slate-300">
                           {order.paymentMethod === 'UPI' ? 'UPI (Paid)' : 'Cash at Counter'}
                         </span>
                       </div>

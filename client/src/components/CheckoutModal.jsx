@@ -508,12 +508,12 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
     setError('');
 
     try {
-      const studentId = user?.id || user?._id || 'user-stu-1';
-      const studentName = user?.name || 'Ayush Pandey';
-      const studentRoll = user?.studentId || user?.enrollmentNumber || user?.rollNumber || 'BTET25O1039';
-      const studentDepartment = user?.department || 'Electronics and Telecommunication';
-      const studentEmail = user?.email || 'ayushpandey1603@gmail.com';
-      const studentPhone = user?.phone || '+91 98765 43210';
+      const studentId = user?.id || user?._id || ('guest-' + Date.now());
+      const studentName = user?.name || 'Student Diner';
+      const studentRoll = user?.studentId || user?.enrollmentNumber || user?.rollNumber || '';
+      const studentDepartment = user?.department || 'General Campus';
+      const studentEmail = user?.email || '';
+      const studentPhone = user?.phone || '';
 
       const createdOrder = placeOrder({
         studentId,
