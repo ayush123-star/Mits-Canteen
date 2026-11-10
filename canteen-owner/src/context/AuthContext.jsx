@@ -7,7 +7,42 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('smart_canteen_active_user');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed) {
+        const uEmail = String(parsed.email || '').toLowerCase().trim();
+        const uAlias = String(parsed.aliasEmail || '').toLowerCase().trim();
+        const uSid = String(parsed.studentId || '').toUpperCase();
+        const isAyush =
+          uEmail === 'pandeyayush1603@gmail.com' ||
+          uEmail === 'ayushpandey1603@gmail.com' ||
+          uEmail === '25et1ay39@mitsgwl.ac.in' ||
+          uAlias === 'pandeyayush1603@gmail.com' ||
+          uSid === 'PANDEYAYUSH1603' ||
+          uSid === 'BTET25O1039';
+        if (isAyush) {
+          const updatedAyush = {
+            ...parsed,
+            id: 'user-stu-ayush',
+            name: 'Ayush Pandey',
+            email: parsed.email || 'pandeyayush1603@gmail.com',
+            aliasEmail: '25et1ay39@mitsgwl.ac.in',
+            studentId: 'BTET25O1039',
+            department: 'Electronics and Telecommunication',
+            phone: parsed.phone || '+91 90395 67623',
+            avatar: parsed.avatar || '/assets/developer/ayush_pandey.jpg',
+          };
+          try {
+            localStorage.setItem('smart_canteen_active_user', JSON.stringify(updatedAyush));
+          } catch (_) {}
+          return updatedAyush;
+        }
+      }
+      return parsed;
+    } catch (_) {
+      return null;
+    }
   });
 
   const [token, setToken] = useState(() => {
@@ -343,24 +378,35 @@ export const AuthProvider = ({ children }) => {
     }
 
     const savedUsers = JSON.parse(localStorage.getItem('smart_canteen_users') || 'null') || registeredUsers;
-    let foundUser = savedUsers.find((u) => (u.email || '').toLowerCase().trim() === cleanEmail);
+    let foundUser = savedUsers.find((u) => {
+      const e = (u.email || '').toLowerCase().trim();
+      const alias = (u.aliasEmail || '').toLowerCase().trim();
+      return e === cleanEmail || alias === cleanEmail;
+    });
 
     if (!foundUser) {
+      const isAyush =
+        cleanEmail === 'pandeyayush1603@gmail.com' ||
+        cleanEmail === 'ayushpandey1603@gmail.com' ||
+        cleanEmail === '25et1ay39@mitsgwl.ac.in' ||
+        cleanEmail.includes('ayush') ||
+        tokenName?.toLowerCase().includes('ayush pandey');
       const userType = isFaculty ? 'faculty' : 'student';
       const emailPrefix = cleanEmail.split('@')[0];
       const newDiner = {
-        id: 'user-google-' + Date.now(),
-        name: tokenName || (isFaculty ? 'Faculty Member' : 'MITS Student'),
+        id: isAyush ? 'user-stu-ayush' : ('user-google-' + Date.now()),
+        name: tokenName || (isAyush ? 'Ayush Pandey' : (isFaculty ? 'Faculty Member' : 'MITS Student')),
         email: cleanEmail,
+        aliasEmail: isAyush ? '25et1ay39@mitsgwl.ac.in' : '',
         password: 'google_oauth_authorized',
         role: 'student',
         userType,
-        studentId: cleanEmail.startsWith('25et1ay39')
+        studentId: isAyush
           ? 'BTET25O1039'
-          : emailPrefix.toUpperCase(),
-        department: cleanEmail.includes('et') ? 'Electronics and Telecommunication' : 'General Campus',
-        phone: cleanEmail.includes('ayush') ? '+91 90395 67623' : '+91 98765 43210',
-        avatar: tokenPicture || (cleanEmail.includes('ayush') ? '/assets/developer/ayush_pandey.jpg' : ''),
+          : (cleanEmail.startsWith('25et1ay39') ? 'BTET25O1039' : emailPrefix.toUpperCase()),
+        department: isAyush || cleanEmail.includes('et') ? 'Electronics and Telecommunication' : 'General Campus',
+        phone: isAyush ? '+91 90395 67623' : '+91 98765 43210',
+        avatar: tokenPicture || (isAyush ? '/assets/developer/ayush_pandey.jpg' : ''),
         isActive: true,
         joinedDate: new Date().toISOString().split('T')[0],
       };

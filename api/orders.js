@@ -1,7 +1,33 @@
 // Centralized Serverless API for Vercel deployment - /api/orders
 // Clean 200 OK responses with zero external rate limits
+import { createRequire } from 'module';
+import fs from 'fs';
+const require = createRequire(import.meta.url);
 
-let serverOrdersCache = [];
+const CACHE_FILE = '/tmp/canteenOrdersCache.json';
+
+let canonicalData = {};
+try {
+  canonicalData = require('./canonicalData.json');
+} catch (_) {}
+
+let serverOrdersCache = Array.isArray(canonicalData?.orders) ? [...canonicalData.orders] : [];
+
+try {
+  if (fs.existsSync(CACHE_FILE)) {
+    const raw = fs.readFileSync(CACHE_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      serverOrdersCache = parsed;
+    }
+  }
+} catch (_) {}
+
+const saveCacheToDisk = () => {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(serverOrdersCache.slice(0, 150)), 'utf8');
+  } catch (_) {}
+};
 
 const isMock = (ord) => {
   if (!ord || typeof ord !== 'object') return true;
@@ -52,6 +78,7 @@ export default async function handler(req, res) {
         );
         if (!exists) {
           serverOrdersCache = [order, ...serverOrdersCache].slice(0, 100);
+          saveCacheToDisk();
         }
       }
       return res.status(201).json({ success: true, order });
@@ -88,6 +115,7 @@ export default async function handler(req, res) {
         return o;
       });
 
+      saveCacheToDisk();
       return res.status(200).json({ success: true, orderId: cleanOrderId, status: finalStatus });
     }
 

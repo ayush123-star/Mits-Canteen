@@ -198,12 +198,13 @@ export const DataProvider = ({ children }) => {
   });
 
   const [orders, setOrders] = useState(() => {
+    let localList = [];
     const saved = localStorage.getItem('smart_canteen_orders');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localList = parsed
             .filter((ord) => !isMockOrder(ord))
             .map((ord) => {
               const tok = String(ord.tokenNumber || '').replace('#', '').trim();
@@ -215,7 +216,11 @@ export const DataProvider = ({ children }) => {
         }
       } catch (_) {}
     }
-    return [];
+    const merged = mergeOrders(INITIAL_ORDERS || [], localList);
+    try {
+      localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
+    } catch (_) {}
+    return merged;
   });
 
   // Proactively purge any mock dummy orders and stale TK-114 tokens from local & cloud state
