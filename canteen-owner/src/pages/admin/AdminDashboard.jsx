@@ -31,12 +31,13 @@ import {
   MessageSquare,
   ExternalLink,
   Send,
-  FileText
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
-  const { orders, updateOrderStatus, updateOrderPrepTime, rejectOrder, cancelOrder, feedbackList } = useData();
+  const { orders, updateOrderStatus, updateOrderPrepTime, rejectOrder, cancelOrder, clearAllOrders, feedbackList } = useData();
   const { socket, isConnected } = useSocket();
 
   const [searchToken, setSearchToken] = useState('');
@@ -50,6 +51,7 @@ export const AdminDashboard = () => {
   const [newOrderAlert, setNewOrderAlert] = useState(null);
   const [orderPrepTimes, setOrderPrepTimes] = useState({});
   const [prepTimeFeedback, setPrepTimeFeedback] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
   const prevCountRef = useRef(orders.length);
 
   // Instant notification when a new order arrives via state changes
@@ -401,6 +403,17 @@ export const AdminDashboard = () => {
               {feedbackList?.length || 0}
             </span>
           </Link>
+
+          {/* Quick Reset All Orders to 0 */}
+          <button
+            type="button"
+            onClick={() => setShowResetModal(true)}
+            className="px-3 py-2.5 rounded-xl sm:rounded-2xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs shrink-0 cursor-pointer active:scale-95"
+            title="Reset all orders to 0 for a clean start"
+          >
+            <RotateCcw className="w-4 h-4 text-red-400" />
+            <span className="hidden sm:inline">Clear Orders (0)</span>
+          </button>
         </div>
       </div>
 
@@ -1242,6 +1255,44 @@ export const AdminDashboard = () => {
                 className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/30 cursor-pointer"
               >
                 Hand Over Food
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Confirmation Modal: Reset All Orders to 0 */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-[#111625] border border-red-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white">Reset All Orders to 0?</h3>
+                <p className="text-xs text-red-300 font-medium">Permanent Clean Start</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This will permanently delete all existing order history across both the <strong className="text-white">Canteen Owner Dashboard</strong> and the <strong className="text-white">Student App</strong> for all accounts. Future orders will start fresh from Order #1.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-[#1C263A] hover:bg-[#25334d] text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  clearAllOrders();
+                  setShowResetModal(false);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black shadow-lg shadow-red-600/30 transition-all cursor-pointer active:scale-95"
+              >
+                Yes, Clear All Orders to 0
               </button>
             </div>
           </div>

@@ -199,11 +199,12 @@ export const DataProvider = ({ children }) => {
 
   const [orders, setOrders] = useState(() => {
     try {
-      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_version');
-      if (wipeVer !== 'v4_fresh_clean_start_2026') {
+      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_2026_v7');
+      if (wipeVer !== 'fresh_zero_start') {
         localStorage.setItem('smart_canteen_orders', '[]');
-        localStorage.setItem('smart_canteen_clean_slate_version', 'v4_fresh_clean_start_2026');
+        localStorage.setItem('smart_canteen_clean_slate_2026_v7', 'fresh_zero_start');
         localStorage.removeItem('used_canteen_utrs');
+        localStorage.removeItem('smart_canteen_used_item_tokens');
         return [];
       }
       const saved = localStorage.getItem('smart_canteen_orders');
@@ -220,11 +221,12 @@ export const DataProvider = ({ children }) => {
   // Proactively purge any mock dummy orders and stale TK-114 tokens from local & cloud state
   useEffect(() => {
     try {
-      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_version');
-      if (wipeVer !== 'v4_fresh_clean_start_2026') {
+      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_2026_v7');
+      if (wipeVer !== 'fresh_zero_start') {
         localStorage.setItem('smart_canteen_orders', '[]');
-        localStorage.setItem('smart_canteen_clean_slate_version', 'v4_fresh_clean_start_2026');
+        localStorage.setItem('smart_canteen_clean_slate_2026_v7', 'fresh_zero_start');
         localStorage.removeItem('used_canteen_utrs');
+        localStorage.removeItem('smart_canteen_used_item_tokens');
         setOrders([]);
         return;
       }
@@ -974,6 +976,17 @@ export const DataProvider = ({ children }) => {
           menuItems: incomingMenu,
         } = event.data || {};
 
+        if (type === 'PURGE_ALL_ORDERS') {
+          setOrders([]);
+          try {
+            localStorage.setItem('smart_canteen_orders', '[]');
+            localStorage.removeItem('used_canteen_utrs');
+            localStorage.removeItem('smart_canteen_used_item_tokens');
+          } catch (_) {}
+          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+          return;
+        }
+
         if (incomingOrders && Array.isArray(incomingOrders)) {
           setOrders((prev) => {
             if (JSON.stringify(prev) === JSON.stringify(incomingOrders)) return prev;
@@ -1118,15 +1131,14 @@ export const DataProvider = ({ children }) => {
     const unsubscribeCloud = subscribeToOrderEvents((cloudEvent) => {
       const { type, orders: incomingOrders, newOrder, orderId, newStatus, updatedOrder } = cloudEvent || {};
 
-      if (type === 'PURGE_MOCK_ORDERS') {
-        setOrders((prev) => {
-          const cleaned = prev.filter((ord) => !isMockOrder(ord));
-          try {
-            localStorage.setItem('smart_canteen_orders', JSON.stringify(cleaned));
-          } catch (_) {}
-          window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
-          return cleaned;
-        });
+      if (type === 'PURGE_ALL_ORDERS' || type === 'PURGE_MOCK_ORDERS') {
+        setOrders([]);
+        try {
+          localStorage.setItem('smart_canteen_orders', '[]');
+          localStorage.removeItem('used_canteen_utrs');
+          localStorage.removeItem('smart_canteen_used_item_tokens');
+        } catch (_) {}
+        window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
         return;
       }
 
@@ -1461,7 +1473,10 @@ export const DataProvider = ({ children }) => {
 
       if (type === 'SNAPSHOT_SYNC') {
         const list = incomingOrders || cloudEvent.orders;
-        if (Array.isArray(list) && list.length > 0) {
+        if (Array.isArray(list)) {
+          if (list.length === 0) {
+            return;
+          }
           setOrders((prev) => {
             const merged = mergeOrders(prev, list);
             try {
@@ -2152,6 +2167,31 @@ export const DataProvider = ({ children }) => {
     const nextOrders = orders.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: 'PAID' } : ord));
     persistAndBroadcastOrders(nextOrders, 'PAYMENT_COLLECTED', { orderId });
     logActivity(adminName, 'CASH_PAYMENT_COLLECTED', 'PAYMENTS', `Collected cash for order`);
+  };
+
+  const clearAllOrders = () => {
+    setOrders([]);
+    try {
+      localStorage.setItem('smart_canteen_orders', '[]');
+      localStorage.removeItem('used_canteen_utrs');
+      localStorage.removeItem('smart_canteen_used_item_tokens');
+      localStorage.setItem('smart_canteen_clean_slate_2026_v7', 'fresh_zero_start');
+    } catch (_) {}
+
+    persistAndBroadcastOrders([], 'PURGE_ALL_ORDERS', {
+      timestamp: Date.now(),
+    });
+
+    try {
+      axios.delete(CENTRAL_API).catch(() => {});
+    } catch (_) {}
+
+    try {
+      axios.delete('/api/orders').catch(() => {});
+    } catch (_) {}
+
+    window.dispatchEvent(new CustomEvent('smartcanteen:tokens_refresh'));
+    logActivity('Canteen Owner', 'ALL_ORDERS_CLEARED', 'ORDERS', 'All order history was reset and cleared to 0');
   };
 
   // ==========================================
@@ -2967,6 +3007,7 @@ export const DataProvider = ({ children }) => {
         updateOrderPrepTime,
         rejectOrder,
         cancelOrder,
+        clearAllOrders,
         markCashPaymentCollected,
         addFoodItem,
         updateFoodItem,

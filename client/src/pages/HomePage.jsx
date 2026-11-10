@@ -492,7 +492,7 @@ export const HomePage = () => {
               desc: 'Watch the dining hall TV calling board or check your phone pass. Collect tray when ready.',
               icon: CheckCircle2,
               image: '/assets/steps/step4-collect-counter.jpg',
-              fallback: '/assets/campus/mits-main-canteen.jpg',
+              fallback: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80',
               badge: 'Express Counter Pickup',
               badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
               counter: 'Counter 1 or 2',

@@ -18,7 +18,7 @@ export const CENTRAL_API = typeof window !== 'undefined' && window.location.orig
 export const CENTRAL_CANTEEN_API = 'https://mits-canteen.vercel.app/api/canteen-config';
 
 // Global topic namespace for MITS Campus Canteen
-const BASE_TOPIC = 'mits_campus_canteen_prod_2026';
+const BASE_TOPIC = 'mits_campus_canteen_fresh_2026';
 const TOPIC_EVENTS = `${BASE_TOPIC}/events`;
 const TOPIC_SNAPSHOT = `${BASE_TOPIC}/snapshot`;
 const TOPIC_CANTEEN_CONFIG = `${BASE_TOPIC}/canteen_config`;
@@ -69,7 +69,7 @@ const getMqttClient = () => {
       });
 
       // Purge broker retained order snapshot for fresh clean start
-      if (typeof window !== 'undefined' && localStorage.getItem('smart_canteen_clean_slate_version') !== 'v4_fresh_clean_start_2026') {
+      if (typeof window !== 'undefined' && localStorage.getItem('smart_canteen_clean_slate_2026_v7') !== 'fresh_zero_start') {
         try {
           mqttClient.publish(
             TOPIC_SNAPSHOT,
@@ -288,7 +288,7 @@ export const publishOrderEvent = async (event) => {
   publishMqtt(TOPIC_EVENTS, eventPayload, { qos: 1 });
 
   // 3. Publish retained snapshot if order list is provided
-  if (Array.isArray(event.orders) && event.orders.length > 0) {
+  if (Array.isArray(event.orders)) {
     const cleanList = event.orders
       .filter((o) => !isMockOrder(o))
       .map(sanitizeOrderForBroadcast)
@@ -409,7 +409,8 @@ export const fetchRecentCloudEvents = async () => {
   try {
     const res = await axios.get(CENTRAL_API, { timeout: 3000 });
     const orders = res.data?.orders;
-    if (Array.isArray(orders) && orders.length > 0) {
+    if (Array.isArray(orders)) {
+      if (orders.length === 0) return [];
       return [
         {
           type: 'SNAPSHOT_SYNC',
@@ -420,11 +421,7 @@ export const fetchRecentCloudEvents = async () => {
     }
   } catch (_) {}
 
-  return lastKnownSnapshot.map((ord) => ({
-    type: 'NEW_ORDER',
-    newOrder: ord,
-    timestamp: Date.now(),
-  }));
+  return [];
 };
 
 /**

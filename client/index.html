@@ -26,6 +26,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Google Identity Services (Official GIS OAuth 2.0 SDK) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Immediate Zero-Orders Fresh Start Purge (Runs before any React app mounts) -->
+    <script>
+      (function() {
+        var CLEAN_KEY = 'smart_canteen_clean_slate_2026_v7';
+        if (localStorage.getItem(CLEAN_KEY) !== 'fresh_zero_start') {
+          try {
+            localStorage.removeItem('smart_canteen_orders');
+            localStorage.removeItem('canteen_orders');
+            localStorage.removeItem('used_canteen_utrs');
+            localStorage.removeItem('smart_canteen_used_item_tokens');
+            localStorage.removeItem('smart_canteen_clean_slate_version');
+            localStorage.setItem('smart_canteen_orders', '[]');
+            localStorage.setItem(CLEAN_KEY, 'fresh_zero_start');
+          } catch (e) {}
+        }
+      })();
+    </script>
     <script>
       (function() {
         try {
