@@ -71,22 +71,6 @@ const getMqttClient = () => {
       mqttClient.subscribe([TOPIC_EVENTS, TOPIC_SNAPSHOT, TOPIC_CANTEEN_CONFIG, TOPIC_HOMEPAGE_CONFIG, TOPIC_FEEDBACK], { qos: 1 }, (err) => {
         if (err) console.debug('[RealtimeSync] Subscribe error:', err.message);
       });
-
-      // Purge broker retained order snapshot for fresh clean start
-      if (typeof window !== 'undefined' && localStorage.getItem('smart_canteen_clean_slate_2026_v7') !== 'fresh_zero_start') {
-        try {
-          mqttClient.publish(
-            TOPIC_SNAPSHOT,
-            JSON.stringify({
-              type: 'SNAPSHOT_SYNC',
-              orders: [],
-              timestamp: Date.now(),
-              emitterId: getClientInstanceId(),
-            }),
-            { retain: true, qos: 1 }
-          );
-        } catch (_) {}
-      }
     });
 
     mqttClient.on('message', (topic, payloadBuffer) => {
@@ -224,13 +208,16 @@ export const sanitizeOrderForBroadcast = (ord) => {
     tokenNumber: ord.tokenNumber,
     orderNumber: ord.orderNumber || ord.orderId || id,
     sequence: ord.sequence,
-    studentId: ord.studentId,
-    studentName: ord.studentName || ord.customerName,
-    studentEmail: ord.studentEmail,
-    studentRoll: ord.studentRoll,
-    studentEnrollment: ord.studentEnrollment,
-    studentDepartment: ord.studentDepartment,
-    studentPhone: ord.studentPhone,
+    userId: ord.userId || ord.studentId || '',
+    studentId: ord.studentId || ord.userId || '',
+    studentName: ord.studentName || ord.customerName || 'Student Diner',
+    email: ord.email || ord.studentEmail || ord.userEmail || '',
+    studentEmail: ord.studentEmail || ord.email || ord.userEmail || '',
+    userEmail: ord.userEmail || ord.studentEmail || ord.email || '',
+    studentRoll: ord.studentRoll || ord.studentEnrollment || '',
+    studentEnrollment: ord.studentEnrollment || ord.studentRoll || '',
+    studentDepartment: ord.studentDepartment || 'MITS Campus',
+    studentPhone: ord.studentPhone || '',
     items: Array.isArray(ord.items)
       ? ord.items.slice(0, 15).map((i) => ({
           foodId: i.foodId,
@@ -621,42 +608,30 @@ export const isOrderOwnedByUser = (order, user) => {
 
   // Normalized User Attributes
   const uEmail = String(user.email || '').trim().toLowerCase();
-  const uAlias = String(user.aliasEmail || '').trim().toLowerCase();
-  const ordEmail = String(order.studentEmail || order.email || order.user?.email || '').trim().toLowerCase();
+  const ordEmail = String(order.studentEmail || order.email || order.userEmail || order.user?.email || '').trim().toLowerCase();
 
-  // 1. Primary ground truth: Email match
-  // If both order and user have email addresses, they must match!
-  if (uEmail && ordEmail) {
-    return ordEmail === uEmail || (uAlias && ordEmail === uAlias);
+  // 1. Primary ground truth: Strict individual email match
+  // If the order has an email recorded, it MUST strictly match the logged-in user's email!
+  if (ordEmail) {
+    return !!uEmail && ordEmail === uEmail;
   }
 
-  // 2. Direct unique User ID match (if either has no email)
+  // 2. Direct unique User ID match (if order has no email recorded)
   const uId = String(user.id || user._id || '').trim().toLowerCase();
-  const ordStudentId = String(order.studentId || order.userId || order.user?._id || order.user || '').trim().toLowerCase();
+  const ordStudentId = String(order.studentId || order.userId || order.user?._id || order.user?.id || order.user || '').trim().toLowerCase();
   const genericIds = ['user-stu-1', 'guest', 'student', ''];
 
   if (uId && ordStudentId && !genericIds.includes(uId) && !genericIds.includes(ordStudentId)) {
     if (uId === ordStudentId) return true;
   }
 
-  // 3. Roll / Enrollment Number match
+  // 3. Roll / Enrollment Number match (ONLY if order has no email AND rolls match non-generic)
   const uRoll = String(user.studentId || user.enrollmentNumber || user.rollNumber || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
   const ordRoll = String(order.studentRoll || order.studentEnrollment || order.enrollmentNumber || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
   const genericRolls = ['student', 'guest', 'diner', 'none', ''];
 
   if (uRoll && ordRoll && !genericRolls.includes(uRoll) && !genericRolls.includes(ordRoll)) {
-    if (uRoll === ordRoll) return true;
-  }
-
-  // 4. Phone number match (10 digits)
-  const uPhoneDigits = String(user.phone || '').replace(/\D/g, '');
-  const ordPhoneDigits = String(order.studentPhone || order.phone || order.user?.phone || '').replace(/\D/g, '');
-  const uPhone10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : '';
-  const ordPhone10 = ordPhoneDigits.length >= 10 ? ordPhoneDigits.slice(-10) : '';
-
-  const dummyPhones = ['9876543210', '0000000000', '1234567890'];
-  if (uPhone10 && ordPhone10 && !dummyPhones.includes(uPhone10) && !dummyPhones.includes(ordPhone10)) {
-    if (uPhone10 === ordPhone10) return true;
+    return uRoll === ordRoll;
   }
 
   return false;

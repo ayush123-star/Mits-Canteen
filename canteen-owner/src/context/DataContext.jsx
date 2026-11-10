@@ -211,38 +211,118 @@ export const DataProvider = ({ children }) => {
 
   const [orders, setOrders] = useState(() => {
     try {
-      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_2026_v7');
-      if (wipeVer !== 'fresh_zero_start') {
-        localStorage.setItem('smart_canteen_orders', '[]');
-        localStorage.setItem('smart_canteen_clean_slate_2026_v7', 'fresh_zero_start');
-        localStorage.removeItem('used_canteen_utrs');
-        localStorage.removeItem('smart_canteen_used_item_tokens');
-        return [];
-      }
       const saved = localStorage.getItem('smart_canteen_orders');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.filter((ord) => !isMockOrder(ord) && !String(ord?.id || '').startsWith('ord-ayush-10'));
         }
       }
     } catch (_) {}
-    return [];
+    return [
+      {
+        id: 'ord-1731253020000-152',
+        orderId: 'ORD-2026-152',
+        tokenNumber: 'TK-152',
+        primaryToken: 'TK-152',
+        tokens: ['TK-152'],
+        orderNumber: 'ORD-2026-152',
+        sequence: 152,
+        userId: 'user-google-pandeyayush1603',
+        studentId: 'PANDEYAYUSH1603',
+        studentName: 'Ayush Pandey',
+        email: 'pandeyayush1603@gmail.com',
+        studentEmail: 'pandeyayush1603@gmail.com',
+        userEmail: 'pandeyayush1603@gmail.com',
+        studentRoll: 'PANDEYAYUSH1603',
+        studentEnrollment: 'PANDEYAYUSH1603',
+        studentDepartment: 'Electronics and Telecommunication',
+        studentPhone: '+91 90395 67623',
+        items: [
+          {
+            foodId: 'food-3',
+            name: 'Special Campus Deluxe Thali',
+            price: 130,
+            quantity: 1,
+            isVeg: true,
+            counter: 1,
+            tokenNumber: 'TK-152',
+            itemToken: 'TK-152',
+            specialInstructions: 'No Onion & Garlic (Jain) • Extra Spicy • Separate Chutney'
+          }
+        ],
+        totalAmount: 130,
+        discountAmount: 0,
+        finalAmount: 130,
+        couponCode: '',
+        paymentMethod: 'CASH',
+        paymentStatus: 'PAID',
+        status: 'Completed',
+        assignedCounter: 1,
+        scheduledPickupTime: 'ASAP',
+        estimatedPrepMinutes: 8,
+        orderNotes: 'No Onion & Garlic (Jain) • Extra Spicy • Separate Chutney',
+        specialInstructions: 'No Onion & Garlic (Jain) • Extra Spicy • Separate Chutney',
+        whatsappOptIn: true,
+        orderDate: '2026-11-10',
+        createdAtDate: '2026-11-10T21:07:00.000Z',
+        createdAt: '09:07 pm',
+        stockDeducted: true
+      },
+      {
+        id: 'ord-1731252840000-151',
+        orderId: 'ORD-2026-151',
+        tokenNumber: 'TK-151',
+        primaryToken: 'TK-151',
+        tokens: ['TK-151'],
+        orderNumber: 'ORD-2026-151',
+        sequence: 151,
+        userId: 'user-stu-ayush',
+        studentId: 'user-stu-ayush',
+        studentName: 'Ayush Pandey',
+        email: '25et1ay39@mitsgwl.ac.in',
+        studentEmail: '25et1ay39@mitsgwl.ac.in',
+        userEmail: '25et1ay39@mitsgwl.ac.in',
+        studentRoll: 'BTET2501039',
+        studentEnrollment: 'BTET2501039',
+        studentDepartment: 'Electronics and Telecommunication',
+        studentPhone: '+91 98765 43210',
+        items: [
+          {
+            foodId: 'food-5',
+            name: 'Thick Cold Coffee with Choco Ice Cream',
+            price: 60,
+            quantity: 1,
+            isVeg: true,
+            counter: 1,
+            tokenNumber: 'TK-151',
+            itemToken: 'TK-151',
+            specialInstructions: 'With Onion • Medium Spice'
+          }
+        ],
+        totalAmount: 60,
+        discountAmount: 0,
+        finalAmount: 60,
+        couponCode: '',
+        paymentMethod: 'CASH',
+        paymentStatus: 'PAID',
+        status: 'Completed',
+        assignedCounter: 1,
+        scheduledPickupTime: 'ASAP',
+        estimatedPrepMinutes: 8,
+        orderNotes: 'With Onion • Medium Spice',
+        specialInstructions: 'With Onion • Medium Spice',
+        whatsappOptIn: true,
+        orderDate: '2026-11-10',
+        createdAtDate: '2026-11-10T21:04:00.000Z',
+        createdAt: '09:04 pm',
+        stockDeducted: true
+      }
+    ];
   });
 
   // Proactively purge any mock dummy orders and stale TK-114 tokens from local & cloud state
   useEffect(() => {
-    try {
-      const wipeVer = localStorage.getItem('smart_canteen_clean_slate_2026_v7');
-      if (wipeVer !== 'fresh_zero_start') {
-        localStorage.setItem('smart_canteen_orders', '[]');
-        localStorage.setItem('smart_canteen_clean_slate_2026_v7', 'fresh_zero_start');
-        localStorage.removeItem('used_canteen_utrs');
-        localStorage.removeItem('smart_canteen_used_item_tokens');
-        setOrders([]);
-        return;
-      }
-    } catch (_) {}
 
     setOrders((prev) => {
       let changed = false;
@@ -1845,9 +1925,12 @@ export const DataProvider = ({ children }) => {
       tokens,
       orderNumber,
       sequence,
+      userId: orderData.userId || orderData.studentId || ('user-stu-' + Date.now()),
       studentId: orderData.studentId || ('user-stu-' + Date.now()),
       studentName: orderData.studentName || 'Student Diner',
-      studentEmail: orderData.studentEmail || '',
+      email: orderData.email || orderData.studentEmail || orderData.userEmail || '',
+      studentEmail: orderData.studentEmail || orderData.email || orderData.userEmail || '',
+      userEmail: orderData.userEmail || orderData.studentEmail || orderData.email || '',
       studentRoll: orderData.studentRoll || orderData.studentEnrollment || '',
       studentEnrollment: orderData.studentEnrollment || orderData.studentRoll || '',
       studentDepartment: orderData.studentDepartment || 'MITS Campus',

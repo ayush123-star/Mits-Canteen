@@ -516,8 +516,11 @@ export const CheckoutModal = ({ isOpen, onClose, onOrderPlaced }) => {
       const studentPhone = user?.phone || '';
 
       const createdOrder = placeOrder({
+        userId: user?.id || user?._id || studentId,
         studentId,
         studentName,
+        email: studentEmail,
+        userEmail: studentEmail,
         studentEmail,
         studentRoll,
         studentEnrollment: studentRoll,

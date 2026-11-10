@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
       const uStudentId = (u.studentId || '').toLowerCase().trim();
       const uStaffId = (u.staffId || '').toLowerCase().trim();
 
-      if (uEmail === cleanId || uAlias === cleanId) return true;
+      if (uEmail === cleanId) return true;
       if (uEmail.split('@')[0] === cleanId) return true;
       if (digitsOnly.length >= 7 && (uPhone.includes(digitsOnly) || digitsOnly.includes(uPhone))) return true;
       if (uStudentId === cleanId || uStaffId === cleanId) return true;
@@ -281,11 +281,12 @@ export const AuthProvider = ({ children }) => {
 
     const cleanEmail = String(tokenEmail || '').toLowerCase().trim();
 
-    // 1. Strict Domain Validation on Client
-    const isStudent = cleanEmail.endsWith('@mitsgwl.ac.in');
+    // 1. Strict Domain Validation on Client (College domains + Developer Account)
+    const isDev = cleanEmail === 'pandeyayush1603@gmail.com';
+    const isStudent = cleanEmail.endsWith('@mitsgwl.ac.in') || (isDev && roleType === 'student');
     const isFaculty = cleanEmail.endsWith('@mitsgwalior.in');
 
-    if (cleanEmail && !isStudent && !isFaculty) {
+    if (cleanEmail && !isStudent && !isFaculty && !isDev) {
       return {
         success: false,
         code: 'UNAUTHORIZED_DOMAIN',
@@ -345,8 +346,7 @@ export const AuthProvider = ({ children }) => {
     const savedUsers = JSON.parse(localStorage.getItem('smart_canteen_users') || 'null') || registeredUsers;
     let foundUser = savedUsers.find((u) => {
       const e = (u.email || '').toLowerCase().trim();
-      const alias = (u.aliasEmail || '').toLowerCase().trim();
-      return e === cleanEmail || alias === cleanEmail;
+      return e === cleanEmail;
     });
 
     if (!foundUser) {

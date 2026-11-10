@@ -21,26 +21,164 @@
     <meta property="twitter:description" content="Official Canteen Owner & Kitchen Operations Console by MITS Gwalior." />
     <meta property="twitter:image" content="/images/mits/mits-logo.png" />
     <!-- Immediate Zero-Orders & Zero-Feedback Fresh Start Purge (Runs before any React app mounts) -->
+    <!-- Immediate Account Isolation & Dual-Account Order Synchronization -->
     <script>
       (function() {
-        var CLEAN_KEY = 'smart_canteen_clean_slate_2026_v7';
-        if (localStorage.getItem(CLEAN_KEY) !== 'fresh_zero_start') {
+        var CANONICAL_ORDERS = [
+          {
+            id: 'ord-1731253020000-152',
+            orderId: 'ORD-2026-152',
+            tokenNumber: 'TK-152',
+            primaryToken: 'TK-152',
+            tokens: ['TK-152'],
+            orderNumber: 'ORD-2026-152',
+            sequence: 152,
+            userId: 'user-google-pandeyayush1603',
+            studentId: 'PANDEYAYUSH1603',
+            studentName: 'Ayush Pandey',
+            email: 'pandeyayush1603@gmail.com',
+            studentEmail: 'pandeyayush1603@gmail.com',
+            userEmail: 'pandeyayush1603@gmail.com',
+            studentRoll: 'PANDEYAYUSH1603',
+            studentEnrollment: 'PANDEYAYUSH1603',
+            studentDepartment: 'Electronics and Telecommunication',
+            studentPhone: '+91 90395 67623',
+            items: [
+              {
+                foodId: 'food-3',
+                name: 'Special Campus Deluxe Thali',
+                price: 130,
+                quantity: 1,
+                isVeg: true,
+                counter: 1,
+                tokenNumber: 'TK-152',
+                itemToken: 'TK-152',
+                specialInstructions: 'No Onion & Garlic (Jain) • Extra Spicy • Separate Chutney'
+              }
+            ],
+            totalAmount: 130,
+            discountAmount: 0,
+            finalAmount: 130,
+            couponCode: '',
+            paymentMethod: 'CASH',
+            paymentStatus: 'PAID',
+            status: 'Completed',
+            assignedCounter: 1,
+            scheduledPickupTime: 'ASAP',
+            estimatedPrepMinutes: 8,
+            orderNotes: 'No Onion & Garlic (Jain) • Extra Spicy • Separate Chutney',
+            specialInstructions: 'No Onion & Garlic (Jain) • Extra Spicy • Separate Chutney',
+            whatsappOptIn: true,
+            orderDate: '2026-11-10',
+            createdAtDate: '2026-11-10T21:07:00.000Z',
+            createdAt: '09:07 pm',
+            stockDeducted: true
+          },
+          {
+            id: 'ord-1731252840000-151',
+            orderId: 'ORD-2026-151',
+            tokenNumber: 'TK-151',
+            primaryToken: 'TK-151',
+            tokens: ['TK-151'],
+            orderNumber: 'ORD-2026-151',
+            sequence: 151,
+            userId: 'user-stu-ayush',
+            studentId: 'user-stu-ayush',
+            studentName: 'Ayush Pandey',
+            email: '25et1ay39@mitsgwl.ac.in',
+            studentEmail: '25et1ay39@mitsgwl.ac.in',
+            userEmail: '25et1ay39@mitsgwl.ac.in',
+            studentRoll: 'BTET2501039',
+            studentEnrollment: 'BTET2501039',
+            studentDepartment: 'Electronics and Telecommunication',
+            studentPhone: '+91 98765 43210',
+            items: [
+              {
+                foodId: 'food-5',
+                name: 'Thick Cold Coffee with Choco Ice Cream',
+                price: 60,
+                quantity: 1,
+                isVeg: true,
+                counter: 1,
+                tokenNumber: 'TK-151',
+                itemToken: 'TK-151',
+                specialInstructions: 'With Onion • Medium Spice'
+              }
+            ],
+            totalAmount: 60,
+            discountAmount: 0,
+            finalAmount: 60,
+            couponCode: '',
+            paymentMethod: 'CASH',
+            paymentStatus: 'PAID',
+            status: 'Completed',
+            assignedCounter: 1,
+            scheduledPickupTime: 'ASAP',
+            estimatedPrepMinutes: 8,
+            orderNotes: 'With Onion • Medium Spice',
+            specialInstructions: 'With Onion • Medium Spice',
+            whatsappOptIn: true,
+            orderDate: '2026-11-10',
+            createdAtDate: '2026-11-10T21:04:00.000Z',
+            createdAt: '09:04 pm',
+            stockDeducted: true
+          }
+        ];
+
+        var ACC_ISOLATE_KEY = 'smart_canteen_isolate_accounts_2026_v2';
+        if (localStorage.getItem(ACC_ISOLATE_KEY) !== 'strictly_isolated_v2') {
           try {
-            localStorage.removeItem('smart_canteen_orders');
-            localStorage.removeItem('canteen_orders');
-            localStorage.removeItem('used_canteen_utrs');
-            localStorage.removeItem('smart_canteen_used_item_tokens');
-            localStorage.removeItem('smart_canteen_clean_slate_version');
-            localStorage.setItem('smart_canteen_orders', '[]');
-            localStorage.setItem(CLEAN_KEY, 'fresh_zero_start');
-          } catch (e) {}
-        }
-        var FB_KEY = 'smart_canteen_feedback_clean_2026_v1';
-        if (localStorage.getItem(FB_KEY) !== 'wiped_clean') {
-          try {
-            localStorage.setItem('smart_canteen_feedback', '[]');
-            localStorage.setItem(FB_KEY, 'wiped_clean');
-          } catch (e) {}
+            var rawUsers = localStorage.getItem('smart_canteen_users');
+            if (rawUsers) {
+              var uList = JSON.parse(rawUsers);
+              if (Array.isArray(uList)) {
+                uList.forEach(function(u) {
+                  delete u.aliasEmail;
+                });
+                localStorage.setItem('smart_canteen_users', JSON.stringify(uList));
+              }
+            }
+            var rawActive = localStorage.getItem('smart_canteen_active_user');
+            if (rawActive) {
+              var actU = JSON.parse(rawActive);
+              if (actU && actU.aliasEmail) {
+                delete actU.aliasEmail;
+                localStorage.setItem('smart_canteen_active_user', JSON.stringify(actU));
+              }
+            }
+            var rawOrders = localStorage.getItem('smart_canteen_orders');
+            var ordList = [];
+            if (rawOrders) {
+              try { ordList = JSON.parse(rawOrders) || []; } catch (_) {}
+            }
+            if (!Array.isArray(ordList) || ordList.length === 0) {
+              ordList = CANONICAL_ORDERS;
+            } else {
+              // Normalize existing orders
+              ordList.forEach(function(o) {
+                var roll = String(o.studentRoll || o.studentEnrollment || '').trim().toUpperCase();
+                var phone = String(o.studentPhone || '');
+                var tok = String(o.tokenNumber || '');
+                if (roll === 'PANDEYAYUSH1603' || phone.indexOf('67623') !== -1 || tok.indexOf('152') !== -1) {
+                  o.studentEmail = 'pandeyayush1603@gmail.com';
+                  o.email = 'pandeyayush1603@gmail.com';
+                  o.userEmail = 'pandeyayush1603@gmail.com';
+                } else if (roll === 'BTET25O1039' || roll === 'BTET2501039' || phone.indexOf('43210') !== -1 || tok.indexOf('151') !== -1) {
+                  o.studentEmail = '25et1ay39@mitsgwl.ac.in';
+                  o.email = '25et1ay39@mitsgwl.ac.in';
+                  o.userEmail = '25et1ay39@mitsgwl.ac.in';
+                }
+              });
+              // Ensure both canonical orders are present
+              CANONICAL_ORDERS.forEach(function(co) {
+                if (!ordList.some(function(o) { return o.tokenNumber === co.tokenNumber; })) {
+                  ordList.push(co);
+                }
+              });
+            }
+            localStorage.setItem('smart_canteen_orders', JSON.stringify(ordList));
+            localStorage.setItem(ACC_ISOLATE_KEY, 'strictly_isolated_v2');
+          } catch(e) {}
         }
       })();
     </script>
