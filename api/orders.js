@@ -18,14 +18,14 @@ try {
     const raw = fs.readFileSync(CACHE_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      serverOrdersCache = parsed;
+      serverOrdersCache = parsed.filter((o) => !isMock(o) && !String(o.id || '').startsWith('ord-ayush-10'));
     }
   }
 } catch (_) {}
 
 const saveCacheToDisk = () => {
   try {
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(serverOrdersCache.slice(0, 150)), 'utf8');
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(serverOrdersCache.filter((o) => !isMock(o) && !String(o.id || '').startsWith('ord-ayush-10')).slice(0, 150)), 'utf8');
   } catch (_) {}
 };
 
@@ -37,6 +37,7 @@ const isMock = (ord) => {
   const id = String(ord.id || ord._id || '');
   if (mockIds.includes(id)) return true;
   if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return true;
+  if (id.startsWith('ord-ayush-10')) return true;
   return false;
 };
 

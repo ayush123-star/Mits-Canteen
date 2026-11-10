@@ -205,7 +205,7 @@ export const DataProvider = ({ children }) => {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           localList = parsed
-            .filter((ord) => !isMockOrder(ord))
+            .filter((ord) => !isMockOrder(ord) && !String(ord?.id || '').startsWith('ord-ayush-10'))
             .map((ord) => {
               const tok = String(ord.tokenNumber || '').replace('#', '').trim();
               if (tok === 'TK-114' || tok === '114') {
@@ -216,7 +216,8 @@ export const DataProvider = ({ children }) => {
         }
       } catch (_) {}
     }
-    const merged = mergeOrders(INITIAL_ORDERS || [], localList);
+    const cleanInitial = (INITIAL_ORDERS || []).filter((ord) => !isMockOrder(ord) && !String(ord?.id || '').startsWith('ord-ayush-10'));
+    const merged = mergeOrders(cleanInitial, localList);
     try {
       localStorage.setItem('smart_canteen_orders', JSON.stringify(merged));
     } catch (_) {}
@@ -228,7 +229,7 @@ export const DataProvider = ({ children }) => {
     setOrders((prev) => {
       let changed = false;
       const filtered = prev.filter((ord) => {
-        if (isMockOrder(ord)) {
+        if (isMockOrder(ord) || String(ord?.id || '').startsWith('ord-ayush-10')) {
           changed = true;
           return false;
         }

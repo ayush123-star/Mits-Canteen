@@ -572,6 +572,7 @@ export const isMockOrder = (ord) => {
   const token = String(ord.tokenNumber || '').replace('#', '').trim();
 
   if (mockIds.includes(id)) return true;
+  if (id.startsWith('ord-ayush-10')) return true;
   if (mockNames.some((n) => name.toLowerCase().includes(n.toLowerCase()))) return true;
   if (mockRolls.includes(roll)) return true;
   if (mockTokens.includes(token) && (email.includes('mitsgwl.ac.in') || roll.startsWith('STU-') || id.startsWith('ord-10'))) return true;
@@ -582,98 +583,53 @@ export const isMockOrder = (ord) => {
 
 /**
  * Accurately determines if an order belongs to the currently logged-in user.
- * Strictly guarantees that every user has their own separate, isolated order history,
- * while ensuring all legitimate account orders (including email aliases, rolls, IDs, and phone) match.
+ * Strictly isolates order history per individual user account.
  */
 export const isOrderOwnedByUser = (order, user) => {
   if (!order || typeof order !== 'object') return false;
   if (!user || typeof user !== 'object') return false;
 
+  // Ignore dummy seed orders
+  if (String(order.id || '').startsWith('ord-ayush-10')) return false;
+
   // Normalized User Attributes
   const uEmail = String(user.email || '').trim().toLowerCase();
   const uAlias = String(user.aliasEmail || '').trim().toLowerCase();
-  const uId = String(user.id || user._id || '').trim().toLowerCase();
-  const uName = String(user.name || '').trim().toLowerCase();
-  const uRoll = String(user.studentId || user.enrollmentNumber || user.rollNumber || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
-  const uPhoneDigits = String(user.phone || '').replace(/\D/g, '');
-  const uPhone10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : '';
-
-  // Check if current user is Ayush Pandey (Creator / Student account)
-  const isAyushUser =
-    uEmail === 'pandeyayush1603@gmail.com' ||
-    uEmail === 'ayushpandey1603@gmail.com' ||
-    uEmail === '25et1ay39@mitsgwl.ac.in' ||
-    uAlias === 'pandeyayush1603@gmail.com' ||
-    uAlias === 'ayushpandey1603@gmail.com' ||
-    uAlias === '25et1ay39@mitsgwl.ac.in' ||
-    uId === 'user-stu-ayush' ||
-    uRoll === 'btet25o1039' ||
-    uRoll === 'btet2501039' ||
-    uRoll === 'pandeyayush1603' ||
-    uPhone10 === '9039567623' ||
-    (uName === 'ayush pandey' && !uEmail.includes('other'));
-
-  // Normalized Order Attributes
   const ordEmail = String(order.studentEmail || order.email || order.user?.email || '').trim().toLowerCase();
+
+  // 1. Primary ground truth: Email match
+  // If both order and user have email addresses, they must match!
+  if (uEmail && ordEmail) {
+    return ordEmail === uEmail || (uAlias && ordEmail === uAlias);
+  }
+
+  // 2. Direct unique User ID match (if either has no email)
+  const uId = String(user.id || user._id || '').trim().toLowerCase();
   const ordStudentId = String(order.studentId || order.userId || order.user?._id || order.user || '').trim().toLowerCase();
+  const genericIds = ['user-stu-1', 'guest', 'student', ''];
+
+  if (uId && ordStudentId && !genericIds.includes(uId) && !genericIds.includes(ordStudentId)) {
+    if (uId === ordStudentId) return true;
+  }
+
+  // 3. Roll / Enrollment Number match
+  const uRoll = String(user.studentId || user.enrollmentNumber || user.rollNumber || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
   const ordRoll = String(order.studentRoll || order.studentEnrollment || order.enrollmentNumber || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
-  const ordName = String(order.studentName || order.customerName || order.user?.name || '').trim().toLowerCase();
-  const ordPhoneDigits = String(order.studentPhone || order.phone || order.user?.phone || '').replace(/\D/g, '');
-  const ordPhone10 = ordPhoneDigits.length >= 10 ? ordPhoneDigits.slice(-10) : '';
-
-  // Check if order belongs to Ayush Pandey
-  const isAyushOrder =
-    ordEmail === 'pandeyayush1603@gmail.com' ||
-    ordEmail === 'ayushpandey1603@gmail.com' ||
-    ordEmail === '25et1ay39@mitsgwl.ac.in' ||
-    ordStudentId === 'user-stu-ayush' ||
-    ordRoll === 'btet25o1039' ||
-    ordRoll === 'btet2501039' ||
-    ordRoll === 'pandeyayush1603' ||
-    ordPhone10 === '9039567623' ||
-    (ordName === 'ayush pandey' && !ordEmail.includes('other'));
-
-  // Case A: Current logged-in user IS Ayush Pandey
-  if (isAyushUser) {
-    if (isAyushOrder) return true;
-    // Also match if user ID or direct email match
-    if (uEmail && ordEmail && uEmail === ordEmail) return true;
-    if (uId && ordStudentId && uId === ordStudentId) return true;
-    return false;
-  }
-
-  // Case B: Current logged-in user is NOT Ayush Pandey
-  // Strictly prevent non-Ayush users from seeing Ayush Pandey's orders
-  if (isAyushOrder) {
-    return false;
-  }
-
-  // Case C: Standard account isolation for any other student/user
-  // 1. Direct Email match (Primary & unique per account)
-  if (uEmail && ordEmail && (ordEmail === uEmail || (uAlias && ordEmail === uAlias))) {
-    return true;
-  }
-
-  // 2. Direct unique User ID match
-  if (uId && ordStudentId && uId === ordStudentId && !uId.startsWith('user-stu-1')) {
-    return true;
-  }
-
-  // 3. Roll / Enrollment Number match (unique per student)
   const genericRolls = ['student', 'guest', 'diner', 'none', ''];
-  if (uRoll && ordRoll && uRoll === ordRoll && !genericRolls.includes(uRoll)) {
-    return true;
+
+  if (uRoll && ordRoll && !genericRolls.includes(uRoll) && !genericRolls.includes(ordRoll)) {
+    if (uRoll === ordRoll) return true;
   }
 
   // 4. Phone number match (10 digits)
-  if (uPhone10 && ordPhone10 && uPhone10 === ordPhone10) {
-    return true;
-  }
+  const uPhoneDigits = String(user.phone || '').replace(/\D/g, '');
+  const ordPhoneDigits = String(order.studentPhone || order.phone || order.user?.phone || '').replace(/\D/g, '');
+  const uPhone10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : '';
+  const ordPhone10 = ordPhoneDigits.length >= 10 ? ordPhoneDigits.slice(-10) : '';
 
-  // 5. Full name match if non-generic and neither has a conflicting email
-  const genericNames = ['student diner', 'mits student', 'guest', 'student', 'customer', ''];
-  if (!uEmail && !ordEmail && uName && ordName && uName === ordName && !genericNames.includes(uName)) {
-    return true;
+  const dummyPhones = ['9876543210', '0000000000', '1234567890'];
+  if (uPhone10 && ordPhone10 && !dummyPhones.includes(uPhone10) && !dummyPhones.includes(ordPhone10)) {
+    if (uPhone10 === ordPhone10) return true;
   }
 
   return false;
