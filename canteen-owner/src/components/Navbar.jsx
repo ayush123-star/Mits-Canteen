@@ -820,20 +820,6 @@ export const Navbar = () => {
               </p>
             </div>
 
-            {/* 🛠️ Key Technical Stack */}
-            <div className="bg-[#151C30]/80 rounded-2xl p-3.5 border border-purple-500/20 space-y-2 text-left">
-              <p className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">
-                CORE TECHNICAL SKILLS
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {['JavaScript', 'React', 'Node.js', 'Express.js', 'MongoDB', 'REST APIs', 'Electronics', 'Signal Processing', 'Embedded Systems', 'Tailwind CSS', 'Git & GitHub'].map((skill) => (
-                  <span key={skill} className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#0C1222] text-purple-200 border border-purple-500/30">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-
             {/* Direct CTA Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
               <a
